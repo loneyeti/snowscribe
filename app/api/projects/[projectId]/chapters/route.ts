@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createChapterSchema } from '@/lib/schemas/chapter.schema';
+import { countWords } from '@/lib/utils'; // Import countWords utility
+import type { Chapter as ChapterType, Scene as SceneType } from '@/lib/types'; // Import types
 
 interface ProjectParams {
   projectId: string;
@@ -33,7 +35,7 @@ export async function GET(request: Request, { params }: { params: ProjectParams 
     return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 });
   }
 
-  const { data: chapters, error: chaptersError } = await supabase
+  const { data: chaptersFromDb, error: chaptersError } = await supabase
     .from('chapters')
     .select('*, scenes(id, content)') // Fetch scenes (id and content) along with chapters
     .eq('project_id', projectId)
@@ -45,7 +47,43 @@ export async function GET(request: Request, { params }: { params: ProjectParams 
     return NextResponse.json({ error: 'Failed to fetch chapters', details: chaptersError.message }, { status: 500 });
   }
 
-  return NextResponse.json(chapters);
+  if (!chaptersFromDb) {
+    return NextResponse.json([]); // No chapters found or an unexpected issue
+  }
+
+  // Process chapters to add word_count and scene_count
+  const processedChapters = chaptersFromDb.map(chapter => {
+    // Explicitly type chapter to include scenes for processing
+    const chapterWithScenes = chapter as Omit<ChapterType, 'word_count' | 'scene_count'> & { scenes: Pick<SceneType, 'id' | 'content'>[] | null };
+    
+    let chapterWordCount = 0;
+    const chapterSceneCount = chapterWithScenes.scenes?.length || 0;
+
+    if (chapterWithScenes.scenes) {
+      for (const scene of chapterWithScenes.scenes) {
+        chapterWordCount += countWords(scene.content);
+      }
+    }
+    
+    // Construct the final chapter object to match ChapterType
+    const finalChapter: ChapterType = {
+      id: chapterWithScenes.id,
+      project_id: chapterWithScenes.project_id,
+      title: chapterWithScenes.title,
+      // description: chapterWithScenes.description, // Removed as it's not in ChapterType or DB
+      order: chapterWithScenes.order,
+      created_at: chapterWithScenes.created_at,
+      updated_at: chapterWithScenes.updated_at,
+      word_count: chapterWordCount,
+      scene_count: chapterSceneCount,
+      // scenes array is not part of the final ChapterType by default,
+      // if it were, it should be added here.
+      // For now, we only add calculated counts.
+    };
+    return finalChapter;
+  });
+
+  return NextResponse.json(processedChapters);
 }
 
 // POST /api/projects/[projectId]/chapters

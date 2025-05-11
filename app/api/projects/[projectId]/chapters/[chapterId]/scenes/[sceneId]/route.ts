@@ -21,7 +21,7 @@ interface SceneParams {
 
 // GET /api/projects/[projectId]/chapters/[chapterId]/scenes/[sceneId]
 export async function GET(request: Request, { params }: { params: SceneParams }) {
-  const { projectId, chapterId, sceneId } = params;
+  const { projectId, chapterId, sceneId } = await params;
   if (!projectId || !chapterId || !sceneId) {
     return NextResponse.json({ error: 'Project ID, Chapter ID, and Scene ID are required' }, { status: 400 });
   }
@@ -76,7 +76,7 @@ export async function GET(request: Request, { params }: { params: SceneParams })
 
 // PUT /api/projects/[projectId]/chapters/[chapterId]/scenes/[sceneId]
 export async function PUT(request: Request, { params }: { params: SceneParams }) {
-  const { projectId, chapterId, sceneId } = params;
+  const { projectId, chapterId, sceneId } = await params;
   if (!projectId || !chapterId || !sceneId) {
     return NextResponse.json({ error: 'Project ID, Chapter ID, and Scene ID are required' }, { status: 400 });
   }
@@ -149,7 +149,7 @@ export async function PUT(request: Request, { params }: { params: SceneParams })
 
 // DELETE /api/projects/[projectId]/chapters/[chapterId]/scenes/[sceneId]
 export async function DELETE(request: Request, { params }: { params: SceneParams }) {
-  const { projectId, chapterId, sceneId } = params;
+  const { projectId, chapterId, sceneId } = await params;
   if (!projectId || !chapterId || !sceneId) {
     return NextResponse.json({ error: 'Project ID, Chapter ID, and Scene ID are required' }, { status: 400 });
   }

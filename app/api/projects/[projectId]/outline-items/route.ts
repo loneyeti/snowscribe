@@ -8,7 +8,7 @@ interface ProjectParams {
 
 // GET /api/projects/[projectId]/outline-items
 export async function GET(request: Request, { params }: { params: ProjectParams }) {
-  const { projectId } = params;
+  const { projectId } = await params;
   if (!projectId) {
     return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
   }
@@ -52,7 +52,7 @@ export async function GET(request: Request, { params }: { params: ProjectParams 
 
 // POST /api/projects/[projectId]/outline-items
 export async function POST(request: Request, { params }: { params: ProjectParams }) {
-  const { projectId } = params;
+  const { projectId } = await params;
   if (!projectId) {
     return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
   }

@@ -9,7 +9,7 @@ interface ChapterParams {
 
 // GET /api/projects/[projectId]/chapters/[chapterId]
 export async function GET(request: Request, { params }: { params: ChapterParams }) {
-  const { projectId, chapterId } = params;
+  const { projectId, chapterId } = await params;
   if (!projectId || !chapterId) {
     return NextResponse.json({ error: 'Project ID and Chapter ID are required' }, { status: 400 });
   }
@@ -47,7 +47,7 @@ export async function GET(request: Request, { params }: { params: ChapterParams 
 
 // PUT /api/projects/[projectId]/chapters/[chapterId]
 export async function PUT(request: Request, { params }: { params: ChapterParams }) {
-  const { projectId, chapterId } = params;
+  const { projectId, chapterId } = await params;
   if (!projectId || !chapterId) {
     return NextResponse.json({ error: 'Project ID and Chapter ID are required' }, { status: 400 });
   }
@@ -108,7 +108,7 @@ export async function PUT(request: Request, { params }: { params: ChapterParams 
 
 // DELETE /api/projects/[projectId]/chapters/[chapterId]
 export async function DELETE(request: Request, { params }: { params: ChapterParams }) {
-  const { projectId, chapterId } = params;
+  const { projectId, chapterId } = await params;
   if (!projectId || !chapterId) {
     return NextResponse.json({ error: 'Project ID and Chapter ID are required' }, { status: 400 });
   }

@@ -9,7 +9,7 @@ interface WorldNoteParams {
 
 // GET /api/projects/[projectId]/world-notes/[noteId]
 export async function GET(request: Request, { params }: { params: WorldNoteParams }) {
-  const { projectId, noteId } = params;
+  const { projectId, noteId } = await params;
   if (!projectId || !noteId) {
     return NextResponse.json({ error: 'Project ID and Note ID are required' }, { status: 400 });
   }
@@ -47,7 +47,7 @@ export async function GET(request: Request, { params }: { params: WorldNoteParam
 
 // PUT /api/projects/[projectId]/world-notes/[noteId]
 export async function PUT(request: Request, { params }: { params: WorldNoteParams }) {
-  const { projectId, noteId } = params;
+  const { projectId, noteId } = await params;
   if (!projectId || !noteId) {
     return NextResponse.json({ error: 'Project ID and Note ID are required' }, { status: 400 });
   }
@@ -108,7 +108,7 @@ export async function PUT(request: Request, { params }: { params: WorldNoteParam
 
 // DELETE /api/projects/[projectId]/world-notes/[noteId]
 export async function DELETE(request: Request, { params }: { params: WorldNoteParams }) {
-  const { projectId, noteId } = params;
+  const { projectId, noteId } = await params;
   if (!projectId || !noteId) {
     return NextResponse.json({ error: 'Project ID and Note ID are required' }, { status: 400 });
   }

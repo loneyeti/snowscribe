@@ -6,24 +6,49 @@ import {
   createCharacterSchema, 
   updateCharacterSchema 
 } from "@/lib/schemas/character.schema";
+import { createClient } from "@/lib/supabase/server"; // Import Supabase server client
+import { cookies } from 'next/headers'; // Import cookies
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function getCharacters(
   projectId: string
 ): Promise<Character[]> {
+  const supabase = await createClient();
+
+  // Get current user to ensure authenticated access and for project ownership check
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    console.error(`Unauthorized attempt to fetch characters for project ${projectId} in lib/data/characters.ts:`, userError?.message);
+    return [];
+  }
+
+    // Verify that the project exists and belongs to the authenticated user
+    const { data: project, error: projectFetchError } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (projectFetchError || !project) {
+    console.error(`Project not found or access denied for project ${projectId} in lib/data/chapters.ts:`, projectFetchError?.message);
+    return [];
+  }
+  
   try {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.getAll().map((cookie: { name: string; value: string }) => `${cookie.name}=${cookie.value}`).join('; ');
+
     const response = await fetch(
       `${API_BASE_URL}/api/projects/${projectId}/characters`,
       {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          ...(cookieHeader && { 'Cookie': cookieHeader }),
         },
-        // IMPORTANT: If your API needs cookies for auth, ensure they are passed.
-        // Next.js 13+ fetch in Route Handlers/Server Components might handle this
-        // automatically or require explicit cookie forwarding.
-        // For now, assuming middleware handles session validation.
       }
     );
 
@@ -36,7 +61,7 @@ export async function getCharacters(
       );
     }
     const data = await response.json();
-    return data.characters as Character[];
+    return data as Character[];
   } catch (error) {
     console.error("Error fetching characters:", error);
     // Consider how to handle errors - rethrow, return empty array, etc.
@@ -50,12 +75,16 @@ export async function getCharacter(
   characterId: string
 ): Promise<Character | null> {
   try {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.getAll().map((cookie: { name: string; value: string }) => `${cookie.name}=${cookie.value}`).join('; ');
+
     const response = await fetch(
       `${API_BASE_URL}/api/projects/${projectId}/characters/${characterId}`,
       {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          ...(cookieHeader && { 'Cookie': cookieHeader }),
         },
       }
     );
@@ -72,7 +101,7 @@ export async function getCharacter(
       );
     }
     const data = await response.json();
-    return data.character as Character;
+    return data as Character;
   } catch (error) {
     console.error("Error fetching character:", error);
     throw error;
@@ -88,12 +117,16 @@ export async function createCharacter(
     const dataToSend = { ...characterData, project_id: projectId };
     const validatedData = createCharacterSchema.parse(dataToSend);
 
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.getAll().map((cookie: { name: string; value: string }) => `${cookie.name}=${cookie.value}`).join('; ');
+
     const response = await fetch(
       `${API_BASE_URL}/api/projects/${projectId}/characters`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(cookieHeader && { 'Cookie': cookieHeader }),
         },
         body: JSON.stringify(validatedData), // Send validated data which includes project_id
       }
@@ -108,7 +141,7 @@ export async function createCharacter(
       );
     }
     const data = await response.json();
-    return data.character as Character;
+    return data as Character;
   } catch (error) {
     console.error("Error creating character:", error);
     if (error instanceof z.ZodError) {
@@ -128,12 +161,16 @@ export async function updateCharacter(
     // Partial validation - API will do full validation
     const validatedData = updateCharacterSchema.parse(characterData);
 
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.getAll().map((cookie: { name: string; value: string }) => `${cookie.name}=${cookie.value}`).join('; ');
+
     const response = await fetch(
       `${API_BASE_URL}/api/projects/${projectId}/characters/${characterId}`,
       {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          ...(cookieHeader && { 'Cookie': cookieHeader }),
         },
         body: JSON.stringify(validatedData),
       }
@@ -148,7 +185,7 @@ export async function updateCharacter(
       );
     }
     const data = await response.json();
-    return data.character as Character;
+    return data as Character;
   } catch (error) {
     console.error("Error updating character:", error);
      if (error instanceof z.ZodError) {
@@ -163,10 +200,16 @@ export async function deleteCharacter(
   characterId: string
 ): Promise<void> {
   try {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.getAll().map((cookie: { name: string; value: string }) => `${cookie.name}=${cookie.value}`).join('; ');
+
     const response = await fetch(
       `${API_BASE_URL}/api/projects/${projectId}/characters/${characterId}`,
       {
         method: "DELETE",
+        headers: {
+          ...(cookieHeader && { 'Cookie': cookieHeader }),
+        },
       }
     );
 

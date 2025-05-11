@@ -9,7 +9,7 @@ interface CharacterParams {
 
 // GET /api/projects/[projectId]/characters/[characterId]
 export async function GET(request: Request, { params }: { params: CharacterParams }) {
-  const { projectId, characterId } = params;
+  const { projectId, characterId } = await params;
   if (!projectId || !characterId) {
     return NextResponse.json({ error: 'Project ID and Character ID are required' }, { status: 400 });
   }
@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: { params: CharacterParam
     .select('*')
     .eq('id', characterId)
     .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    // .eq('user_id', user.id) // RLS handles user ownership via project
     .single();
 
   if (characterError) {
@@ -47,7 +47,7 @@ export async function GET(request: Request, { params }: { params: CharacterParam
 
 // PUT /api/projects/[projectId]/characters/[characterId]
 export async function PUT(request: Request, { params }: { params: CharacterParams }) {
-  const { projectId, characterId } = params;
+  const { projectId, characterId } = await params;
   if (!projectId || !characterId) {
     return NextResponse.json({ error: 'Project ID and Character ID are required' }, { status: 400 });
   }
@@ -82,7 +82,7 @@ export async function PUT(request: Request, { params }: { params: CharacterParam
     .select('id')
     .eq('id', characterId)
     .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    // .eq('user_id', user.id) // RLS handles user ownership via project
     .single();
 
   if (fetchError || !existingCharacter) {
@@ -108,7 +108,7 @@ export async function PUT(request: Request, { params }: { params: CharacterParam
 
 // DELETE /api/projects/[projectId]/characters/[characterId]
 export async function DELETE(request: Request, { params }: { params: CharacterParams }) {
-  const { projectId, characterId } = params;
+  const { projectId, characterId } = await params;
   if (!projectId || !characterId) {
     return NextResponse.json({ error: 'Project ID and Character ID are required' }, { status: 400 });
   }
@@ -127,7 +127,7 @@ export async function DELETE(request: Request, { params }: { params: CharacterPa
     .select('id')
     .eq('id', characterId)
     .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    // .eq('user_id', user.id) // RLS handles user ownership via project
     .single();
 
   if (fetchError || !existingCharacter) {

@@ -274,3 +274,27 @@ export const projectSchema = z.object({
 
 export type ProjectFormValues = z.infer<typeof projectSchema>;
 ```
+
+### Server-Side Internal API Calls
+
+When data-fetching functions residing on the server (e.g., in `lib/data/*` which are often called by Server Components) need to call internal API routes (e.g., in `app/api/*`), it's crucial to ensure proper authentication context is passed.
+
+**Pattern**:
+Next.js's built-in `fetch` on the server-side does not reliably or automatically forward cookies from the original incoming request to these internal API calls. To ensure the internal API route can authenticate the user via middleware:
+
+1. Import `cookies` from `next/headers` in the server-side data-fetching function.
+2. Retrieve all cookies: `const cookieStore = await cookies();`
+3. Format them into a `Cookie` header string: `const cookieHeader = cookieStore.getAll().map(cookie => \`\${cookie.name}=\${cookie.value}\`).join('; ');`
+4. Explicitly include this `cookieHeader` in the `headers` option of the `fetch` call:
+   ```typescript
+   const response = await fetch(apiUrl, {
+     method: "GET", // or other methods
+     headers: {
+       "Content-Type": "application/json",
+       ...(cookieHeader && { Cookie: cookieHeader }), // Important: pass the cookies
+     },
+   });
+   ```
+
+**Rationale**:
+This explicit forwarding of cookies ensures that the middleware protecting the internal API route receives the necessary authentication tokens to validate the user's session, preventing erroneous unauthenticated errors or redirects for these server-to-server requests. This was identified as a fix for issues where internal API calls were being redirected to login despite the calling Server Component having a valid user session.

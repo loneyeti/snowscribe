@@ -9,7 +9,7 @@ interface OutlineItemParams {
 
 // GET /api/projects/[projectId]/outline-items/[itemId]
 export async function GET(request: Request, { params }: { params: OutlineItemParams }) {
-  const { projectId, itemId } = params;
+  const { projectId, itemId } = await params;
   if (!projectId || !itemId) {
     return NextResponse.json({ error: 'Project ID and Item ID are required' }, { status: 400 });
   }
@@ -47,7 +47,7 @@ export async function GET(request: Request, { params }: { params: OutlineItemPar
 
 // PUT /api/projects/[projectId]/outline-items/[itemId]
 export async function PUT(request: Request, { params }: { params: OutlineItemParams }) {
-  const { projectId, itemId } = params;
+  const { projectId, itemId } = await params;
   if (!projectId || !itemId) {
     return NextResponse.json({ error: 'Project ID and Item ID are required' }, { status: 400 });
   }
@@ -128,7 +128,7 @@ export async function PUT(request: Request, { params }: { params: OutlineItemPar
 
 // DELETE /api/projects/[projectId]/outline-items/[itemId]
 export async function DELETE(request: Request, { params }: { params: OutlineItemParams }) {
-  const { projectId, itemId } = params;
+  const { projectId, itemId } = await params;
   if (!projectId || !itemId) {
     return NextResponse.json({ error: 'Project ID and Item ID are required' }, { status: 400 });
   }

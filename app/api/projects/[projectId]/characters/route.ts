@@ -8,7 +8,7 @@ interface ProjectParams {
 
 // GET /api/projects/[projectId]/characters
 export async function GET(request: Request, { params }: { params: ProjectParams }) {
-  const { projectId } = params;
+  const { projectId } = await params;
   if (!projectId) {
     return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
   }
@@ -50,7 +50,7 @@ export async function GET(request: Request, { params }: { params: ProjectParams 
 
 // POST /api/projects/[projectId]/characters
 export async function POST(request: Request, { params }: { params: ProjectParams }) {
-  const { projectId } = params;
+  const { projectId } = await params;
   if (!projectId) {
     return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
   }
@@ -98,7 +98,6 @@ export async function POST(request: Request, { params }: { params: ProjectParams
     .from('characters')
     .insert({
       project_id: projectId,
-      user_id: user.id,
       name,
       description,
       notes,

@@ -2,9 +2,9 @@
 
 ## Current Work Focus
 
-_(Updated: 2025-05-10)_
+_(Updated: 2025-05-11)_
 
-With navigation and initial Character Editor data alignment complete, the focus shifts to the remaining "Next Steps," prioritizing Authentication UI Refinements and then API for Relationships.
+Refactoring of `lib/data` files to ensure all database interactions go through API routes is complete. The next focus is Authentication UI Refinements and then API for Relationships.
 
 ## Recent Changes
 
@@ -50,6 +50,14 @@ With navigation and initial Character Editor data alignment complete, the focus 
   - Updated `components/editors/CharacterCardEditor.tsx` to use fields (`description`, `notes`, `image_url`) aligned with `lib/schemas/character.schema.ts`. Removed outdated fields (`backstory`, `traits`).
   - Modified `app/(dashboard)/project/[projectId]/ProjectDashboardClient.tsx` to correctly pass `initialData` to the updated `CharacterCardEditor` and handle the `onSave` callback with the new `CharacterFormData` structure.
   - Updated `lib/types/index.ts` for the `Character` interface: changed `notes` from `Record<string, unknown> | null` to `string | null`, and removed `backstory` and `motivations` fields to align with the schema. This resolved critical TypeScript errors.
+- **Refactored Data Access Layer (`lib/data`)**:
+  - Modified `lib/data/projects.ts` (`getProjectById`) to fetch data via its corresponding API route (`/api/projects/[projectId]`). The API route was updated to include genre and word count calculations.
+  - Modified `lib/data/chapters.ts` (`getChaptersByProjectId`) to fetch data via its corresponding API route (`/api/projects/[projectId]/chapters`). The API route was updated to include scene and word count calculations for each chapter.
+  - Verified `lib/data/characters.ts` and `lib/data/scenes.ts` already adhere to the pattern of calling API routes.
+- **Resolved Authentication Issue for Internal API Calls**:
+  - Fixed an issue where server-side `fetch` calls from `lib/data/*` functions to internal API routes were failing authentication.
+  - The root cause was that cookies were not being automatically forwarded by `fetch`.
+  - **Solution**: Modified `lib/data/projects.ts` to explicitly read cookies using `cookies()` from `next/headers` and add them to the `Cookie` header of the `fetch` request. This ensures the internal API calls are authenticated correctly. This pattern will need to be applied to other similar data fetching functions.
 
 ## Next Steps
 
@@ -152,3 +160,4 @@ The manuscript editor needs careful consideration:
 - Careful attention to import paths and exact exported names from modules (e.g., Zod schemas) is crucial to avoid TypeScript resolution errors.
 - Client-side components that manage their own data fetching (like `ProjectDashboardClient` for chapters/scenes) provide good encapsulation but require careful state management for loading, errors, and updates.
 - Next.js 15 requires careful handling of dynamic APIs (`params`, `cookies()`, `headers()`) by `await`ing them in server contexts.
+- **Server-Side Internal API Calls & Cookies**: When making server-side `fetch` requests from data-fetching functions (e.g., in `lib/data/*`) to internal API routes, cookies are not automatically forwarded by `fetch` as reliably as expected. It's necessary to explicitly read cookies using `cookies()` from `next/headers` and attach them to the `Cookie` header of the outgoing `fetch` request to ensure proper authentication of these internal calls.

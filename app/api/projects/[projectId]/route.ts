@@ -20,9 +20,16 @@ export async function GET(request: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data: project, error: projectError } = await supabase
+  const { data: projectData, error: projectError } = await supabase
     .from('projects')
-    .select('*')
+    .select(`
+      *,
+      genres (
+        id,
+        name,
+        created_at
+      )
+    `)
     .eq('id', projectId)
     .eq('user_id', user.id)
     .single();
@@ -35,11 +42,38 @@ export async function GET(request: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: 'Failed to fetch project', details: projectError.message }, { status: 500 });
   }
 
-  if (!project) {
+  if (!projectData) {
      return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 });
   }
 
-  return NextResponse.json(project);
+  // Calculate total word count for the project
+  let totalWordCount = 0;
+  try {
+    const { data: chapters, error: chaptersError } = await supabase
+      .from('chapters')
+      .select('word_count')
+      .eq('project_id', projectId)
+      .eq('user_id', user.id); // Ensure chapters also belong to the user for safety
+
+    if (chaptersError) {
+      console.error(`Error fetching chapters for word count for project ${projectId}:`, chaptersError.message);
+      // Proceed without word count if chapters can't be fetched
+    } else if (chapters && chapters.length > 0) {
+      totalWordCount = chapters.reduce((sum, chapter) => sum + (chapter.word_count || 0), 0);
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(`Error calculating total word count for project ${projectId}:`, error.message);
+    } else {
+      console.error(`An unknown error occurred while calculating total word count for project ${projectId}:`, error);
+    }
+    // Proceed with project data but word count will be 0
+  }
+
+  return NextResponse.json({
+    ...projectData,
+    wordCount: totalWordCount,
+  });
 }
 
 export async function PUT(request: Request, { params }: { params: Params }) {

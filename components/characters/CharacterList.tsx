@@ -48,7 +48,7 @@ export function CharacterList({
           </Button>
         }
       />
-      {characters.length === 0 ? (
+      {!characters || characters.length === 0 ? (
         <div className="p-4 text-sm text-center text-gray-500">
           No characters yet.
           <Button
