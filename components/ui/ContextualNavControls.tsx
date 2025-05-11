@@ -27,13 +27,13 @@ export function ContextualNavControls({
       <div>
         {showBackButton && onBackClick && (
           // Placeholder for BackButton (using Button with variant link or ghost)
-          <button
+          (<button
             onClick={onBackClick}
             className="flex items-center text-sm text-muted-foreground hover:text-foreground"
           >
             <ChevronLeft size={18} className="mr-1" />
             {backButtonLabel}
-          </button>
+          </button>)
           /* <Button variant="ghost" onClick={onBackClick}>
             <ChevronLeft size={18} className="mr-1" />
             {backButtonLabel}
@@ -43,13 +43,13 @@ export function ContextualNavControls({
       <div>
         {showAddItemButton && onAddItemClick && (
           // Placeholder for AddItemButton (using IconButton)
-          <button
+          (<button
             onClick={onAddItemClick}
             aria-label={addItemButtonLabel}
             className="p-2 rounded-md hover:bg-muted"
           >
             <Plus size={20} />
-          </button>
+          </button>)
           /* <IconButton onClick={onAddItemClick} aria-label={addItemButtonLabel}>
             <Plus size={20} />
           </IconButton> */
