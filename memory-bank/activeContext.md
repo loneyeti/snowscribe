@@ -4,7 +4,7 @@
 
 _(Updated: 2025-05-10)_
 
-The primary focus has been on completing the manuscript editor integration within the project dashboard.
+With navigation and initial Character Editor data alignment complete, the focus shifts to the remaining "Next Steps," prioritizing Authentication UI Refinements and then API for Relationships.
 
 ## Recent Changes
 
@@ -36,6 +36,20 @@ The primary focus has been on completing the manuscript editor integration withi
   - Auto-saves scene content via `saveText` prop, calling the appropriate API.
   - Word count is calculated, displayed, and updated in real-time.
   - Uses `geistSans` font for the editor.
+- **Implemented Initial Character UI in Project Dashboard (`ProjectDashboardClient.tsx` and related components):**
+  - Characters are dynamically fetched and displayed using `CharacterList.tsx`.
+  - Users can add new characters via `CreateCharacterModal.tsx`.
+  - `lib/data/characters.ts` created for character data operations.
+  - `CharacterCardEditor.tsx` updated to include delete functionality (accepts `onDelete` prop, has a delete button with confirmation) and uses project's `Button`, `Input`, `Textarea` components.
+  - Resolved TypeScript error related to `onDelete` prop in `ProjectDashboardClient.tsx` by ensuring `CharacterCardEditor.tsx` accepts it.
+- **Refactored Project Dashboard Navigation:**
+  - `AppShell.tsx` now manages `activeSection` state and passes it and a handler to `PrimarySidebar` and its children (`ProjectDashboardClient`).
+  - `PrimarySidebar.tsx` now receives `activeSection` and `onSectionChange` props to control active state and handle navigation clicks.
+  - `ProjectDashboardClient.tsx` now receives `activeSection` as a prop and renders views accordingly, removing internal state management for section navigation. This resolves the issue of sidebar clicks not changing the displayed section.
+- **Refined Character Editor and Data Structures:**
+  - Updated `components/editors/CharacterCardEditor.tsx` to use fields (`description`, `notes`, `image_url`) aligned with `lib/schemas/character.schema.ts`. Removed outdated fields (`backstory`, `traits`).
+  - Modified `app/(dashboard)/project/[projectId]/ProjectDashboardClient.tsx` to correctly pass `initialData` to the updated `CharacterCardEditor` and handle the `onSave` callback with the new `CharacterFormData` structure.
+  - Updated `lib/types/index.ts` for the `Character` interface: changed `notes` from `Record<string, unknown> | null` to `string | null`, and removed `backstory` and `motivations` fields to align with the schema. This resolved critical TypeScript errors.
 
 ## Next Steps
 
@@ -49,18 +63,25 @@ The following are the prioritized next steps:
 
 2.  **Project Dashboard & Navigation**:
 
-    - [ ] Fully implement navigation between different sections of a project (Manuscript, Outline, Characters, etc.) using `AppShell` and `PrimarySidebar` within `app/(dashboard)/layout.tsx`. The `handleSectionChange` function in `ProjectDashboardClient.tsx` needs to be connected to the sidebar.
+    - [x] Implement basic Character list, creation, and display of selected character in `CharacterCardEditor`.
+    - [x] Implement delete functionality for characters within `CharacterCardEditor`.
+    - [x] Address data mapping mismatch between `CharacterCardEditor`'s internal `CharacterData` (fields like `backstory`, `traits`) and the main `Character` type / `CharacterFormValues` (fields like `description`, `notes`).
+    - [x] Ensure all fields from the `character.schema.ts` (e.g., `description`, `notes`) are editable in `CharacterCardEditor.tsx`.
 
-3.  **Authentication UI Refinements**:
+3.  **Project Dashboard & Navigation**:
+
+    - [x] Fully implement navigation between different sections of a project (Manuscript, Outline, Characters, etc.) using `AppShell` and `PrimarySidebar`. State is managed in `AppShell` and propagated to `ProjectDashboardClient`.
+
+4.  **Authentication UI Refinements**:
 
     - [ ] Refine error handling and user feedback for all auth flows (login, signup, password reset) using `sonner` for toasts.
 
-4.  **API for Relationships**:
+5.  **API for Relationships**:
 
     - [ ] Implement API endpoints for managing Scene Tags (applying/removing tags to scenes).
     - [ ] Implement API endpoints for Scene Characters (linking/unlinking characters to scenes).
 
-5.  **Core UI Components**:
+6.  **Core UI Components**:
     - Continue refinement and expansion of the UI component library as new features are developed.
     - Improve display of chapter/scene metadata (e.g., scene counts, word counts) in lists.
 

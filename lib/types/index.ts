@@ -80,6 +80,9 @@ export interface SceneAppliedTag {
   created_at: string; // TIMESTAMPTZ
 }
 
+import { z } from 'zod';
+import { characterBaseSchema } from '@/lib/schemas/character.schema';
+
 // Based on supabase/migrations/20250509073255_create_characters_table.sql
 export interface Character {
   id: string; // UUID
@@ -87,14 +90,15 @@ export interface Character {
   name: string;
   nickname?: string | null;
   description?: string | null;
-  backstory?: string | null;
-  motivations?: string | null;
-  appearance?: string | null;
-  notes?: Record<string, unknown> | null; // JSONB
+  // backstory, motivations, appearance to be consolidated into description or notes as per schema
+  appearance?: string | null; // Keeping appearance for now, can be part of description
+  notes?: string | null; // Aligning with schema (TEXT field)
   image_url?: string | null;
   created_at: string; // TIMESTAMPTZ
   updated_at: string; // TIMESTAMPTZ
 }
+
+export type CharacterFormValues = z.infer<typeof characterBaseSchema>;
 
 // Based on supabase/migrations/20250509073406_create_scene_characters_table.sql
 export interface SceneCharacter {

@@ -15,13 +15,13 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
+          cookiesToSet.forEach(({ name, value }) => // 'options' removed from destructuring here
+            request.cookies.set(name, value) 
           );
           supabaseResponse = NextResponse.next({
             request,
           });
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value, options }) => // 'options' is still needed and used here
             supabaseResponse.cookies.set(name, value, options)
           );
         },
@@ -44,7 +44,11 @@ export async function middleware(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/login") &&
     !request.nextUrl.pathname.startsWith("/auth")
   ) {
-    // no user, potentially respond by redirecting the user to the login page
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+      // For API routes, return a JSON 401 Unauthorized response
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    // For non-API routes, redirect to the login page
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

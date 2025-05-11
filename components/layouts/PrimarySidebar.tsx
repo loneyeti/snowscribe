@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react"; // Removed useState
 import {
   BookOpen,
   Users,
@@ -32,16 +32,19 @@ const navItemConfigs: NavItemConfig[] = [
 // Separate config for items that might appear after the main nav group or at the bottom
 const bottomNavItemConfigs: NavItemConfig[] = [
   { id: "export", label: "Export", icon: FileDown },
+  // Settings will be handled separately as it's often a modal or different page, not a main section
 ];
 
-export function PrimarySidebar() {
-  const [activeItem, setActiveItem] = useState<string>("manuscript"); // Default active item
+interface PrimarySidebarProps {
+  activeSection: string;
+  onSectionChange: (sectionId: string) => void;
+}
 
-  const handleNavItemClick = (itemId: string) => {
-    setActiveItem(itemId);
-    // Actual navigation/content switching will be handled by a parent component (ProjectDashboardClient)
-    // This component will likely receive setActiveSection as a prop in the future.
-  };
+export function PrimarySidebar({
+  activeSection,
+  onSectionChange,
+}: PrimarySidebarProps) {
+  // Removed internal activeItem state and handleNavItemClick
 
   return (
     <aside className="w-16 bg-slate-800 text-slate-100 flex flex-col items-center py-4 space-y-2">
@@ -60,8 +63,8 @@ export function PrimarySidebar() {
             key={config.id}
             icon={<config.icon size={22} aria-hidden="true" />}
             label={config.label}
-            isActive={activeItem === config.id}
-            onClick={() => handleNavItemClick(config.id)}
+            isActive={activeSection === config.id}
+            onClick={() => onSectionChange(config.id)}
           />
         ))}
       </nav>
@@ -73,15 +76,15 @@ export function PrimarySidebar() {
             key={config.id}
             icon={<config.icon size={22} aria-hidden="true" />}
             label={config.label}
-            isActive={activeItem === config.id}
-            onClick={() => handleNavItemClick(config.id)}
+            isActive={activeSection === config.id} // Use activeSection for isActive
+            onClick={() => onSectionChange(config.id)} // Call onSectionChange
           />
         ))}
         <PrimarySidebarNavItem
           icon={<Settings size={22} aria-hidden="true" />}
           label="Settings"
-          isActive={activeItem === "settings"}
-          onClick={() => handleNavItemClick("settings")}
+          isActive={activeSection === "settings"} // Use activeSection for isActive
+          onClick={() => onSectionChange("settings")} // Call onSectionChange
         />
       </div>
     </aside>

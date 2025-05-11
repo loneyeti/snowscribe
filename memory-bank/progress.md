@@ -28,6 +28,22 @@
   - [x] Updated `app/(dashboard)/project/[projectId]/page.tsx` to use `await params`.
   - [x] Updated `lib/data/projects.ts` to use `await cookies()`.
   - [x] Updated API route handlers (`app/api/projects/[projectId]/route.ts`, `app/api/projects/[projectId]/chapters/route.ts`) to use `await params`.
+- **Project Dashboard - Characters Section (Initial Implementation)**:
+  - [x] Dynamically fetch and list characters for a project using `CharacterList.tsx`.
+  - [x] Add new characters via `CreateCharacterModal.tsx`.
+  - [x] `lib/data/characters.ts` created and functional for CRUD operations.
+  - [x] `CharacterCardEditor.tsx` displays selected character and allows saving.
+  - [x] Delete functionality implemented in `CharacterCardEditor.tsx` with confirmation.
+  - [x] `CharacterCardEditor.tsx` updated to use project's `Button`, `Input`, `Textarea` UI components.
+- **Project Dashboard Navigation**:
+  - [x] `AppShell.tsx` manages `activeSection` state.
+  - [x] `PrimarySidebar.tsx` uses props from `AppShell` to handle navigation clicks and display active state.
+  - [x] `ProjectDashboardClient.tsx` receives `activeSection` from `AppShell` to render the correct view.
+  - [x] Navigation between sections (Manuscript, Characters, etc.) is now functional.
+- **Character Editor Data Alignment**:
+  - [x] `CharacterCardEditor.tsx` updated to use fields (`description`, `notes`, `image_url`) aligned with `character.schema.ts`.
+  - [x] `ProjectDashboardClient.tsx` updated to correctly pass `initialData` and handle `onSave` with the new `CharacterFormData`.
+  - [x] `lib/types/index.ts` updated for `Character` type ( `notes` field to `string | null`, removed `backstory`, `motivations`) to align with schema and resolve TypeScript errors.
 
 ## What's Left to Build
 
@@ -71,8 +87,11 @@
 
 - [ ] Characters System (Client-Side)
 
-  - [ ] Character creation form
-  - [ ] Character editing interface
+  - [x] Character creation form (`CreateCharacterModal.tsx`)
+  - [x] Character editing interface (basic via `CharacterCardEditor.tsx`, now aligned with schema fields).
+  - [x] Character deletion from editor.
+  - [x] Refine `CharacterCardEditor.tsx` to fully support all fields from `character.schema.ts` (e.g., `description`, `notes`). (This is now complete)
+  - [x] Address data mapping discrepancies between `CharacterCardEditor`'s internal state and the main `Character` type. (This is now complete)
   - [ ] Character linking to scenes UI
 
 - [ ] Outlines (Client-Side)
@@ -122,16 +141,17 @@
 
 ## Current Status
 
-**Phase**: Core Application Views -> **Manuscript Feature Complete, Focusing on Dashboard Navigation**
+**Phase**: Core Application Views -> **Character Editor Refined, Focusing on Auth UI & API Relationships**
 _(Updated: 2025-05-10)_
 
-The project has successfully established its foundational API layer, a basic authentication flow, and a functional homepage. The manuscript section of the project dashboard now allows users to list chapters, add new chapters, select a chapter to view its scenes, add new scenes, and edit scene content using the `ManuscriptEditor`. Scene content auto-saves, and word counts are updated dynamically. Compatibility issues with Next.js 15's asynchronous dynamic APIs have been addressed.
+The project has successfully established its foundational API layer, a basic authentication flow, and a functional homepage. The manuscript section of the project dashboard is largely complete. The Character section is functional, with `CharacterCardEditor` now aligned with the data schema, supporting all relevant fields (`name`, `description`, `notes`, `image_url`). Navigation between dashboard sections is working correctly.
 
 The immediate focus areas are now:
 
-1.  **Dashboard Navigation**: Fully implementing navigation between different project sections (Outline, Characters, etc.).
-2.  **UI/UX Refinements**: Improving chapter/scene metadata display and auth feedback.
-3.  **Authentication UI Refinements**: Enhancing error handling and user feedback for auth flows.
+1.  **Authentication UI Refinements**: Refine error handling and user feedback for all auth flows (login, signup, password reset) using `sonner` for toasts.
+2.  **API for Relationships**: Implement API endpoints for managing Scene Tags and Scene Characters.
+3.  **UI/UX Refinements**: Improving chapter/scene metadata display.
+4.  **Implementation of other dashboard sections**: Outline, World Notes, AI Assistant.
 
 ## Known Issues
 
@@ -140,12 +160,15 @@ The immediate focus areas are now:
 
 ## Evolution of Project Decisions
 
-| Date       | Decision                                                                   | Rationale                                                                                           |
-| ---------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| 2025-05-09 | Established memory bank documentation                                      | To ensure clear project tracking and communication                                                  |
-| ...        | ... (previous entries)                                                     | ...                                                                                                 |
-| 2025-05-10 | Implemented dynamic chapter and scene fetching in `ProjectDashboardClient` | To make the manuscript section self-contained for its data needs and reflect real-time additions.   |
-| 2025-05-10 | Created `CreateChapterModal` and `CreateSceneModal` components             | To provide UI for adding new chapters and scenes.                                                   |
-| 2025-05-10 | Updated `ListSectionHeader` to support an `actionElement` prop             | To allow placement of action buttons (like "add") directly in section headers, matching UI mockups. |
-| 2025-05-10 | Addressed Next.js 15 async API requirements                                | Ensured `params` and `cookies()` are `await`ed in server contexts to prevent runtime errors.        |
-| 2025-05-10 | Integrated `ManuscriptEditor` into `ProjectDashboardClient`                | Enabled scene content editing, auto-saving, and dynamic word count updates. Used `geistSans` font.  |
+| Date       | Decision                                                                   | Rationale                                                                                                                                                                                                          |
+| ---------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2025-05-09 | Established memory bank documentation                                      | To ensure clear project tracking and communication                                                                                                                                                                 |
+| ...        | ... (previous entries)                                                     | ...                                                                                                                                                                                                                |
+| 2025-05-10 | Implemented dynamic chapter and scene fetching in `ProjectDashboardClient` | To make the manuscript section self-contained for its data needs and reflect real-time additions.                                                                                                                  |
+| 2025-05-10 | Created `CreateChapterModal` and `CreateSceneModal` components             | To provide UI for adding new chapters and scenes.                                                                                                                                                                  |
+| 2025-05-10 | Updated `ListSectionHeader` to support an `actionElement` prop             | To allow placement of action buttons (like "add") directly in section headers, matching UI mockups.                                                                                                                |
+| 2025-05-10 | Addressed Next.js 15 async API requirements                                | Ensured `params` and `cookies()` are `await`ed in server contexts to prevent runtime errors.                                                                                                                       |
+| 2025-05-10 | Integrated `ManuscriptEditor` into `ProjectDashboardClient`                | Enabled scene content editing, auto-saving, and dynamic word count updates. Used `geistSans` font.                                                                                                                 |
+| 2025-05-10 | Implemented Character CRUD UI foundation                                   | Created `CharacterList`, `CreateCharacterModal`, `CharacterCardEditor` components and `lib/data/characters.ts`. Added delete functionality to editor.                                                              |
+| 2025-05-10 | Refactored Dashboard Navigation                                            | Centralized `activeSection` state in `AppShell` to enable `PrimarySidebar` to control content displayed by `ProjectDashboardClient`.                                                                               |
+| 2025-05-10 | Aligned Character Editor with Schema                                       | Updated `CharacterCardEditor.tsx`, `ProjectDashboardClient.tsx`, and `lib/types/index.ts` (Character type) to use schema-consistent fields (`description`, `notes`, `image_url`) and resolve data type mismatches. |

@@ -1,27 +1,50 @@
 import type { Chapter } from "@/lib/types";
 import { countWords } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server"; // Import Supabase server client
 
 export async function getChaptersByProjectId(projectId: string): Promise<Chapter[]> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) {
-    console.error("NEXT_PUBLIC_APP_URL is not set. API calls will fail.");
-    return []; // Return empty array on configuration error
-  }
+  const supabase = await createClient();
 
-  const response = await fetch(`${appUrl}/api/projects/${projectId}/chapters`, {
-    cache: "no-store", // Or configure caching as needed
-  });
+  // Get current user to ensure authenticated access and for project ownership check
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  if (!response.ok) {
-    // Log error but return empty array to allow the page to render gracefully
-    console.error(`Error fetching chapters for project ${projectId}: ${response.status} ${response.statusText}`);
+  if (userError || !user) {
+    console.error(`Unauthorized attempt to fetch chapters for project ${projectId} in lib/data/chapters.ts:`, userError?.message);
     return [];
   }
-  
-  const chaptersFromApi = await response.json() as Chapter[]; // API returns Chapter[] with nested scenes
+
+  // Verify that the project exists and belongs to the authenticated user
+  const { data: project, error: projectFetchError } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (projectFetchError || !project) {
+    console.error(`Project not found or access denied for project ${projectId} in lib/data/chapters.ts:`, projectFetchError?.message);
+    return [];
+  }
+
+  // Fetch chapters directly from the database
+  const { data: chaptersFromDb, error: chaptersError } = await supabase
+    .from('chapters')
+    .select('*, scenes(id, content)') // Fetch scenes (id and content) along with chapters
+    .eq('project_id', projectId)
+    .order('order', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true });
+
+  if (chaptersError) {
+    console.error(`Error fetching chapters from DB for project ${projectId}:`, chaptersError.message);
+    return [];
+  }
+
+  if (!chaptersFromDb) {
+    return []; // No chapters found, or an unexpected issue
+  }
 
   // Process chapters to add word_count and scene_count
-  const processedChapters = chaptersFromApi.map(chapter => {
+  const processedChapters = chaptersFromDb.map(chapter => {
     let chapterWordCount = 0;
     const chapterSceneCount = chapter.scenes?.length || 0;
 

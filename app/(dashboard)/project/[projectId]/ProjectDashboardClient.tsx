@@ -1,10 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 // Import all types directly from @/lib/types
-import type { Project, Chapter, Genre, Scene } from "@/lib/types";
-import { getChaptersByProjectId } from "@/lib/data/chapters";
+import type {
+  Project,
+  Chapter,
+  Genre,
+  Scene,
+  Character,
+  // CharacterFormValues, // Not directly used here anymore, CharacterFormData from editor is based on UpdateCharacterValues
+} from "@/lib/types";
+// import { getChaptersByProjectId } from "@/lib/data/chapters";
 import { getScenesByChapterId } from "@/lib/data/scenes";
+import {
+  getCharacters,
+  getCharacter,
+  updateCharacter,
+  deleteCharacter as deleteCharacterData,
+} from "@/lib/data/characters";
 import { toast } from "sonner";
 import { Geist } from "next/font/google"; // Import Geist
 import { countWords } from "@/lib/utils"; // Import countWords
@@ -16,8 +29,14 @@ import { ContextualHeader } from "@/components/ui/ContextualHeader";
 // import { ContextualNavControls } from "@/components/ui/ContextualNavControls"; // Removed as it's not used directly
 import { IconButton } from "@/components/ui/IconButton";
 import { ManuscriptEditor } from "@/components/editors/ManuscriptEditor";
+import {
+  CharacterCardEditor,
+  type CharacterFormData,
+} from "@/components/editors/CharacterCardEditor";
 import { CreateChapterModal } from "@/components/manuscript/CreateChapterModal";
-import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal"; // Import the new modal
+import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal";
+import { CreateCharacterModal } from "@/components/characters/CreateCharacterModal";
+import { CharacterList } from "@/components/characters/CharacterList";
 import { PlusCircle, ArrowLeft } from "lucide-react";
 
 // Define view states for the manuscript section
@@ -31,14 +50,16 @@ const geistSans = Geist({
 
 interface ProjectDashboardClientProps {
   project: Project & { genres: Genre | null };
-  // initialChapters: Chapter[]; // Will fetch chapters internally
-  // We might pass initial scenes for the first chapter or handle fetching them
+  activeSection?: string; // Made optional, AppShell will inject it
+  onSectionChange?: (sectionId: string) => void; // Made optional
 }
 
 export function ProjectDashboardClient({
   project,
-}: ProjectDashboardClientProps) {
-  const [activeSection, setActiveSection] = useState<string>("manuscript"); // 'manuscript', 'outline', etc.
+  activeSection = "manuscript", // Provide default if not passed, though AppShell should always pass it
+}: // onSectionChange,
+ProjectDashboardClientProps) {
+  // Removed internal activeSection state
   const [manuscriptView, setManuscriptView] =
     useState<ManuscriptView>("chapters");
 
@@ -56,22 +77,36 @@ export function ProjectDashboardClient({
     useState(false);
   const [isCreateSceneModalOpen, setIsCreateSceneModalOpen] = useState(false);
 
-  const fetchProjectChapters = async () => {
+  // Character states
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [isLoadingCharactersData, setIsLoadingCharactersData] = useState(false);
+  const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(
+    null
+  );
+  const [isCreateCharacterModalOpen, setIsCreateCharacterModalOpen] =
+    useState(false);
+
+  const fetchProjectChapters = useCallback(async () => {
     setIsLoadingChapters(true);
     try {
-      const fetchedChapters = await getChaptersByProjectId(project.id);
+      const response = await fetch(`/api/projects/${project.id}/chapters`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({
+          error: "Failed to load chapters and parse error response.",
+        }));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+      const fetchedChapters = (await response.json()) as Chapter[];
       setChapters(fetchedChapters);
-      // Optionally, select the first chapter automatically
-      // if (fetchedChapters.length > 0 && !selectedChapter) {
-      //   handleChapterSelect(fetchedChapters[0]);
-      // }
     } catch (error) {
       console.error("Failed to fetch chapters:", error);
-      toast.error("Failed to load chapters.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load chapters."
+      );
     } finally {
       setIsLoadingChapters(false);
     }
-  };
+  }, [project.id]); // Added missing dependency array for useCallback
 
   useEffect(() => {
     if (
@@ -81,20 +116,45 @@ export function ProjectDashboardClient({
     ) {
       fetchProjectChapters();
     }
-  }, [project.id, activeSection, manuscriptView]); // Removed fetchProjectChapters from deps array as it's defined outside
+  }, [project.id, activeSection, manuscriptView, fetchProjectChapters]);
 
-  // This function will be passed to PrimarySidebar later or handled by routing
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleSectionChange = (sectionId: string) => {
-    setActiveSection(sectionId);
+  const fetchProjectCharacters = useCallback(async () => {
+    if (!project.id) return;
+    setIsLoadingCharactersData(true);
+    try {
+      const fetchedCharacters = await getCharacters(project.id);
+      setCharacters(fetchedCharacters);
+    } catch (error) {
+      console.error("Failed to fetch characters:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load characters."
+      );
+    } finally {
+      setIsLoadingCharactersData(false);
+    }
+  }, [project.id]);
+
+  useEffect(() => {
+    if (project.id && activeSection === "characters") {
+      fetchProjectCharacters();
+    }
+  }, [project.id, activeSection, fetchProjectCharacters]);
+
+  // Effect to reset views when activeSection (prop) changes
+  useEffect(() => {
     // Reset manuscript specific views when changing main section
-    if (sectionId !== "manuscript") {
+    if (activeSection !== "manuscript") {
       setManuscriptView("chapters");
       setSelectedChapter(null);
       setSelectedScene(null);
       setScenesForSelectedChapter([]);
     }
-  };
+    // Reset character specific views
+    if (activeSection !== "characters") {
+      setSelectedCharacter(null);
+    }
+    // Add other section resets if necessary
+  }, [activeSection]);
 
   const fetchScenesForChapter = async (chapterId: string) => {
     setIsLoadingScenes(true);
@@ -225,6 +285,102 @@ export function ProjectDashboardClient({
           setCurrentSceneWordCount(reFetchedScene.word_count || 0);
         }
       }
+    }
+  };
+
+  // Character Handlers
+  const handleCharacterSelect = async (characterId: string) => {
+    // Attempt to find in current list first
+    const existingCharacter = characters.find((c) => c.id === characterId);
+    if (existingCharacter && existingCharacter.description !== undefined) {
+      // Check if full data is likely present
+      setSelectedCharacter(existingCharacter);
+      return;
+    }
+    // If not found or potentially partial, fetch full details
+    try {
+      const characterDetails = await getCharacter(project.id, characterId);
+      setSelectedCharacter(characterDetails);
+    } catch (error) {
+      toast.error("Failed to load character details.");
+      console.error("Error fetching character details:", error);
+    }
+  };
+
+  const handleOpenCreateCharacterModal = () => {
+    setIsCreateCharacterModalOpen(true);
+  };
+
+  const handleCharacterCreated = (newCharacter: Character) => {
+    setCharacters((prev) =>
+      [...prev, newCharacter].sort((a, b) => a.name.localeCompare(b.name))
+    );
+    setSelectedCharacter(newCharacter); // Optionally auto-select
+    setIsCreateCharacterModalOpen(false);
+  };
+
+  // This function updates state after a successful API call
+  const processCharacterUpdate = (updatedCharacter: Character) => {
+    setCharacters((prev) =>
+      prev
+        .map((c) => (c.id === updatedCharacter.id ? updatedCharacter : c))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    );
+    if (selectedCharacter?.id === updatedCharacter.id) {
+      setSelectedCharacter(updatedCharacter);
+    }
+    toast.success(`Character "${updatedCharacter.name}" updated.`);
+  };
+
+  // This function is called by CharacterCardEditor's onSave
+  const handleSaveCharacterEditorData = async (
+    editorData: CharacterFormData
+  ) => {
+    if (!selectedCharacter) {
+      toast.error("No character selected to save.");
+      return;
+    }
+
+    // The editorData is already in the shape of UpdateCharacterValues (potentially with id)
+    // We need to ensure we pass only the fields relevant for the update to the API.
+    // The `updateCharacter` function expects `UpdateCharacterValues`.
+    // `CharacterFormData` includes `id`, which `UpdateCharacterValues` does not.
+    // Prefix id with _ to indicate it's intentionally not used in this scope.
+    const { id: _id, ...updatePayload } = editorData;
+
+    try {
+      const updatedCharacterFromApi = await updateCharacter(
+        project.id,
+        selectedCharacter.id, // Use the ID of the character being edited
+        updatePayload // Pass the payload which matches UpdateCharacterValues
+      );
+      processCharacterUpdate(updatedCharacterFromApi);
+    } catch (error) {
+      console.error("Failed to save character from editor:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not save character details."
+      );
+    }
+  };
+
+  const handleCharacterDeleted = async (characterId: string) => {
+    if (!selectedCharacter || selectedCharacter.id !== characterId) {
+      toast.error("No character selected or ID mismatch for deletion.");
+      return;
+    }
+    const characterNameToDelete = selectedCharacter.name;
+    try {
+      await deleteCharacterData(project.id, characterId);
+      setCharacters((prev) => prev.filter((c) => c.id !== characterId));
+      setSelectedCharacter(null);
+      toast.success(`Character "${characterNameToDelete}" deleted.`);
+    } catch (error) {
+      console.error("Failed to delete character:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Could not delete character."
+      );
     }
   };
 
@@ -366,6 +522,67 @@ export function ProjectDashboardClient({
     );
   };
 
+  const renderCharactersView = () => {
+    const middleColumnContent = (
+      <>
+        <ContextualHeader
+          title="Characters"
+          navControls={
+            <IconButton
+              icon={PlusCircle}
+              aria-label="New Character"
+              onClick={handleOpenCreateCharacterModal}
+            />
+          }
+        />
+        <CharacterList
+          characters={characters}
+          selectedCharacterId={selectedCharacter?.id}
+          onSelectCharacter={handleCharacterSelect}
+          onCreateNewCharacter={handleOpenCreateCharacterModal}
+          isLoading={isLoadingCharactersData}
+        />
+      </>
+    );
+
+    const mainDetailColumnContent = (
+      <>
+        {selectedCharacter ? (
+          <CharacterCardEditor
+            key={selectedCharacter.id} // Ensure re-render when character changes
+            initialData={{
+              id: selectedCharacter.id,
+              name: selectedCharacter.name,
+              description: selectedCharacter.description || "",
+              notes: selectedCharacter.notes || "",
+              image_url:
+                typeof selectedCharacter.image_url === "string" ||
+                selectedCharacter.image_url === null
+                  ? selectedCharacter.image_url
+                  : undefined,
+            }}
+            // projectId is not a prop of CharacterCardEditor, it's handled by data functions
+            onSave={handleSaveCharacterEditorData}
+            onDelete={() => handleCharacterDeleted(selectedCharacter.id)}
+          />
+        ) : (
+          <div className="p-8 flex items-center justify-center h-full">
+            <p className="text-muted-foreground">
+              Select a character to view details, or create a new one.
+            </p>
+          </div>
+        )}
+      </>
+    );
+
+    return (
+      <SecondaryViewLayout
+        middleColumn={middleColumnContent}
+        mainDetailColumn={mainDetailColumnContent}
+      />
+    );
+  };
+
   // Main render based on activeSection
   // For now, only manuscript is partially implemented
   return (
@@ -374,9 +591,7 @@ export function ProjectDashboardClient({
       {activeSection === "outline" && (
         <div className="p-4">Outline View (Not Implemented)</div>
       )}
-      {activeSection === "characters" && (
-        <div className="p-4">Characters View (Not Implemented)</div>
-      )}
+      {activeSection === "characters" && renderCharactersView()}
       {activeSection === "world" && (
         <div className="p-4">World Notes View (Not Implemented)</div>
       )}
@@ -391,13 +606,9 @@ export function ProjectDashboardClient({
           isOpen={isCreateChapterModalOpen}
           onClose={() => setIsCreateChapterModalOpen(false)}
           onChapterCreated={(newChapter) => {
-            // Add to local state and optionally select
             setChapters((prev) =>
               [...prev, newChapter].sort((a, b) => a.order - b.order)
             );
-            // Or refetch all chapters:
-            // fetchProjectChapters();
-            // handleChapterSelect(newChapter); // Optionally auto-select new chapter
             setIsCreateChapterModalOpen(false);
           }}
         />
@@ -413,10 +624,17 @@ export function ProjectDashboardClient({
             setScenesForSelectedChapter((prev) =>
               [...prev, newScene].sort((a, b) => a.order - b.order)
             );
-            // Optionally auto-select new scene
-            // handleSceneSelect(newScene);
             setIsCreateSceneModalOpen(false);
           }}
+        />
+      )}
+
+      {isCreateCharacterModalOpen && (
+        <CreateCharacterModal
+          projectId={project.id}
+          isOpen={isCreateCharacterModalOpen}
+          onClose={() => setIsCreateCharacterModalOpen(false)}
+          onCharacterCreated={handleCharacterCreated}
         />
       )}
     </>

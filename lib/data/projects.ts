@@ -1,35 +1,41 @@
-import { cookies } from "next/headers";
 import type { Project, Genre } from "@/lib/types";
 import { getChaptersByProjectId } from "./chapters"; // Import the function to get chapters
+import { createClient } from "@/lib/supabase/server"; // Import Supabase server client
 
 export async function getProjectById(projectId: string): Promise<(Project & { genres: Genre | null }) | null> {
-  const cookieStore = await cookies(); // Await cookies()
-  // Ensure NEXT_PUBLIC_APP_URL is set in your environment variables
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) {
-    console.error("NEXT_PUBLIC_APP_URL is not set. API calls will fail.");
-    // Depending on strictness, you might throw an error or return null
-    // For now, returning null to allow the caller to handle it (e.g., with notFound())
+  const supabase = await createClient();
+
+  // Get current user to ensure authenticated access and for project ownership check
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    console.error(`Unauthorized attempt to fetch project ${projectId} in lib/data/projects.ts:`, userError?.message);
     return null;
   }
 
-  const response = await fetch(`${appUrl}/api/projects/${projectId}`, {
-    headers: {
-      Cookie: cookieStore.toString(), // Forward cookies for authentication
-    },
-    cache: "no-store", // Or configure caching as needed, e.g., 'force-cache' or revalidate options
-  });
+  // Fetch project directly from the database, including genre data
+  // Also verify ownership by checking user_id
+  const { data: projectData, error: projectError } = await supabase
+    .from('projects')
+    .select(`
+      *,
+      genres (
+        id,
+        name,
+        created_at
+      )
+    `)
+    .eq('id', projectId)
+    .eq('user_id', user.id)
+    .single();
 
-  if (!response.ok) {
-    if (response.status === 404) {
-      return null; // Project not found
+  if (projectError) {
+    console.error(`Error fetching project ${projectId} from DB:`, projectError.message);
+    if (projectError.code === 'PGRST116') { // Code for "Not a single row was found"
+      return null; // Project not found or access denied
     }
-    // Log other errors but still return null to let the page handle with notFound() or an error message
-    console.error(`Error fetching project ${projectId}: ${response.status} ${response.statusText}`);
-    return null;
+    return null; // Other error
   }
-  
-  const projectData = await response.json() as (Project & { genres: Genre | null });
 
   if (!projectData) {
     return null;

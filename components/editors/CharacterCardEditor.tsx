@@ -2,26 +2,23 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-// Assuming you'll have a Button and Input component similar to shadcn/ui
-// For now, using basic HTML elements or placeholders.
-// import { Button } from "@/components/ui/button"; // Placeholder
-// import { Input } from "@/components/ui/input"; // Placeholder
-// import { Textarea } from "@/components/ui/textarea"; // Placeholder
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 
-// Define a basic structure for character data
-interface CharacterData {
-  id?: string; // Optional, if editing an existing character
-  name: string;
-  backstory: string;
-  traits: string; // Could be a comma-separated string or an array
-  imageUrl?: string;
-  // Add more fields as needed based on your application's requirements
+import { type UpdateCharacterValues } from "@/lib/schemas/character.schema";
+
+// Use UpdateCharacterValues for the data structure, adding id
+export interface CharacterFormData extends UpdateCharacterValues {
+  id?: string;
+  // image_url is already in UpdateCharacterValues
 }
 
 interface CharacterCardEditorProps {
-  initialData?: CharacterData;
-  onSave: (data: CharacterData) => void | Promise<void>;
+  initialData?: CharacterFormData;
+  onSave: (data: CharacterFormData) => void | Promise<void>;
   onCancel?: () => void;
+  onDelete?: () => void | Promise<void>;
   className?: string;
 }
 
@@ -29,14 +26,15 @@ export function CharacterCardEditor({
   initialData,
   onSave,
   onCancel,
+  onDelete,
   className,
 }: CharacterCardEditorProps) {
-  const [character, setCharacter] = useState<CharacterData>(
+  const [character, setCharacter] = useState<CharacterFormData>(
     initialData || {
       name: "",
-      backstory: "",
-      traits: "",
-      imageUrl: "",
+      description: "",
+      notes: "",
+      image_url: "",
     }
   );
 
@@ -64,7 +62,7 @@ export function CharacterCardEditor({
         reader.onloadend = () => {
           setCharacter((prev) => ({
             ...prev,
-            imageUrl: reader.result as string,
+            image_url: reader.result as string,
           }));
         };
         reader.readAsDataURL(file);
@@ -93,15 +91,15 @@ export function CharacterCardEditor({
         {/* Image Upload Area */}
         <div className="md:col-span-1 flex flex-col items-center">
           <label
-            htmlFor="imageUrl"
+            htmlFor="image_url"
             className="block text-sm font-medium text-muted-foreground mb-2"
           >
             Character Image
           </label>
           <div className="w-48 h-48 bg-muted rounded-md flex items-center justify-center mb-2 overflow-hidden">
-            {character.imageUrl ? (
+            {character.image_url ? (
               <img
-                src={character.imageUrl}
+                src={character.image_url}
                 alt={character.name || "Character"}
                 className="w-full h-full object-cover"
               />
@@ -111,8 +109,8 @@ export function CharacterCardEditor({
           </div>
           <input
             type="file"
-            id="imageUrl"
-            name="imageUrl"
+            id="image_url"
+            name="image_url"
             accept="image/*"
             onChange={handleImageUpload}
             className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
@@ -128,33 +126,14 @@ export function CharacterCardEditor({
             >
               Name
             </label>
-            <input // Replace with your Input component
+            <Input
               type="text"
               name="name"
               id="name"
               value={character.name}
               onChange={handleChange}
               required
-              className="mt-1 block w-full rounded-md border-border bg-input shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2"
               placeholder="Character's full name"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="traits"
-              className="block text-sm font-medium text-muted-foreground"
-            >
-              Key Traits
-            </label>
-            <input // Replace with your Input component
-              type="text"
-              name="traits"
-              id="traits"
-              value={character.traits}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-border bg-input shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2"
-              placeholder="e.g., Brave, Curious, Stubborn"
             />
           </div>
         </div>
@@ -162,38 +141,63 @@ export function CharacterCardEditor({
 
       <div>
         <label
-          htmlFor="backstory"
+          htmlFor="description"
           className="block text-sm font-medium text-muted-foreground"
         >
-          Backstory
+          Description
         </label>
-        <textarea // Replace with your Textarea component
-          name="backstory"
-          id="backstory"
-          value={character.backstory}
+        <Textarea
+          name="description"
+          id="description"
+          value={character.description || ""}
           onChange={handleChange}
-          rows={6}
-          className="mt-1 block w-full rounded-md border-border bg-input shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2"
-          placeholder="Describe the character's history, motivations, and significant life events."
+          rows={4}
+          placeholder="A brief description of the character (physical appearance, key personality aspects, etc.)."
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="notes"
+          className="block text-sm font-medium text-muted-foreground"
+        >
+          Notes
+        </label>
+        <Textarea
+          name="notes"
+          id="notes"
+          value={character.notes || ""}
+          onChange={handleChange}
+          rows={8}
+          placeholder="Detailed notes about the character, including backstory, motivations, relationships, character arc, etc. This can be extensive."
         />
       </div>
 
       <div className="flex justify-end space-x-3 pt-4">
-        {onCancel && (
-          <button // Replace with your Button component (variant="outline")
+        {onDelete && (
+          <Button
             type="button"
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium rounded-md border border-border text-muted-foreground hover:bg-muted/50"
+            variant="destructive"
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Are you sure you want to delete this character? This action cannot be undone."
+                )
+              ) {
+                onDelete();
+              }
+            }}
           >
-            Cancel
-          </button>
+            Delete
+          </Button>
         )}
-        <button // Replace with your Button component
-          type="submit"
-          className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          Save Character
-        </button>
+        <div className="flex-grow" /> {/* Spacer */}
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit">Save Character</Button>
       </div>
     </form>
   );

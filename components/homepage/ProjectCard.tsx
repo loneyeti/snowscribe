@@ -23,7 +23,7 @@ const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
       projectData;
 
     return (
-      <Link href={`/project/${id}`} passHref legacyBehavior>
+      <Link href={`/project/${id}`} passHref>
         <div
           ref={ref}
           className={cn(
