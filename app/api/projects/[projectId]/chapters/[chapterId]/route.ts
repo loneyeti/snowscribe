@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { verifyProjectOwnership } from '@/lib/supabase/guards'; // Import the guard
 import { updateChapterSchema } from '@/lib/schemas/chapter.schema';
 
 interface ChapterParams {
@@ -22,12 +23,19 @@ export async function GET(request: Request, { params }: { params: ChapterParams 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Verify project ownership first
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
+  }
+
+  // If project ownership is verified, proceed to fetch the specific chapter
   const { data: chapter, error: chapterError } = await supabase
     .from('chapters')
     .select('*')
     .eq('id', chapterId)
-    .eq('project_id', projectId) // Ensure chapter belongs to the project
-    .eq('user_id', user.id)      // Ensure chapter belongs to the user
+    .eq('project_id', projectId) // Ensure chapter belongs to the verified project
+    // .eq('user_id', user.id)      // Redundant if RLS is properly set up
     .single();
 
   if (chapterError) {
@@ -60,6 +68,13 @@ export async function PUT(request: Request, { params }: { params: ChapterParams 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Verify project ownership first
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
+  }
+
+  // If project ownership is verified, proceed with chapter update logic
   let jsonData;
   try {
     jsonData = await request.json();
@@ -81,8 +96,8 @@ export async function PUT(request: Request, { params }: { params: ChapterParams 
     .from('chapters')
     .select('id')
     .eq('id', chapterId)
-    .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    .eq('project_id', projectId) // Ensure chapter belongs to the verified project
+    // .eq('user_id', user.id) // Redundant with RLS
     .single();
 
   if (fetchError || !existingChapter) {
@@ -93,8 +108,8 @@ export async function PUT(request: Request, { params }: { params: ChapterParams 
     .from('chapters')
     .update(validationResult.data)
     .eq('id', chapterId)
-    .eq('project_id', projectId) // Redundant but safe
-    .eq('user_id', user.id)
+    // .eq('project_id', projectId) // Already ensured by existingChapter check and RLS
+    // .eq('user_id', user.id) // Redundant with RLS
     .select()
     .single();
 
@@ -121,25 +136,29 @@ export async function DELETE(request: Request, { params }: { params: ChapterPara
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify chapter exists, belongs to the project and user before deleting
+  // Verify project ownership first
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
+  }
+
+  // If project ownership is verified, proceed with chapter deletion logic
+  // Still need to check if the chapter itself exists within this project before deleting
   const { data: existingChapter, error: fetchError } = await supabase
     .from('chapters')
     .select('id')
     .eq('id', chapterId)
-    .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    .eq('project_id', projectId) // This check is crucial
     .single();
 
   if (fetchError || !existingChapter) {
-    return NextResponse.json({ error: 'Chapter not found or access denied for deletion' }, { status: 404 });
+    return NextResponse.json({ error: 'Chapter not found in this project or access denied for deletion' }, { status: 404 });
   }
 
   const { error: deleteError } = await supabase
     .from('chapters')
     .delete()
-    .eq('id', chapterId)
-    .eq('project_id', projectId) // Redundant but safe
-    .eq('user_id', user.id);
+    .eq('id', chapterId); // Only need to match chapterId for delete after checks
 
   if (deleteError) {
     console.error(`Error deleting chapter ${chapterId} for project ${projectId}:`, deleteError);

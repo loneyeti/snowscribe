@@ -6,7 +6,7 @@ import {
   createCharacterSchema, 
   updateCharacterSchema 
 } from "@/lib/schemas/character.schema";
-import { createClient } from "@/lib/supabase/server"; // Import Supabase server client
+// import { createClient } from "@/lib/supabase/server"; // No longer needed here
 import { cookies } from 'next/headers'; // Import cookies
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -14,29 +14,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 export async function getCharacters(
   projectId: string
 ): Promise<Character[]> {
-  const supabase = await createClient();
+  // The responsibility of checking project ownership and user authentication
+  // is now delegated to the API endpoint. This function just fetches data.
+  // Ensure the API endpoint `/api/projects/${projectId}/characters` correctly
+  // handles authentication and authorization.
 
-  // Get current user to ensure authenticated access and for project ownership check
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    console.error(`Unauthorized attempt to fetch characters for project ${projectId} in lib/data/characters.ts:`, userError?.message);
-    return [];
-  }
-
-    // Verify that the project exists and belongs to the authenticated user
-    const { data: project, error: projectFetchError } = await supabase
-    .from('projects')
-    .select('id')
-    .eq('id', projectId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (projectFetchError || !project) {
-    console.error(`Project not found or access denied for project ${projectId} in lib/data/chapters.ts:`, projectFetchError?.message);
-    return [];
-  }
-  
   try {
     const cookieStore = await cookies();
     const cookieHeader = cookieStore.getAll().map((cookie: { name: string; value: string }) => `${cookie.name}=${cookie.value}`).join('; ');

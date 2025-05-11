@@ -4,7 +4,7 @@
 
 _(Updated: 2025-05-11)_
 
-Refactoring of `lib/data` files to ensure all database interactions go through API routes is complete. The next focus is Authentication UI Refinements and then API for Relationships.
+Data model for the Outlining feature has been refactored. The next focus is implementing the UI for the Outlining feature, followed by Authentication UI Refinements and API for Relationships (Scene Tags, Scene Characters).
 
 ## Recent Changes
 
@@ -58,40 +58,59 @@ Refactoring of `lib/data` files to ensure all database interactions go through A
   - Fixed an issue where server-side `fetch` calls from `lib/data/*` functions to internal API routes were failing authentication.
   - The root cause was that cookies were not being automatically forwarded by `fetch`.
   - **Solution**: Modified `lib/data/projects.ts` to explicitly read cookies using `cookies()` from `next/headers` and add them to the `Cookie` header of the `fetch` request. This ensures the internal API calls are authenticated correctly. This pattern will need to be applied to other similar data fetching functions.
+- **Centralized Project Ownership Verification**:
+  - Created a `verifyProjectOwnership` guard in `lib/supabase/guards.ts`.
+  - Refactored all relevant API routes (`/api/projects/[projectId]/...` and its sub-routes for chapters, scenes, characters, etc.) to use this guard for consistent and DRY project ownership checks before proceeding with operations.
+  - Removed direct Supabase ownership queries from `lib/data/characters.ts` as this is now handled by the API layer.
+- **Implemented World Building & Research Notes Feature:**
+  - Created Zod schemas for world building notes (`lib/schemas/worldBuildingNote.schema.ts`).
+  - Implemented API route handlers for CRUD operations on world notes (`app/api/projects/[projectId]/world-notes/` and `app/api/projects/[projectId]/world-notes/[noteId]/`).
+  - Created data access functions for world notes (`lib/data/worldBuildingNotes.ts`) that call the API routes with cookie forwarding.
+  - Developed UI components: `WorldNoteList.tsx`, `CreateWorldNoteModal.tsx`, and `WorldNoteEditor.tsx` in `components/world-notes/`.
+  - Integrated the World Building Notes section into `ProjectDashboardClient.tsx`, including state management, data fetching, and event handling.
+  - Added `@radix-ui/react-alert-dialog` dependency and created `components/ui/AlertDialog.tsx` for delete confirmations.
+- **Fixed World Notes Navigation**: Corrected a mismatch between the navigation ID used in `PrimarySidebar.tsx` (`"world"`) and the ID expected by `ProjectDashboardClient.tsx` (`"world-notes"`) for the World Building Notes section. Changed ID in `PrimarySidebar.tsx` to `"world-notes"` to ensure the correct view is rendered.
+- **Refactored Outline Data Model (2025-05-11):**
+  - Simplified the data model for the outlining feature to directly integrate with `projects` and `scenes` tables.
+  - Removed the `outline_items` table by commenting out its creation in `supabase/migrations/20250509074219_create_outline_items_table.sql`.
+  - Created a new migration (`supabase/migrations/20250511204700_add_outline_fields.sql`) to:
+    - Add `one_page_synopsis TEXT NULL` to the `projects` table (for the one-page synopsis). The existing `log_line` will be used for the one-sentence synopsis.
+    - Add `outline_description TEXT NULL` to the `scenes` table (for brief scene outline descriptions).
+    - Add `pov_character_id UUID NULL REFERENCES characters(id) ON DELETE SET NULL` to the `scenes` table.
+  - Updated `lib/types/index.ts`: removed `OutlineItem` interface, added new fields to `Project` and `Scene` interfaces.
+  - Deleted `lib/schemas/outlineItem.schema.ts`.
+  - Deleted API routes related to `outline-items` (`app/api/projects/[projectId]/outline-items/`).
 
 ## Next Steps
 
 The following are the prioritized next steps:
 
-1.  **Manuscript Editor Integration**:
+1.  **Implement Outline Feature UI**:
 
-    - [x] Integrate the user-provided `components/editors/ManuscriptEditor.tsx` into the scene view within the project dashboard.
-    - [x] Connect the editor to scene data API endpoints (fetch and save scene content for `selectedScene`).
-    - [x] Ensure word count tracking display is functional and updates in real-time based on editor content.
+    - [ ] Design and implement UI components for viewing and editing the one-sentence synopsis (`projects.log_line`) and one-page synopsis (`projects.one_page_synopsis`).
+    - [ ] Design and implement UI for listing scenes within chapters in an outline view.
+    - [ ] Allow editing of `scenes.outline_description` and `scenes.pov_character_id` from the outline view.
+    - [ ] Ensure changes in the outline view are reflected in the manuscript view and vice-versa, leveraging the shared data model.
 
-2.  **Project Dashboard & Navigation**:
+2.  **API for Relationships (supporting Outline & Manuscript)**:
 
-    - [x] Implement basic Character list, creation, and display of selected character in `CharacterCardEditor`.
-    - [x] Implement delete functionality for characters within `CharacterCardEditor`.
-    - [x] Address data mapping mismatch between `CharacterCardEditor`'s internal `CharacterData` (fields like `backstory`, `traits`) and the main `Character` type / `CharacterFormValues` (fields like `description`, `notes`).
-    - [x] Ensure all fields from the `character.schema.ts` (e.g., `description`, `notes`) are editable in `CharacterCardEditor.tsx`.
+    - [ ] Implement API endpoints for managing Scene Tags (applying/removing tags to scenes).
+    - [ ] Implement API endpoints for Scene Characters (linking/unlinking characters to scenes, distinct from `pov_character_id`).
 
-3.  **Project Dashboard & Navigation**:
-
-    - [x] Fully implement navigation between different sections of a project (Manuscript, Outline, Characters, etc.) using `AppShell` and `PrimarySidebar`. State is managed in `AppShell` and propagated to `ProjectDashboardClient`.
-
-4.  **Authentication UI Refinements**:
+3.  **Authentication UI Refinements**:
 
     - [ ] Refine error handling and user feedback for all auth flows (login, signup, password reset) using `sonner` for toasts.
 
-5.  **API for Relationships**:
-
-    - [ ] Implement API endpoints for managing Scene Tags (applying/removing tags to scenes).
-    - [ ] Implement API endpoints for Scene Characters (linking/unlinking characters to scenes).
-
-6.  **Core UI Components**:
-    - Continue refinement and expansion of the UI component library as new features are developed.
+4.  **Core UI Components & Manuscript Refinements**:
+    - Continue refinement and expansion of the UI component library.
     - Improve display of chapter/scene metadata (e.g., scene counts, word counts) in lists.
+    - Ensure Manuscript Editor (`components/editors/ManuscriptEditor.tsx`) remains functional and performant.
+
+_Previously completed/lower priority items moved or subsumed:_
+
+- Manuscript Editor Integration (largely complete, ongoing refinements fall under Core UI)
+- Project Dashboard & Navigation for Characters (complete)
+- World Building & Research Notes UI (complete for core CRUD)
 
 ## Active Decisions and Considerations
 
@@ -144,6 +163,7 @@ The manuscript editor needs careful consideration:
 - **Sonner for Notifications**: Utilize `sonner` for user-facing toast notifications for actions, errors, and successes.
 - **Client-side data fetching within feature components**: For dynamic lists like chapters and scenes within the dashboard, components fetch their own data using functions from `lib/data/*` which in turn call internal API routes.
 - **Asynchronous Dynamic APIs (Next.js 15+):** Ensure `params` and `cookies()` are `await`ed in server-side code (Server Components, Route Handlers, server-side data fetching functions).
+- **Project Ownership Guard**: Utilize the `verifyProjectOwnership` guard in `lib/supabase/guards.ts` at the beginning of API route handlers for project-specific resources to ensure the user is authorized to access/modify the project. This complements RLS by providing an early, explicit check.
 
 ## Learnings and Project Insights
 
@@ -161,3 +181,6 @@ The manuscript editor needs careful consideration:
 - Client-side components that manage their own data fetching (like `ProjectDashboardClient` for chapters/scenes) provide good encapsulation but require careful state management for loading, errors, and updates.
 - Next.js 15 requires careful handling of dynamic APIs (`params`, `cookies()`, `headers()`) by `await`ing them in server contexts.
 - **Server-Side Internal API Calls & Cookies**: When making server-side `fetch` requests from data-fetching functions (e.g., in `lib/data/*`) to internal API routes, cookies are not automatically forwarded by `fetch` as reliably as expected. It's necessary to explicitly read cookies using `cookies()` from `next/headers` and attach them to the `Cookie` header of the outgoing `fetch` request to ensure proper authentication of these internal calls.
+- **Centralized Authorization Logic**: The introduction of `verifyProjectOwnership` guard promotes DRY principles and centralizes a critical aspect of authorization logic for project-related data, making API routes cleaner and more consistent.
+  - **Navigation ID Consistency**: Ensured consistency in navigation item IDs between `PrimarySidebar.tsx` and `ProjectDashboardClient.tsx` to correctly render different project sections. A mismatch was causing the World Notes section to not display.
+- **Outline Data Model Simplification (2025-05-11)**: Refined the outline feature requirements leading to a significant simplification of its data model. The new model ties outlining directly to existing `projects` and `scenes` tables (by adding fields like `one_page_synopsis` to projects, and `outline_description`, `pov_character_id` to scenes) instead of using a separate, more complex `outline_items` table. This enhances data consistency and aligns better with the product vision of a unified manuscript and outline structure.

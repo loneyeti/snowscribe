@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { verifyProjectOwnership } from '@/lib/supabase/guards'; // Import the guard
 import { createCharacterSchema } from '@/lib/schemas/character.schema';
 
 interface ProjectParams {
@@ -21,16 +22,10 @@ export async function GET(request: Request, { params }: { params: ProjectParams 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify the project exists and belongs to the user
-  const { data: project, error: projectFetchError } = await supabase
-    .from('projects')
-    .select('id')
-    .eq('id', projectId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (projectFetchError || !project) {
-    return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 });
+  // Verify project ownership
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
   }
 
   const { data: characters, error: charactersError } = await supabase
@@ -63,16 +58,10 @@ export async function POST(request: Request, { params }: { params: ProjectParams
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify the project exists and belongs to the user
-  const { data: project, error: projectFetchError } = await supabase
-    .from('projects')
-    .select('id')
-    .eq('id', projectId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (projectFetchError || !project) {
-    return NextResponse.json({ error: 'Project not found or access denied for creating character' }, { status: 404 });
+  // Verify project ownership
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
   }
 
   let jsonData;

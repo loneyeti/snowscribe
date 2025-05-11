@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { verifyProjectOwnership } from '@/lib/supabase/guards'; // Import the guard
 import { updateCharacterSchema } from '@/lib/schemas/character.schema';
 
 interface CharacterParams {
@@ -22,6 +23,13 @@ export async function GET(request: Request, { params }: { params: CharacterParam
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Verify project ownership first
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
+  }
+
+  // If project ownership is verified, proceed to fetch the specific character
   const { data: character, error: characterError } = await supabase
     .from('characters')
     .select('*')
@@ -60,6 +68,13 @@ export async function PUT(request: Request, { params }: { params: CharacterParam
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Verify project ownership first
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
+  }
+
+  // If project ownership is verified, proceed with character update logic
   let jsonData;
   try {
     jsonData = await request.json();
@@ -121,25 +136,30 @@ export async function DELETE(request: Request, { params }: { params: CharacterPa
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify character exists, belongs to project and user before deleting
+  // Verify project ownership first
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
+  }
+
+  // If project ownership is verified, proceed with character deletion logic
+  // Still need to check if the character itself exists within this project before deleting
   const { data: existingCharacter, error: fetchError } = await supabase
     .from('characters')
     .select('id')
     .eq('id', characterId)
-    .eq('project_id', projectId)
-    // .eq('user_id', user.id) // RLS handles user ownership via project
+    .eq('project_id', projectId) // This check is crucial
     .single();
 
   if (fetchError || !existingCharacter) {
-    return NextResponse.json({ error: 'Character not found or access denied for deletion' }, { status: 404 });
+    // Use 404 if character not found in this project, or if fetchError (e.g. RLS denies if project_id was spoofed)
+    return NextResponse.json({ error: 'Character not found in this project or access denied for deletion' }, { status: 404 });
   }
 
   const { error: deleteError } = await supabase
     .from('characters')
     .delete()
-    .eq('id', characterId);
-    // .eq('project_id', projectId) // Redundant
-    // .eq('user_id', user.id); // Redundant
+    .eq('id', characterId); // Only need to match characterId for delete after checks
 
   if (deleteError) {
     console.error(`Error deleting character ${characterId} for project ${projectId}:`, deleteError);

@@ -25,7 +25,7 @@ const navItemConfigs: NavItemConfig[] = [
   { id: "manuscript", label: "Manuscript", icon: BookOpen },
   { id: "outline", label: "Outline", icon: ListChecks },
   { id: "characters", label: "Characters", icon: Users },
-  { id: "world", label: "World Notes", icon: Globe }, // Renamed "World" to "World Notes" for clarity
+  { id: "world-notes", label: "World Notes", icon: Globe }, // Renamed "World" to "World Notes" for clarity, ID updated
   { id: "ai", label: "AI Assistant", icon: Sparkles }, // Renamed "AI Tools" to "AI Assistant"
 ];
 

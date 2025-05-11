@@ -57,14 +57,21 @@ Snowscribe follows a modern web application architecture using Next.js 15+ with 
 
 ### Authentication Pattern
 
-- Using Supabase Auth with server-side session handling
-- Middleware-based route protection
-- Role-based access control
+- **Core**: Utilizes Supabase Auth for user authentication with server-side session handling (via `@supabase/ssr` and cookie management).
+- **Route Protection**:
+  - **Middleware**: `middleware.ts` is used for protecting pages/routes by validating user sessions. Unauthenticated users are redirected to login for protected areas.
+  - **API Route Authorization**:
+    - All API routes begin by verifying the authenticated user via `supabase.auth.getUser()`.
+    - For routes operating on project-specific data (e.g., `/api/projects/[projectId]/...`), the `verifyProjectOwnership` guard from `lib/supabase/guards.ts` is called immediately after user authentication to ensure the user owns the specified project. This provides a centralized and explicit check before any further processing.
+    - Subsequent database queries for sub-resources (chapters, scenes, etc.) within a verified project context will also typically include checks against `project_id` to ensure data integrity.
+- **Database Level Security**:
+  - **Row Level Security (RLS)**: Supabase RLS policies are crucial for enforcing data access rules at the database level, ensuring users can only access or modify data they own or are permitted to see (e.g., based on `user_id` in the `projects` table and linked tables). The application-level guards complement RLS by providing earlier checks and clearer error handling in the API layer.
 
 ### Data Management and Validation Patterns
 
 - **Entity-Specific Zod Schemas (`lib/schemas`)**: Each core data entity has a corresponding Zod schema file (e.g., `project.schema.ts`). This pattern centralizes validation logic, ensures data integrity at API boundaries, and facilitates type inference for consistent data handling.
 - **Centralized Data Access Layer (`lib/data`)**: Server-side functions for database interactions are grouped in the `lib/data` directory (e.g., `projects.ts`, `chapters.ts`). This abstracts direct Supabase calls, promotes reusability in Server Components and API Routes, and enhances separation of concerns.
+- **Project Ownership Verification Guard (`lib/supabase/guards.ts`)**: A utility function, `verifyProjectOwnership` located in `lib/supabase/guards.ts`, centralizes the logic for checking if a project (and by extension, its sub-resources) belongs to the authenticated user. This guard is used at the beginning of API route handlers that operate on project-specific data to ensure authorization before proceeding. It complements RLS by providing an explicit, application-level check early in the request lifecycle.
 
 ## Component Relationships
 

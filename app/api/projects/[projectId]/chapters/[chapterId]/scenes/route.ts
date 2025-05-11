@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { verifyProjectOwnership } from '@/lib/supabase/guards'; // Import the guard
 import { createSceneSchema } from '@/lib/schemas/scene.schema';
 
 interface ChapterSceneParams {
@@ -22,7 +23,13 @@ export async function GET(request: Request, { params }: { params: ChapterScenePa
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify the chapter (and implicitly the project via user_id on chapter) exists and belongs to the user
+  // First, verify project ownership
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
+  }
+
+  // Then, verify the chapter exists within the verified project
   const { data: chapter, error: chapterFetchError } = await supabase
     .from('chapters')
     .select('id, project_id')
@@ -67,7 +74,13 @@ export async function POST(request: Request, { params }: { params: ChapterSceneP
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify the chapter (and implicitly the project) exists and belongs to the user
+  // First, verify project ownership
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
+  }
+
+  // Then, verify the chapter exists within the verified project
   const { data: chapter, error: chapterFetchError } = await supabase
     .from('chapters')
     .select('id, project_id')

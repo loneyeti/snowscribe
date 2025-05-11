@@ -39,8 +39,8 @@ export async function getProjectById(projectId: string): Promise<(Project & { ge
       },
     });
 
-    console.log(`[getProjectById] Response Status: ${response.status} ${response.statusText}`);
-    console.log(`[getProjectById] Response Headers:`, JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+    // console.log(`[getProjectById] Response Status: ${response.status} ${response.statusText}`);
+    // console.log(`[getProjectById] Response Headers:`, JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
 
     if (!response.ok) {
       let errorBody = 'Could not read error body';

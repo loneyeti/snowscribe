@@ -20,7 +20,7 @@ Snowscribe is built with a modern frontend-focused stack:
 
 A central file `lib/types/index.ts` defines shared TypeScript interfaces for data structures used throughout the application, derived from Supabase table schemas and UI requirements. This ensures type consistency between the frontend and backend.
 
-The content of `lib/types/index.ts` includes interfaces such as `Project`, `Genre`, `Profile`, `Chapter`, `Scene`, `SceneTag`, `SceneAppliedTag`, `Character`, `SceneCharacter`, `WorldBuildingNote`, `OutlineItem`, and `AIInteraction`.
+The content of `lib/types/index.ts` includes interfaces such as `Project`, `Genre`, `Profile`, `Chapter`, `Scene`, `SceneTag`, `SceneAppliedTag`, `Character`, `SceneCharacter`, `WorldBuildingNote`, and `AIInteraction`.
 
 ## `lib/schemas` Directory Pattern
 
@@ -298,3 +298,29 @@ Next.js's built-in `fetch` on the server-side does not reliably or automatically
 
 **Rationale**:
 This explicit forwarding of cookies ensures that the middleware protecting the internal API route receives the necessary authentication tokens to validate the user's session, preventing erroneous unauthenticated errors or redirects for these server-to-server requests. This was identified as a fix for issues where internal API calls were being redirected to login despite the calling Server Component having a valid user session.
+
+### Authorization Utilities (`lib/supabase/guards.ts`)
+
+- **`verifyProjectOwnership` Guard**:
+
+  - **Location**: `lib/supabase/guards.ts`
+  - **Purpose**: This asynchronous function centralizes the logic for verifying that a given `projectId` exists and belongs to the currently authenticated `userId`.
+  - **Usage**: It's called at the beginning of API route handlers that deal with project-specific resources. It takes the Supabase client instance, `projectId`, and `userId` as arguments.
+  - **Return Value**: Returns an object indicating success (with project data, typically just the ID) or failure (with an error message and appropriate HTTP status code).
+  - **Benefits**:
+    - **DRY Principle**: Avoids repetitive ownership checking code in multiple API routes.
+    - **Clarity**: Makes the authorization intent clear at the start of route handlers.
+    - **Complements RLS**: Provides an application-level check before database operations, working in tandem with database-level RLS policies.
+  - **Example Snippet (from an API route)**:
+
+    ```typescript
+    // const supabase = await createClient();
+    // const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // ... handle userError or !user ...
+
+    // const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+    // if (ownershipVerification.error) {
+    //   return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
+    // }
+    // Proceed with route logic if ownership is verified...
+    ```

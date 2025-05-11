@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { verifyProjectOwnership } from '@/lib/supabase/guards';
 import { createWorldBuildingNoteSchema } from '@/lib/schemas/worldBuildingNote.schema';
+import { WorldBuildingNote } from '@/lib/types'; // For casting response
 
 interface ProjectParams {
   projectId: string;
@@ -21,31 +23,23 @@ export async function GET(request: Request, { params }: { params: ProjectParams 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify the project exists and belongs to the user
-  const { data: project, error: projectFetchError } = await supabase
-    .from('projects')
-    .select('id')
-    .eq('id', projectId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (projectFetchError || !project) {
-    return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 });
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
   }
 
   const { data: notes, error: notesError } = await supabase
     .from('world_building_notes')
     .select('*')
     .eq('project_id', projectId)
-    // .eq('user_id', user.id) // Redundant
-    .order('created_at', { ascending: true });
+    .order('title', { ascending: true }); // Order by title for consistency
 
   if (notesError) {
     console.error(`Error fetching world building notes for project ${projectId}:`, notesError);
     return NextResponse.json({ error: 'Failed to fetch world building notes', details: notesError.message }, { status: 500 });
   }
 
-  return NextResponse.json(notes);
+  return NextResponse.json(notes as WorldBuildingNote[]);
 }
 
 // POST /api/projects/[projectId]/world-notes
@@ -63,16 +57,9 @@ export async function POST(request: Request, { params }: { params: ProjectParams
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify the project exists and belongs to the user
-  const { data: project, error: projectFetchError } = await supabase
-    .from('projects')
-    .select('id')
-    .eq('id', projectId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (projectFetchError || !project) {
-    return NextResponse.json({ error: 'Project not found or access denied for creating world note' }, { status: 404 });
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
   }
 
   let jsonData;
@@ -98,7 +85,6 @@ export async function POST(request: Request, { params }: { params: ProjectParams
     .from('world_building_notes')
     .insert({
       project_id: projectId,
-      user_id: user.id,
       title,
       content,
       category,
@@ -111,5 +97,5 @@ export async function POST(request: Request, { params }: { params: ProjectParams
     return NextResponse.json({ error: 'Failed to create world building note', details: insertError.message }, { status: 500 });
   }
 
-  return NextResponse.json(newNote, { status: 201 });
+  return NextResponse.json(newNote as WorldBuildingNote, { status: 201 });
 }

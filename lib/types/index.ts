@@ -10,6 +10,7 @@ export interface Project {
   genre_id?: number | null; // Foreign key to genres table
   genre?: string | null; // Old text field, to be phased out
   log_line?: string | null;
+  one_page_synopsis?: string | null; // Added for outline feature
   target_word_count?: number | null;
   settings?: Record<string, unknown> | null; // JSONB
   created_at: string; // TIMESTAMPTZ
@@ -58,6 +59,10 @@ export interface Scene {
   word_count?: number | null;
   order: number; // "order" is a reserved keyword, maps to "order" column
   notes?: string | null;
+  outline_description?: string | null; // Added for outline feature
+  pov_character_id?: string | null; // Added for outline feature, references characters(id)
+  other_character_ids?: string[]; // Added for outline feature, array of character UUIDs
+  tag_ids?: string[]; // Added for outline feature, array of scene_tag UUIDs
   created_at: string; // TIMESTAMPTZ
   updated_at: string; // TIMESTAMPTZ
 }
@@ -118,20 +123,7 @@ export interface WorldBuildingNote {
   updated_at: string; // TIMESTAMPTZ
 }
 
-// Based on supabase/migrations/20250509074219_create_outline_items_table.sql
-export interface OutlineItem {
-  id: string; // UUID
-  project_id: string; // UUID, references projects
-  parent_id?: string | null; // UUID, references outline_items (self-referencing)
-  title?: string | null;
-  content: string;
-  type?: string | null;
-  order: number; // "order" is a reserved keyword, maps to "order" column
-  associated_scene_id?: string | null; // UUID, references scenes
-  associated_character_id?: string | null; // UUID, references characters
-  created_at: string; // TIMESTAMPTZ
-  updated_at: string; // TIMESTAMPTZ
-}
+// OutlineItem interface removed as the table is being removed.
 
 // Based on supabase/migrations/20250509074322_create_ai_interactions_table.sql
 export interface AIInteraction {

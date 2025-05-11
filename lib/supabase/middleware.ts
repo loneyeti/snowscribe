@@ -35,14 +35,15 @@ export async function updateSession(request: NextRequest) {
 
   // For debugging: Log cookies and user for API requests
   if (request.nextUrl.pathname.startsWith('/api/projects')) {
-    console.log('[Middleware API Check] Path:', request.nextUrl.pathname);
+    // console.log('[Middleware API Check] Path:', request.nextUrl.pathname);
     const allCookies = request.cookies.getAll();
-    console.log('[Middleware API Check] Incoming Cookies:', JSON.stringify(allCookies, null, 2));
+    // console.log('[Middleware API Check] Incoming Cookies:', JSON.stringify(allCookies, null, 2));
     const { data: { user: apiUser }, error: apiUserError } = await supabase.auth.getUser();
     if (apiUserError) {
       console.error('[Middleware API Check] API User Error:', apiUserError.message);
     }
-    console.log('[Middleware API Check] API User Object:', apiUser ? { id: apiUser.id, email: apiUser.email } : null);
+
+    // console.log('[Middleware API Check] API User Object:', apiUser ? { id: apiUser.id, email: apiUser.email } : null);
 
     if (!apiUser && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone();

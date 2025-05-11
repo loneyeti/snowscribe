@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { verifyProjectOwnership } from '@/lib/supabase/guards'; // Import the guard
 import { createChapterSchema } from '@/lib/schemas/chapter.schema';
 import { countWords } from '@/lib/utils'; // Import countWords utility
 import type { Chapter as ChapterType, Scene as SceneType } from '@/lib/types'; // Import types
@@ -23,21 +24,15 @@ export async function GET(request: Request, { params }: { params: ProjectParams 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // First, verify the project exists and belongs to the user
-  const { data: project, error: projectFetchError } = await supabase
-    .from('projects')
-    .select('id')
-    .eq('id', projectId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (projectFetchError || !project) {
-    return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 });
+  // Verify project ownership
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
   }
 
   const { data: chaptersFromDb, error: chaptersError } = await supabase
     .from('chapters')
-    .select('*, scenes(id, content)') // Fetch scenes (id and content) along with chapters
+    .select('*, scenes(*, scene_characters(character_id), scene_applied_tags(tag_id))') // Fetch all scene fields and related character/tag IDs
     .eq('project_id', projectId)
     .order('order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });
@@ -51,34 +46,54 @@ export async function GET(request: Request, { params }: { params: ProjectParams 
     return NextResponse.json([]); // No chapters found or an unexpected issue
   }
 
-  // Process chapters to add word_count and scene_count
-  const processedChapters = chaptersFromDb.map(chapter => {
-    // Explicitly type chapter to include scenes for processing
-    const chapterWithScenes = chapter as Omit<ChapterType, 'word_count' | 'scene_count'> & { scenes: Pick<SceneType, 'id' | 'content'>[] | null };
-    
-    let chapterWordCount = 0;
-    const chapterSceneCount = chapterWithScenes.scenes?.length || 0;
+  // Process chapters to add word_count, scene_count, and fully structured scenes
+  const processedChapters = chaptersFromDb.map(chapter_raw => {
+    // Type for raw chapter data including raw scenes with related character/tag info
+    const chapterWithRawScenes = chapter_raw as Omit<ChapterType, 'word_count' | 'scene_count' | 'scenes'> & {
+      scenes: (Omit<SceneType, 'other_character_ids' | 'tag_ids' | 'word_count'> & {
+        // All direct fields from scenes table are included via scenes(*)
+        scene_characters: { character_id: string }[];
+        scene_applied_tags: { tag_id: string }[];
+      })[] | null;
+    };
 
-    if (chapterWithScenes.scenes) {
-      for (const scene of chapterWithScenes.scenes) {
-        chapterWordCount += countWords(scene.content);
-      }
-    }
-    
-    // Construct the final chapter object to match ChapterType
+    let chapterWordCount = 0;
+    const processedScenes: SceneType[] = (chapterWithRawScenes.scenes || []).map(rawScene => {
+      const sceneWordCount = countWords(rawScene.content); // Calculate word count for the scene
+      chapterWordCount += sceneWordCount; // Add to chapter's total word count
+
+      // Ensure pov_character_id is correctly passed; it comes directly from rawScene
+      // Ensure outline_description is correctly passed; it comes directly from rawScene
+      return {
+        id: rawScene.id,
+        chapter_id: rawScene.chapter_id,
+        title: rawScene.title,
+        content: rawScene.content,
+        order: rawScene.order,
+        notes: rawScene.notes,
+        outline_description: rawScene.outline_description,
+        pov_character_id: rawScene.pov_character_id,
+        created_at: rawScene.created_at,
+        updated_at: rawScene.updated_at,
+        word_count: sceneWordCount, // Assign calculated word_count
+        other_character_ids: (rawScene.scene_characters || []).map(sc => sc.character_id),
+        tag_ids: (rawScene.scene_applied_tags || []).map(sat => sat.tag_id),
+      };
+    });
+
+    const chapterSceneCount = processedScenes.length;
+
+    // Construct the final chapter object to match ChapterType, including processed scenes
     const finalChapter: ChapterType = {
-      id: chapterWithScenes.id,
-      project_id: chapterWithScenes.project_id,
-      title: chapterWithScenes.title,
-      // description: chapterWithScenes.description, // Removed as it's not in ChapterType or DB
-      order: chapterWithScenes.order,
-      created_at: chapterWithScenes.created_at,
-      updated_at: chapterWithScenes.updated_at,
+      id: chapterWithRawScenes.id,
+      project_id: chapterWithRawScenes.project_id,
+      title: chapterWithRawScenes.title,
+      order: chapterWithRawScenes.order,
+      created_at: chapterWithRawScenes.created_at,
+      updated_at: chapterWithRawScenes.updated_at,
       word_count: chapterWordCount,
       scene_count: chapterSceneCount,
-      // scenes array is not part of the final ChapterType by default,
-      // if it were, it should be added here.
-      // For now, we only add calculated counts.
+      scenes: processedScenes, // Include the fully processed scenes array
     };
     return finalChapter;
   });
@@ -101,16 +116,10 @@ export async function POST(request: Request, { params }: { params: ProjectParams
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify the project exists and belongs to the user
-  const { data: project, error: projectFetchError } = await supabase
-    .from('projects')
-    .select('id')
-    .eq('id', projectId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (projectFetchError || !project) {
-    return NextResponse.json({ error: 'Project not found or access denied for creating chapter' }, { status: 404 });
+  // Verify project ownership
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
   }
 
   let jsonData;
