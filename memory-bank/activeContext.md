@@ -2,7 +2,9 @@
 
 ## Current Work Focus
 
-Snowscribe is currently in the initial setup phase. The project has been created with Next.js 15+, TypeScript, and Tailwind CSS as its foundation. The focus is on establishing the core architecture, component structure, and UI/UX principles that will guide the development.
+_(Updated: 2025-05-10)_
+
+The primary focus has been on completing the manuscript editor integration within the project dashboard.
 
 ## Recent Changes
 
@@ -10,35 +12,57 @@ Snowscribe is currently in the initial setup phase. The project has been created
 - Established project goals and requirements in the project brief
 - Defined the system architecture and component structure
 - Documented the technical stack and development environment
-- **Implemented initial Supabase database schema**:
-  - Created migration files for all core tables: `profiles`, `projects`, `chapters`, `scenes`, `scene_tags`, `scene_applied_tags`, `characters`, `scene_characters`, `world_building_notes`, `outline_items`, and `ai_interactions`.
-  - Successfully applied all migrations to the local Supabase instance.
-  - Included RLS policies, triggers for `updated_at`, and a function for `word_count` on scenes.
+- Implemented initial Supabase database schema via migrations.
+- Set up Supabase Auth SSR foundational files (`client.ts`, `server.ts`, `middleware.ts`).
+- **Implemented API Route Handlers and Zod Schemas for core entities.**
+- All API routes include user authentication checks and input validation using Zod.
+- **Implemented a basic authentication flow.**
+- **Developed a basic homepage.**
+- **Defined shared TypeScript types.**
+- **Created initial suite of UI components.**
+- **Implemented Manuscript Section in Project Dashboard (`ProjectDashboardClient.tsx`):**
+  - Chapters are dynamically fetched and displayed.
+  - Users can add new chapters via `CreateChapterModal.tsx`.
+  - Clicking a chapter fetches and displays its scenes.
+  - Users can add new scenes via `CreateSceneModal.tsx`.
+  - Data fetching functions for chapters and scenes implemented.
+  - UI components like `ListSectionHeader` updated.
+- **Addressed Next.js 15 Asynchronous API Errors:**
+  - Updated `app/(dashboard)/project/[projectId]/page.tsx` to use `await params`.
+  - Updated `lib/data/projects.ts` to use `await cookies()`.
+  - Updated API route handlers (`app/api/projects/[projectId]/route.ts`, `app/api/projects/[projectId]/chapters/route.ts`) to use `await params`.
+- **Integrated `ManuscriptEditor` in `ProjectDashboardClient.tsx`:**
+  - Editor displays content of `selectedScene`.
+  - Auto-saves scene content via `saveText` prop, calling the appropriate API.
+  - Word count is calculated, displayed, and updated in real-time.
+  - Uses `geistSans` font for the editor.
 
 ## Next Steps
 
-1. **Authentication Setup**:
+The following are the prioritized next steps:
 
-   - Implement Supabase Auth SSR following the required pattern (as defined in `.clinerules` and `techContext.md`).
-   - Create middleware for session management and route protection.
-   - Build login, signup, and password reset pages/components.
+1.  **Manuscript Editor Integration**:
 
-2. **Core UI Components**:
+    - [x] Integrate the user-provided `components/editors/ManuscriptEditor.tsx` into the scene view within the project dashboard.
+    - [x] Connect the editor to scene data API endpoints (fetch and save scene content for `selectedScene`).
+    - [x] Ensure word count tracking display is functional and updates in real-time based on editor content.
 
-   - Develop reusable UI component library with CVA (e.g., Button, Input, Card).
-   - Create typography components with a focus on beautiful text rendering.
-   - Design and implement the main application layout structure (DashboardLayout, ProjectLayout).
+2.  **Project Dashboard & Navigation**:
 
-3. **Project Creation Flow**:
+    - [ ] Fully implement navigation between different sections of a project (Manuscript, Outline, Characters, etc.) using `AppShell` and `PrimarySidebar` within `app/(dashboard)/layout.tsx`. The `handleSectionChange` function in `ProjectDashboardClient.tsx` needs to be connected to the sidebar.
 
-   - Design and implement the project creation form.
-   - Define project metadata and initial structure.
-   - Set up project listing view on the main dashboard.
+3.  **Authentication UI Refinements**:
 
-4. **Manuscript Editor**:
-   - Research and select a suitable text editor library (e.g., TipTap, Lexical).
-   - Implement basic text editing functionality within the `SceneEditor` component.
-   - Integrate word count tracking (already handled by DB trigger, but UI display needed).
+    - [ ] Refine error handling and user feedback for all auth flows (login, signup, password reset) using `sonner` for toasts.
+
+4.  **API for Relationships**:
+
+    - [ ] Implement API endpoints for managing Scene Tags (applying/removing tags to scenes).
+    - [ ] Implement API endpoints for Scene Characters (linking/unlinking characters to scenes).
+
+5.  **Core UI Components**:
+    - Continue refinement and expansion of the UI component library as new features are developed.
+    - Improve display of chapter/scene metadata (e.g., scene counts, word counts) in lists.
 
 ## Active Decisions and Considerations
 
@@ -50,6 +74,7 @@ Typography is critical for Snowscribe. We need to select fonts that are:
 - Highly readable for long writing sessions
 - Available for web use (consider Google Fonts or Adobe Fonts)
 - Performant (limited number of weights to reduce load times)
+- **Action**: Define and integrate chosen fonts. The `ManuscriptEditor` will need a proper `NextFont` object.
 
 ### AI Integration Strategy
 
@@ -85,13 +110,24 @@ The manuscript editor needs careful consideration:
 - **Strong TypeScript**: Use explicit typing for all functions, components, and data structures
 - **Component-Driven Development**: Build from small, reusable components up to larger features
 - **Accessibility First**: Build with accessibility in mind from the beginning
+- **API Route Handlers**: Use Next.js Route Handlers for backend logic, secured by middleware and RLS.
+- **Zod for Validation**: Enforce data integrity through Zod schemas at the API boundary.
+- **Sonner for Notifications**: Utilize `sonner` for user-facing toast notifications for actions, errors, and successes.
+- **Client-side data fetching within feature components**: For dynamic lists like chapters and scenes within the dashboard, components fetch their own data using functions from `lib/data/*` which in turn call internal API routes.
+- **Asynchronous Dynamic APIs (Next.js 15+):** Ensure `params` and `cookies()` are `await`ed in server-side code (Server Components, Route Handlers, server-side data fetching functions).
 
 ## Learnings and Project Insights
 
-- The Supabase Auth SSR pattern is critical to implement correctly, avoiding deprecated methods.
+- The Supabase Auth SSR pattern, when implemented correctly with `@supabase/ssr` and proper cookie handling, provides a robust authentication foundation.
 - Typography selection will have a major impact on the overall user experience.
 - AI integration needs careful boundaries to ensure it assists rather than replaces the writer.
 - Mobile responsiveness requires thoughtful design decisions for the manuscript editor.
-- Supabase migrations are straightforward for table creation but require careful handling of constraints and RLS policies. Partial unique indexes are a good way to handle conditional uniqueness (e.g., global tags).
-- The `handle_updated_at` trigger function is reusable across multiple tables.
-- The `update_scene_word_count` trigger function automates word count for scenes.
+- Supabase migrations are straightforward for table creation but require careful handling of constraints and RLS policies.
+- API design for nested resources requires careful planning of route structures and parameter handling. User authorization checks at each API endpoint are crucial.
+- Ensuring user ownership and authorization at each API endpoint is crucial for security.
+- Creating highly generic and polymorphic components (like the attempted `Text.tsx`) can introduce significant TypeScript complexity. A simpler, more direct approach for typography components (`Heading`, `Paragraph`) was adopted for now.
+- Centralizing TypeScript types in `lib/types/index.ts` improves maintainability and consistency across the application.
+- The homepage now provides a functional entry point for users to see their work and start new projects.
+- Careful attention to import paths and exact exported names from modules (e.g., Zod schemas) is crucial to avoid TypeScript resolution errors.
+- Client-side components that manage their own data fetching (like `ProjectDashboardClient` for chapters/scenes) provide good encapsulation but require careful state management for loading, errors, and updates.
+- Next.js 15 requires careful handling of dynamic APIs (`params`, `cookies()`, `headers()`) by `await`ing them in server contexts.

@@ -19,6 +19,8 @@ Snowscribe follows a modern web application architecture using Next.js 15+ with 
 ├── lib/                    # Shared utilities
 │   ├── supabase/           # Supabase client and helpers
 │   ├── utils/              # General utilities
+│   ├── schemas/            # zod schemas
+│   ├── data/               # Data access layer to abstract supabase API calls
 │   └── types/              # TypeScript types and interfaces
 ├── hooks/                  # Custom React hooks
 ├── middleware.ts           # Next.js middleware
@@ -59,6 +61,11 @@ Snowscribe follows a modern web application architecture using Next.js 15+ with 
 - Middleware-based route protection
 - Role-based access control
 
+### Data Management and Validation Patterns
+
+- **Entity-Specific Zod Schemas (`lib/schemas`)**: Each core data entity has a corresponding Zod schema file (e.g., `project.schema.ts`). This pattern centralizes validation logic, ensures data integrity at API boundaries, and facilitates type inference for consistent data handling.
+- **Centralized Data Access Layer (`lib/data`)**: Server-side functions for database interactions are grouped in the `lib/data` directory (e.g., `projects.ts`, `chapters.ts`). This abstracts direct Supabase calls, promotes reusability in Server Components and API Routes, and enhances separation of concerns.
+
 ## Component Relationships
 
 ### Core Component Structure
@@ -76,7 +83,7 @@ graph TD
 
     ManuscriptView --> ChapterList[Chapter List]
     ChapterList --> SceneList[Scene List]
-    SceneList --> SceneEditor[Scene Editor]
+    SceneList --> ManuscriptEditor[Manuscript Editor]
 
     CharactersView --> CharacterList[Character List]
     CharacterList --> CharacterEditor[Character Editor]

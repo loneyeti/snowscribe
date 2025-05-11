@@ -1,0 +1,146 @@
+// Based on supabase/migrations/20250509072432_create_projects_table.sql
+// supabase/migrations/20250510093011_add_description_to_projects.sql
+// supabase/migrations/20250510093630_update_projects_genre_to_fk.sql
+// and components/homepage/ProjectCard.tsx
+export interface Project {
+  id: string; // UUID
+  user_id: string; // UUID
+  title: string;
+  description?: string | null;
+  genre_id?: number | null; // Foreign key to genres table
+  genre?: string | null; // Old text field, to be phased out
+  log_line?: string | null;
+  target_word_count?: number | null;
+  settings?: Record<string, unknown> | null; // JSONB
+  created_at: string; // TIMESTAMPTZ
+  updated_at: string; // TIMESTAMPTZ
+  // Optional fields that might be derived or added later for UI
+  wordCount?: number;
+  thumbnailUrl?: string;
+}
+
+// Based on supabase/migrations/20250510093215_create_genres_table.sql
+export interface Genre {
+  id: number; // SERIAL
+  name: string;
+  created_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250509072238_create_profiles_table.sql
+export interface Profile {
+  id: string; // UUID, references auth.users
+  username?: string | null;
+  full_name?: string | null;
+  avatar_url?: string | null;
+  created_at: string; // TIMESTAMPTZ
+  updated_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250509072629_create_chapters_table.sql
+export interface Chapter {
+  id: string; // UUID
+  project_id: string; // UUID, references projects
+  title: string;
+  order: number; // "order" is a reserved keyword, maps to "order" column
+  created_at: string; // TIMESTAMPTZ
+  updated_at: string; // TIMESTAMPTZ
+  scenes?: Scene[]; // For holding nested scenes, typically id and content
+  word_count?: number; // Calculated field
+  scene_count?: number; // Calculated field
+}
+
+// Based on supabase/migrations/20250509072734_create_scenes_table.sql
+export interface Scene {
+  id: string; // UUID
+  chapter_id: string; // UUID, references chapters
+  title?: string | null;
+  content?: string | null;
+  word_count?: number | null;
+  order: number; // "order" is a reserved keyword, maps to "order" column
+  notes?: string | null;
+  created_at: string; // TIMESTAMPTZ
+  updated_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250509072906_create_scene_tags_table.sql
+export interface SceneTag {
+  id: string; // UUID
+  project_id?: string | null; // UUID, references projects, NULLABLE for global tags
+  user_id?: string | null; // UUID, references auth.users, NULLABLE
+  name: string;
+  description?: string | null;
+  color?: string | null; // e.g. hex code
+  created_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250509073117_create_scene_applied_tags_table.sql
+export interface SceneAppliedTag {
+  scene_id: string; // UUID, references scenes
+  tag_id: string; // UUID, references scene_tags
+  created_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250509073255_create_characters_table.sql
+export interface Character {
+  id: string; // UUID
+  project_id: string; // UUID, references projects
+  name: string;
+  nickname?: string | null;
+  description?: string | null;
+  backstory?: string | null;
+  motivations?: string | null;
+  appearance?: string | null;
+  notes?: Record<string, unknown> | null; // JSONB
+  image_url?: string | null;
+  created_at: string; // TIMESTAMPTZ
+  updated_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250509073406_create_scene_characters_table.sql
+export interface SceneCharacter {
+  scene_id: string; // UUID, references scenes
+  character_id: string; // UUID, references characters
+  created_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250509073509_create_world_building_notes_table.sql
+export interface WorldBuildingNote {
+  id: string; // UUID
+  project_id: string; // UUID, references projects
+  title: string;
+  content?: string | null; // Can be Markdown
+  category?: string | null;
+  created_at: string; // TIMESTAMPTZ
+  updated_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250509074219_create_outline_items_table.sql
+export interface OutlineItem {
+  id: string; // UUID
+  project_id: string; // UUID, references projects
+  parent_id?: string | null; // UUID, references outline_items (self-referencing)
+  title?: string | null;
+  content: string;
+  type?: string | null;
+  order: number; // "order" is a reserved keyword, maps to "order" column
+  associated_scene_id?: string | null; // UUID, references scenes
+  associated_character_id?: string | null; // UUID, references characters
+  created_at: string; // TIMESTAMPTZ
+  updated_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250509074322_create_ai_interactions_table.sql
+export interface AIInteraction {
+  id: string; // UUID
+  project_id: string; // UUID, references projects
+  user_id: string; // UUID, references auth.users
+  feature_used: string;
+  ai_model_used?: string | null;
+  input_context?: Record<string, unknown> | null; // JSONB
+  prompt_text?: string | null;
+  response_data?: Record<string, unknown> | null; // JSONB
+  user_feedback?: string | null;
+  created_at: string; // TIMESTAMPTZ
+}
+
+// Add other shared types here as the project grows

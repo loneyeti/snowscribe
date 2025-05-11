@@ -14,6 +14,34 @@ Snowscribe is built with a modern frontend-focused stack:
 | **Docker**       | Containerization                               |
 | **Zod**          | Form validation                                |
 | **snowgander**   | In-house package for AI API connectivity       |
+| **sonner**       | Toast notifications                            |
+
+## Shared Types Definition
+
+A central file `lib/types/index.ts` defines shared TypeScript interfaces for data structures used throughout the application, derived from Supabase table schemas and UI requirements. This ensures type consistency between the frontend and backend.
+
+The content of `lib/types/index.ts` includes interfaces such as `Project`, `Genre`, `Profile`, `Chapter`, `Scene`, `SceneTag`, `SceneAppliedTag`, `Character`, `SceneCharacter`, `WorldBuildingNote`, `OutlineItem`, and `AIInteraction`.
+
+## `lib/schemas` Directory Pattern
+
+The `lib/schemas/` directory houses Zod schema definitions for the application's core data entities.
+
+- **Pattern**: Each primary data entity (e.g., `Project`, `Chapter`, `Scene`) has its own dedicated schema file (e.g., `lib/schemas/project.schema.ts`, `lib/schemas/chapter.schema.ts`).
+- **Purpose**:
+  - **API Input Validation**: These schemas are primarily used in API Route Handlers to validate incoming request bodies, ensuring data integrity before database operations.
+  - **Type Inference**: Zod schemas allow for easy inference of TypeScript types (e.g., `z.infer<typeof projectSchema>`). These inferred types can be used for form values, function parameters, and other client-side or server-side logic, ensuring consistency with the validation rules.
+  - **Centralized Validation Logic**: Consolidates validation rules in one place, making them easier to manage and update.
+
+## `lib/data` Directory Pattern
+
+The `lib/data/` directory contains server-side functions responsible for data fetching and manipulation, acting as a dedicated data access layer.
+
+- **Pattern**: Files within this directory (e.g., `lib/data/projects.ts`, `lib/data/chapters.ts`) export asynchronous functions that interact directly with the Supabase client to perform CRUD operations or complex queries.
+- **Purpose**:
+  - **Centralized Data Access**: Abstracts the direct Supabase calls, providing a clear and reusable API for accessing data.
+  - **Reusability**: These functions can be imported and used by React Server Components for server-side data fetching, as well as by API Route Handlers to fulfill client requests.
+  - **Separation of Concerns**: Keeps data fetching logic separate from UI components and API route handling logic, improving code organization and maintainability.
+  - **Server-Side Logic**: Ensures that direct database interactions are handled securely on the server.
 
 ## Development Setup
 
@@ -66,42 +94,48 @@ Snowscribe must use the latest Supabase Auth SSR pattern with specific implement
 - Screen reader compatibility
 - Sufficient color contrast ratios
 
-## Dependencies
+## Dependencies and Tooling
 
-### Core Dependencies
+This section details the project's key dependencies and development tools, as defined in `package.json`.
 
-```json
-{
-  "dependencies": {
-    "@supabase/ssr": "latest",
-    "@supabase/supabase-js": "latest",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.0.0",
-    "next": "^15.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "snowgander": "^1.0.0",
-    "sonner": "^1.0.0",
-    "tailwind-merge": "^2.0.0",
-    "tailwindcss": "^3.3.0",
-    "tailwindcss-animate": "^1.0.0",
-    "zod": "^3.22.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "eslint": "^8.0.0",
-    "eslint-config-next": "^15.0.0",
-    "postcss": "^8.0.0",
-    "typescript": "^5.0.0"
-  }
-}
-```
+### Core Dependencies (`dependencies`)
+
+| Package                         | Version    | Purpose                                                                    |
+| ------------------------------- | ---------- | -------------------------------------------------------------------------- |
+| `@radix-ui/react-dropdown-menu` | `^2.1.14`  | Unstyled, accessible dropdown menu primitive for UI components.            |
+| `@radix-ui/react-separator`     | `^1.1.6`   | Unstyled, accessible separator primitive for UI components.                |
+| `@radix-ui/react-slot`          | `^1.2.2`   | Utility to compose component props, often used with `asChild`.             |
+| `@radix-ui/react-tooltip`       | `^1.2.6`   | Unstyled, accessible tooltip primitive for UI components.                  |
+| `@supabase/ssr`                 | `^0.6.1`   | Supabase helpers for Server-Side Rendering in Next.js ( crucial for auth). |
+| `@supabase/supabase-js`         | `^2.49.4`  | Official Supabase JavaScript client library.                               |
+| `class-variance-authority`      | `^0.7.1`   | Library for creating type-safe, variant-driven UI components (CVA).        |
+| `clsx`                          | `^2.1.1`   | Utility for constructing `className` strings conditionally.                |
+| `lucide-react`                  | `^0.509.0` | Library of simply beautiful open-source icons.                             |
+| `next`                          | `15.3.2`   | The React framework for production (App Router, SSR, etc.).                |
+| `react`                         | `^19.0.0`  | JavaScript library for building user interfaces.                           |
+| `react-dom`                     | `^19.0.0`  | Serves as the entry point to the DOM and server renderers for React.       |
+| `snowgander`                    | `^0.0.36`  | In-house package for vendor-agnostic AI API connectivity.                  |
+| `sonner`                        | `^2.0.3`   | An opinionated toast component for React.                                  |
+| `tailwind-merge`                | `^2.6.0`   | Utility to merge Tailwind CSS classes without style conflicts.             |
+| `zod`                           | `^3.24.4`  | TypeScript-first schema declaration and validation library.                |
+
+### Development Dependencies (`devDependencies`)
+
+| Package                | Version  | Purpose                                                 |
+| ---------------------- | -------- | ------------------------------------------------------- |
+| `@eslint/eslintrc`     | `^3`     | ESLint configuration utilities.                         |
+| `@tailwindcss/postcss` | `^4`     | PostCSS plugin for Tailwind CSS.                        |
+| `@types/node`          | `^20`    | TypeScript definitions for Node.js.                     |
+| `@types/react`         | `^19`    | TypeScript definitions for React.                       |
+| `@types/react-dom`     | `^19`    | TypeScript definitions for React DOM.                   |
+| `eslint`               | `^9`     | Pluggable linting utility for JavaScript and JSX.       |
+| `eslint-config-next`   | `15.3.2` | ESLint configuration for Next.js projects.              |
+| `tailwindcss`          | `^4`     | A utility-first CSS framework for rapid UI development. |
+| `typescript`           | `^5`     | Superset of JavaScript that adds static types.          |
 
 ### Internal Packages
 
-- **snowgander**: Vendor-agnostic AI API connectivity package that provides:
+- **snowgander (`^0.0.36`)**: As listed in dependencies, this is our in-house package for vendor-agnostic AI API connectivity. It provides:
   - Unified API for multiple AI providers
   - Token usage tracking
   - Rate limiting
