@@ -140,3 +140,43 @@ export interface AIInteraction {
 }
 
 // Add other shared types here as the project grows
+
+// Based on supabase/migrations/20250511201800_create_ai_vendors_table.sql
+export interface AIVendor {
+  id: string; // UUID
+  name: string;
+  api_key_env_var?: string | null;
+  created_at: string; // TIMESTAMPTZ
+  updated_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250511201801_create_ai_models_table.sql
+// This aligns with snowgander's ModelConfig but includes DB fields
+// and uses number for costs (representing micro-cents or similar micro-units).
+export interface AIModel {
+  id: string; // UUID
+  vendor_id: string; // UUID, references ai_vendors
+  name: string; // User-friendly name
+  api_name: string; // Name vendor API expects
+  is_vision: boolean;
+  is_image_generation: boolean;
+  is_thinking: boolean;
+  input_token_cost_micros?: number | null; // Cost per million input tokens in micro-units
+  output_token_cost_micros?: number | null; // Cost per million output tokens in micro-units
+  max_tokens?: number | null; // Default max tokens for this model
+  notes?: string | null;
+  created_at: string; // TIMESTAMPTZ
+  updated_at: string; // TIMESTAMPTZ
+}
+
+// Based on supabase/migrations/20250511201802_create_ai_prompts_table.sql
+export interface AIPrompt {
+  id: string; // UUID
+  project_id?: string | null; // UUID, references projects
+  user_id?: string | null; // UUID, references auth.users
+  name: string;
+  prompt_text: string;
+  category?: string | null;
+  created_at: string; // TIMESTAMPTZ
+  updated_at: string; // TIMESTAMPTZ
+}

@@ -15,7 +15,7 @@ const ListContainer = React.forwardRef<HTMLDivElement, ListContainerProps>(
       <div
         ref={ref}
         className={cn(
-          "flex flex-col h-full overflow-y-auto space-y-1 p-2 bg-background", // Added padding and background
+          "flex flex-col h-full overflow-y-auto bg-background", // Removed space-y-1 and p-2
           className
         )}
         {...props}

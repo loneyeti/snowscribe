@@ -4,7 +4,7 @@
 
 _(Updated: 2025-05-11)_
 
-Data model for the Outlining feature has been refactored. The next focus is implementing the UI for the Outlining feature, followed by Authentication UI Refinements and API for Relationships (Scene Tags, Scene Characters).
+The data model for AI Configurations (Vendors, Models, Prompts) has been implemented. The immediate next steps involve building out the UI for the Outlining feature, and then implementing the API/data layer for the new AI configuration entities, followed by integrating `snowgander`.
 
 ## Recent Changes
 
@@ -80,6 +80,10 @@ Data model for the Outlining feature has been refactored. The next focus is impl
   - Updated `lib/types/index.ts`: removed `OutlineItem` interface, added new fields to `Project` and `Scene` interfaces.
   - Deleted `lib/schemas/outlineItem.schema.ts`.
   - Deleted API routes related to `outline-items` (`app/api/projects/[projectId]/outline-items/`).
+- **Implemented AI Configuration Data Model (2025-05-11):**
+  - Created database tables (`ai_vendors`, `ai_models`, `ai_prompts`) with Supabase migrations.
+  - Defined corresponding TypeScript types (`AIVendor`, `AIModel`, `AIPrompt`) in `lib/types/index.ts`.
+  - Created Zod schemas (`aiVendorSchema`, `aiModelSchema`, `aiPromptSchema`) in `lib/schemas/`.
 
 ## Next Steps
 
@@ -92,16 +96,23 @@ The following are the prioritized next steps:
     - [ ] Allow editing of `scenes.outline_description` and `scenes.pov_character_id` from the outline view.
     - [ ] Ensure changes in the outline view are reflected in the manuscript view and vice-versa, leveraging the shared data model.
 
-2.  **API for Relationships (supporting Outline & Manuscript)**:
+2.  **AI Service Integration**:
+
+    - [ ] Implement API Routes for managing AI Vendors, Models, and Prompts.
+    - [ ] Implement Data Access Layer functions (`lib/data/*`) for these AI entities.
+    - [ ] Begin integrating `snowgander` using the new data model (configuring `AIVendorFactory`, fetching `AIModel` configs).
+    - [ ] Develop initial UI for managing/selecting AI models/prompts (e.g., in settings or AI Assistant section).
+
+3.  **API for Relationships (supporting Outline & Manuscript)**:
 
     - [ ] Implement API endpoints for managing Scene Tags (applying/removing tags to scenes).
     - [ ] Implement API endpoints for Scene Characters (linking/unlinking characters to scenes, distinct from `pov_character_id`).
 
-3.  **Authentication UI Refinements**:
+4.  **Authentication UI Refinements**:
 
     - [ ] Refine error handling and user feedback for all auth flows (login, signup, password reset) using `sonner` for toasts.
 
-4.  **Core UI Components & Manuscript Refinements**:
+5.  **Core UI Components & Manuscript Refinements**:
     - Continue refinement and expansion of the UI component library.
     - Improve display of chapter/scene metadata (e.g., scene counts, word counts) in lists.
     - Ensure Manuscript Editor (`components/editors/ManuscriptEditor.tsx`) remains functional and performant.

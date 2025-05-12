@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
-// import { Button } from "./Button"; // Assuming Button component exists
+import { IconButton } from "./IconButton"; // Import IconButton
 
 interface ModalProps {
   isOpen: boolean;
@@ -76,18 +76,20 @@ export function Modal({
       >
         {/* Header */}
         {(title || !hideCloseButton) && (
-          <div className="flex items-center justify-between p-4 border-b border-border">
+          // Removed border-b
+          <div className="flex items-center justify-between p-4">
             {title && (
               <h3 className="text-lg font-semibold text-foreground">{title}</h3>
             )}
             {!hideCloseButton && (
-              <button // Replace with IconButton if available
-                onClick={onClose}
-                className="p-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              <IconButton
+                icon={X}
                 aria-label="Close modal"
-              >
-                <X className="h-5 w-5" />
-              </button>
+                onClick={onClose}
+                variant="ghost"
+                size="sm" // Using sm size for a slightly less prominent close button in modal header
+                className="text-muted-foreground hover:text-foreground" // Ensure consistent coloring
+              />
             )}
           </div>
         )}
@@ -97,7 +99,8 @@ export function Modal({
 
         {/* Footer */}
         {footerContent && (
-          <div className="flex items-center justify-end p-4 border-t border-border bg-muted/50 rounded-b-lg">
+          // Removed border-t
+          <div className="flex items-center justify-end p-4 bg-muted/50 rounded-b-lg">
             {footerContent}
           </div>
         )}

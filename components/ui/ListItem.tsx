@@ -34,10 +34,10 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
         ref={ref}
         onClick={onClick}
         className={cn(
-          "flex items-center p-3 rounded-md cursor-pointer transition-colors",
-          "hover:bg-muted/50", // Subtle hover effect
+          "flex items-center px-4 py-3 rounded-md cursor-pointer transition-colors", // Updated padding
+          "hover:bg-muted/50",
           isSelected
-            ? "bg-primary/10 text-primary-foreground relative" // Selected state with accent
+            ? "bg-primary/10 relative" // Removed text-primary-foreground, text color handled by inner elements
             : "bg-card text-card-foreground",
           className
         )}
@@ -50,15 +50,17 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
           <Icon
             className={cn(
               "mr-3 h-5 w-5 flex-shrink-0",
-              isSelected ? "text-primary" : "text-muted-foreground"
+              isSelected ? "text-primary" : "text-muted-foreground" // Icon color updates on selection
             )}
           />
         )}
         <div className="flex-grow">
           <div
             className={cn(
-              "font-medium text-sm",
-              isSelected ? "text-primary" : "text-foreground"
+              "text-sm", // Base text size
+              isSelected
+                ? "font-semibold text-primary"
+                : "font-medium text-foreground" // Updated font weight and color for selection
             )}
           >
             {title}
@@ -67,7 +69,7 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
             <div
               className={cn(
                 "text-xs",
-                isSelected ? "text-primary/80" : "text-muted-foreground"
+                isSelected ? "text-primary/90" : "text-muted-foreground" // Slightly more opaque for selected secondary text
               )}
             >
               {secondaryText}

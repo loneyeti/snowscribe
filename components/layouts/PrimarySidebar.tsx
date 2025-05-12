@@ -47,21 +47,25 @@ export function PrimarySidebar({
   // Removed internal activeItem state and handleNavItemClick
 
   return (
-    <aside className="w-16 bg-slate-800 text-slate-100 flex flex-col items-center py-4 space-y-2">
+    <aside className="w-16 bg-gray-900 text-gray-100 flex flex-col items-center py-6 shadow-lg">
       {/* Logo or App Icon placeholder */}
-      <div className="p-2 mb-2">
+      <div className="mb-6">
         {" "}
-        {/* Adjusted margin */}
-        <span className="text-3xl cursor-pointer" title="Snowscribe Home">
+        {/* Increased margin for logo */}
+        <span className="text-4xl cursor-pointer" title="Snowscribe Home">
+          {" "}
+          {/* Slightly larger icon */}
           ❄️
         </span>
       </div>
 
-      <nav className="flex-grow flex flex-col items-center space-y-1 w-full px-2">
+      <nav className="flex-grow flex flex-col items-center space-y-2 w-full px-2">
+        {" "}
+        {/* Increased space-y */}
         {navItemConfigs.map((config) => (
           <PrimarySidebarNavItem
             key={config.id}
-            icon={<config.icon size={22} aria-hidden="true" />}
+            icon={<config.icon size={24} aria-hidden="true" />}
             label={config.label}
             isActive={activeSection === config.id}
             onClick={() => onSectionChange(config.id)}
@@ -70,21 +74,23 @@ export function PrimarySidebar({
       </nav>
 
       {/* Bottom icons: Export and Settings */}
-      <div className="flex flex-col items-center space-y-1 w-full px-2 pb-1">
+      <div className="flex flex-col items-center space-y-2 w-full px-2 pb-4">
+        {" "}
+        {/* Increased space-y and pb */}
         {bottomNavItemConfigs.map((config) => (
           <PrimarySidebarNavItem
             key={config.id}
-            icon={<config.icon size={22} aria-hidden="true" />}
+            icon={<config.icon size={24} aria-hidden="true" />}
             label={config.label}
-            isActive={activeSection === config.id} // Use activeSection for isActive
-            onClick={() => onSectionChange(config.id)} // Call onSectionChange
+            isActive={activeSection === config.id}
+            onClick={() => onSectionChange(config.id)}
           />
         ))}
         <PrimarySidebarNavItem
-          icon={<Settings size={22} aria-hidden="true" />}
+          icon={<Settings size={24} aria-hidden="true" />}
           label="Settings"
-          isActive={activeSection === "settings"} // Use activeSection for isActive
-          onClick={() => onSectionChange("settings")} // Call onSectionChange
+          isActive={activeSection === "settings"}
+          onClick={() => onSectionChange("settings")}
         />
       </div>
     </aside>

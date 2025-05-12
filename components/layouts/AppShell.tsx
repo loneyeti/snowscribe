@@ -33,19 +33,23 @@ export function AppShell({ children, project }: AppShellProps) {
   });
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <AppHeader
-        projectTitle={project.title}
-        projectGenre={project.genres?.name || "N/A"}
-        currentWords={project.wordCount || 0}
-        targetWords={project.target_word_count || 0}
+    <div className="flex h-screen bg-background">
+      <PrimarySidebar
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
       />
-      <div className="flex flex-1 overflow-hidden">
-        <PrimarySidebar
-          activeSection={activeSection}
-          onSectionChange={handleSectionChange}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <AppHeader
+          projectTitle={project.title}
+          projectGenre={project.genres?.name || "N/A"}
+          currentWords={project.wordCount || 0}
+          targetWords={project.target_word_count || 0}
         />
-        <main className="flex-1 overflow-y-auto">{childrenWithProps}</main>
+        <main className="flex-1 overflow-y-auto p-6">
+          {" "}
+          {/* Added p-6 for some initial padding */}
+          {childrenWithProps}
+        </main>
       </div>
     </div>
   );

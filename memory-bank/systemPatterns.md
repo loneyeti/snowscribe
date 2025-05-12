@@ -71,7 +71,35 @@ Snowscribe follows a modern web application architecture using Next.js 15+ with 
 
 - **Entity-Specific Zod Schemas (`lib/schemas`)**: Each core data entity has a corresponding Zod schema file (e.g., `project.schema.ts`). This pattern centralizes validation logic, ensures data integrity at API boundaries, and facilitates type inference for consistent data handling.
 - **Centralized Data Access Layer (`lib/data`)**: Server-side functions for database interactions are grouped in the `lib/data` directory (e.g., `projects.ts`, `chapters.ts`). This abstracts direct Supabase calls, promotes reusability in Server Components and API Routes, and enhances separation of concerns.
-- **Project Ownership Verification Guard (`lib/supabase/guards.ts`)**: A utility function, `verifyProjectOwnership` located in `lib/supabase/guards.ts`, centralizes the logic for checking if a project (and by extension, its sub-resources) belongs to the authenticated user. This guard is used at the beginning of API route handlers that operate on project-specific data to ensure authorization before proceeding. It complements RLS by providing an explicit, application-level check early in the request lifecycle.
+  - **Project Ownership Verification Guard (`lib/supabase/guards.ts`)**: A utility function, `verifyProjectOwnership` located in `lib/supabase/guards.ts`, centralizes the logic for checking if a project (and by extension, its sub-resources) belongs to the authenticated user. This guard is used at the beginning of API route handlers that operate on project-specific data to ensure authorization before proceeding. It complements RLS by providing an explicit, application-level check early in the request lifecycle.
+
+### AI Configuration Data Model
+
+To support the `snowgander` AI abstraction layer and manage AI-related configurations, the following tables have been introduced:
+
+- **`ai_vendors`**:
+
+  - **Purpose**: Stores information about AI API providers (e.g., OpenAI, Anthropic).
+  - **Key Fields**: `name` (unique), `api_key_env_var` (stores the name of the environment variable holding the API key).
+  - **RLS**: Readable by authenticated users, writable by `service_role`.
+
+- **`ai_models`**:
+
+  - **Purpose**: Stores configurations for specific AI models, aligning with `snowgander`'s `ModelConfig` structure.
+  - **Key Fields**: `vendor_id` (FK to `ai_vendors`), `name` (user-friendly), `api_name` (vendor's model identifier), `is_vision`, `is_image_generation`, `is_thinking`, `input_token_cost_micros`, `output_token_cost_micros`, `max_tokens`.
+  - **RLS**: Readable by authenticated users, writable by `service_role`.
+
+- **`ai_prompts`**:
+  - **Purpose**: Stores reusable prompts that can be global, user-specific, or project-specific.
+  - **Key Fields**: `project_id` (FK to `projects`, nullable), `user_id` (FK to `auth.users`, nullable), `name`, `prompt_text`, `category`.
+  - **Unique Constraint**: Ensures `name` is unique within its scope (global, user-global, or project-specific).
+  - **RLS**:
+    - Users can manage their own prompts (`user_id = auth.uid()`).
+    - Authenticated users can read global prompts (`project_id` IS NULL, `user_id` IS NULL).
+    - Users can read prompts for projects they own.
+    - Full access for `service_role`.
+
+These tables provide the necessary backend structure for selecting AI models, configuring vendors, and managing a library of prompts for various AI-assisted features within Snowscribe. Corresponding TypeScript types (`AIVendor`, `AIModel`, `AIPrompt`) are defined in `lib/types/index.ts`, and Zod schemas (`aiVendorSchema`, `aiModelSchema`, `aiPromptSchema`) are available in `lib/schemas/` for validation.
 
 ## Component Relationships
 

@@ -28,7 +28,8 @@ import {
   deleteWorldBuildingNote as deleteWorldBuildingNoteData,
 } from "@/lib/data/worldBuildingNotes"; // Added world note data functions
 import { toast } from "sonner";
-import { Geist } from "next/font/google"; // Import Geist
+// import { Geist } from "next/font/google"; // Removed Geist import
+import { cactusSerif } from "@/lib/fonts"; // Import cactusSerif
 import { countWords } from "@/lib/utils"; // Import countWords
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { ListContainer } from "@/components/ui/ListContainer";
@@ -56,11 +57,7 @@ type ManuscriptView = "chapters" | "scenes";
 // Define view states for the outline section
 type OutlineView = "synopsis" | "scenes";
 
-// Initialize Geist Sans font
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// Geist Sans font initialization removed
 
 // Import the specific form values type from its schema file
 import { type WorldBuildingNoteFormValues as WorldNoteFormValuesTypeFromSchema } from "@/lib/schemas/worldBuildingNote.schema";
@@ -740,17 +737,22 @@ ProjectDashboardClientProps) {
               selectedScene.title
             );
             return (
-              <div className="flex flex-col h-full">
+              <div className="flex flex-col h-full items-center">
+                <div className="text-center p-2">
+                  <h1 className={`text-2xl ${cactusSerif.className} font-bold`}>
+                    {selectedScene.title || "&nbsp;"}
+                  </h1>
+                  <span className="text-sm italic text-gray-500">
+                    {currentSceneWordCount} words
+                  </span>
+                </div>
                 <ManuscriptEditor
                   key={selectedScene.id} // Add key to force re-render when scene changes
                   initialText={selectedScene.content || "&nbsp;"}
                   saveText={handleSaveSceneContent}
-                  font={geistSans} // Use imported Geist Sans font
+                  font={cactusSerif} // Use imported cactusSerif font
                   placeholder="Start writing your scene..."
                 />
-                <div className="p-2 border-t text-sm text-muted-foreground">
-                  Word Count: {currentSceneWordCount}
-                </div>
               </div>
             );
           } else {

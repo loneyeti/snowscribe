@@ -4,9 +4,9 @@
 
 - **Project Initialization**: The project has been set up with Next.js 15+, TypeScript, and Tailwind CSS.
 - **Memory Bank**: Complete documentation structure is established for tracking project status and decisions.
-- **Database Schema**: All core tables created and migrated.
+- **Database Schema**: All core tables created and migrated. (Updated 2025-05-11: Added `ai_vendors`, `ai_models`, `ai_prompts` tables for AI configuration).
 - **Supabase Auth SSR**: Foundational client, server, and middleware files are in place, and a basic authentication flow (signup, login, logout) is functional.
-- **Shared TypeScript Types**: `lib/types/index.ts` created and populated with core data interfaces. (Updated 2025-05-11: `OutlineItem` removed; `Project` and `Scene` interfaces updated with new outline-related fields).
+- **Shared TypeScript Types**: `lib/types/index.ts` created and populated with core data interfaces. (Updated 2025-05-11: `OutlineItem` removed; `Project` and `Scene` interfaces updated with new outline-related fields; Added `AIVendor`, `AIModel`, `AIPrompt` types).
 - **Core API Endpoints (CRUD)**:
   - [x] Projects API (`app/api/projects/` and `app/api/projects/[projectId]/`)
   - [x] Chapters API (`app/api/projects/[projectId]/chapters/` and `app/api/projects/[projectId]/chapters/[chapterId]/`)
@@ -14,8 +14,10 @@
   - [x] Characters API (`app/api/projects/[projectId]/characters/` and `app/api/projects/[projectId]/characters/[characterId]/`)
   - [x] World Building Notes API (`app/api/projects/[projectId]/world-notes/` and `app/api/projects/[projectId]/world-notes/[noteId]/`)
   - [ ] Outline Items API - Removed (2025-05-11) as part of data model refactor.
+  - [ ] AI Vendors, Models, Prompts APIs (To be implemented)
 - **Zod Schemas**:
   - [x] Validation schemas created for core entities (Project, Chapter, Scene, Character, WorldBuildingNote).
+  - [x] Validation schemas created for AI configuration entities (`AIVendor`, `AIModel`, `AIPrompt`) in `lib/schemas/`. (Added 2025-05-11)
   - [ ] `outlineItem.schema.ts` - Removed (2025-05-11).
 - **Data Access Layer (`lib/data`)**:
   - [x] Functions for Projects, Chapters, Scenes, Characters.
@@ -64,6 +66,10 @@
   - [x] Added `one_page_synopsis` field to the `projects` table.
   - [x] Added `outline_description` and `pov_character_id` fields to the `scenes` table.
   - [x] Updated migration files accordingly.
+- **AI Configuration Data Model (2025-05-11)**:
+  - [x] Created `ai_vendors`, `ai_models`, and `ai_prompts` database tables with migrations.
+  - [x] Defined corresponding TypeScript types (`AIVendor`, `AIModel`, `AIPrompt`) in `lib/types/index.ts`.
+  - [x] Created Zod schemas (`aiVendorSchema`, `aiModelSchema`, `aiPromptSchema`) in `lib/schemas/`.
 
 ## What's Left to Build
 
@@ -164,10 +170,10 @@
 
 ## Current Status
 
-**Phase**: Outline Data Model Refactored -> **Focusing on Outline Feature UI Implementation**
+**Phase**: AI Configuration Data Model Implemented -> **Focusing on Outline Feature UI Implementation & AI Service Integration**
 _(Updated: 2025-05-11)_
 
-The project has successfully established its foundational API layer, a basic authentication flow, and a functional homepage. The manuscript, character, and world building notes sections of the project dashboard are largely complete. Navigation between dashboard sections is working correctly. The data model for the outlining feature has been successfully refactored to simplify its structure and integrate it directly with `projects` and `scenes` tables.
+The project has successfully established its foundational API layer, a basic authentication flow, and a functional homepage. The manuscript, character, and world building notes sections of the project dashboard are largely complete. Navigation between dashboard sections is working correctly. The data model for the outlining feature has been successfully refactored. **The data model for AI configuration (Vendors, Models, Prompts) has been implemented.**
 
 The `lib/data` files have been refactored or created to ensure database interactions are routed through API endpoints. API route authorization uses a centralized `verifyProjectOwnership` guard.
 
@@ -175,9 +181,13 @@ The immediate focus areas are now:
 
 1.  **Implement Outline Feature UI**: Design and build the user interface for the outlining feature based on the new data model (project synopses, scene outline descriptions, POV characters).
 2.  **API for Relationships**: Implement API endpoints for managing Scene Tags and Scene Characters (these are crucial for both manuscript and outline views).
-3.  **Authentication UI Refinements**: Refine error handling and user feedback for all auth flows.
-4.  **Implementation of other dashboard sections**: AI Assistant.
-5.  **UI/UX Refinements**: Continue improving general UI/UX, including chapter/scene metadata display.
+3.  **AI Service Integration**:
+    - Implement API Routes for managing AI Vendors, Models, and Prompts.
+    - Implement Data Access Layer functions for these entities.
+    - Begin integrating `snowgander` using the new data model.
+4.  **Authentication UI Refinements**: Refine error handling and user feedback for all auth flows.
+5.  **Implementation of other dashboard sections**: AI Assistant (UI for interacting with AI features).
+6.  **UI/UX Refinements**: Continue improving general UI/UX, including chapter/scene metadata display.
 
 ## Known Issues
 
@@ -206,3 +216,4 @@ The immediate focus areas are now:
 | 2025-05-11 | Implemented World Building & Research Notes Feature                        | Added complete CRUD functionality for world notes, including Zod schemas, API routes, data access layer functions, and UI components (`WorldNoteList`, `CreateWorldNoteModal`, `WorldNoteEditor`), integrated into the project dashboard. Installed `@radix-ui/react-alert-dialog` and created `AlertDialog.tsx`.                                                                                                                                                                                   |
 | 2025-05-11 | Fixed World Notes Navigation ID Mismatch                                   | Corrected the navigation ID for "World Notes" in `PrimarySidebar.tsx` from `"world"` to `"world-notes"` to match the ID expected by `ProjectDashboardClient.tsx`, resolving an issue where the section would not render.                                                                                                                                                                                                                                                                            |
 | 2025-05-11 | Refactored Outline Data Model                                              | Simplified the outline feature's data model by removing the `outline_items` table and integrating its core functionalities directly into the `projects` (added `one_page_synopsis`) and `scenes` (added `outline_description`, `pov_character_id`) tables. This aligns the outline structure more closely with the manuscript structure, enhancing data consistency and simplifying future UI development. Updated migrations, TypeScript types, and removed associated Zod schemas and API routes. |
+| 2025-05-11 | Implemented AI Configuration Data Model                                    | Created database tables (`ai_vendors`, `ai_models`, `ai_prompts`), TypeScript types, and Zod schemas to support `snowgander` integration and management of AI settings. This provides the foundational data structure for AI features.                                                                                                                                                                                                                                                              |

@@ -20,13 +20,13 @@ Snowscribe is built with a modern frontend-focused stack:
 
 A central file `lib/types/index.ts` defines shared TypeScript interfaces for data structures used throughout the application, derived from Supabase table schemas and UI requirements. This ensures type consistency between the frontend and backend.
 
-The content of `lib/types/index.ts` includes interfaces such as `Project`, `Genre`, `Profile`, `Chapter`, `Scene`, `SceneTag`, `SceneAppliedTag`, `Character`, `SceneCharacter`, `WorldBuildingNote`, and `AIInteraction`.
+The content of `lib/types/index.ts` includes interfaces such as `Project`, `Genre`, `Profile`, `Chapter`, `Scene`, `SceneTag`, `SceneAppliedTag`, `Character`, `SceneCharacter`, `WorldBuildingNote`, `AIInteraction`, and more recently, `AIVendor`, `AIModel`, and `AIPrompt` for managing AI configurations.
 
 ## `lib/schemas` Directory Pattern
 
 The `lib/schemas/` directory houses Zod schema definitions for the application's core data entities.
 
-- **Pattern**: Each primary data entity (e.g., `Project`, `Chapter`, `Scene`) has its own dedicated schema file (e.g., `lib/schemas/project.schema.ts`, `lib/schemas/chapter.schema.ts`).
+- **Pattern**: Each primary data entity (e.g., `Project`, `Chapter`, `Scene`) has its own dedicated schema file (e.g., `lib/schemas/project.schema.ts`, `lib/schemas/chapter.schema.ts`). This now also includes schemas for AI configurations: `lib/schemas/aiVendor.schema.ts`, `lib/schemas/aiModel.schema.ts`, and `lib/schemas/aiPrompt.schema.ts`.
 - **Purpose**:
   - **API Input Validation**: These schemas are primarily used in API Route Handlers to validate incoming request bodies, ensuring data integrity before database operations.
   - **Type Inference**: Zod schemas allow for easy inference of TypeScript types (e.g., `z.infer<typeof projectSchema>`). These inferred types can be used for form values, function parameters, and other client-side or server-side logic, ensuring consistency with the validation rules.
