@@ -60,6 +60,7 @@ import {
   Sparkles,
 } from "lucide-react"; // Added FileText, ClipboardList
 import { AISidePanel } from "@/components/ai/AISidePanel";
+import { cn } from "@/lib/utils";
 
 // Define view states for the manuscript section
 type ManuscriptView = "chapters" | "scenes";
@@ -103,6 +104,114 @@ ProjectDashboardClientProps) {
   const [isCreateChapterModalOpen, setIsCreateChapterModalOpen] =
     useState(false);
   const [isCreateSceneModalOpen, setIsCreateSceneModalOpen] = useState(false);
+
+  // Drag and drop state for scenes
+  const [draggedSceneId, setDraggedSceneId] = useState<string | null>(null);
+  const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
+
+  // Drag and drop handlers
+  const handleDragStart = (
+    event: React.DragEvent<HTMLDivElement>,
+    sceneId: string
+  ) => {
+    setDraggedSceneId(sceneId);
+    event.dataTransfer.setData("text/plain", sceneId);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault(); // Necessary to allow drop
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDragEnter = (
+    event: React.DragEvent<HTMLDivElement>,
+    sceneId: string
+  ) => {
+    event.preventDefault();
+    if (sceneId !== draggedSceneId) {
+      setDragOverSceneId(sceneId);
+    }
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragOverSceneId(null);
+  };
+
+  const persistSceneOrder = async (reorderedScenes: Scene[]) => {
+    if (!selectedChapter || reorderedScenes.length === 0) return;
+
+    const scenesWithNewOrder = reorderedScenes.map((scene, index) => ({
+      id: scene.id,
+      order: index,
+    }));
+
+    const toastId = toast.loading("Saving new scene order...");
+
+    try {
+      const response = await fetch(
+        `/api/projects/${project.id}/chapters/${selectedChapter.id}/scenes/reorder`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scenes: scenesWithNewOrder }),
+        }
+      );
+
+      if (response.ok) {
+        toast.success("Scene order saved!", { id: toastId });
+        // Optionally re-fetch scenes to confirm order from backend
+        // await fetchScenesForChapter(selectedChapter.id);
+      } else {
+        const errorData = await response.json().catch(() => ({
+          error: "Failed to save order.",
+        }));
+        toast.error(errorData.error || "Could not save scene order.", {
+          id: toastId,
+        });
+        // Revert local state by re-fetching scenes
+        await fetchScenesForChapter(selectedChapter.id);
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "An error occurred while saving scene order.",
+        { id: toastId }
+      );
+      // Revert local state by re-fetching scenes
+      await fetchScenesForChapter(selectedChapter.id);
+    }
+  };
+
+  const handleDrop = (
+    event: React.DragEvent<HTMLDivElement>,
+    targetSceneId: string
+  ) => {
+    event.preventDefault();
+    const sourceSceneId = event.dataTransfer.getData("text/plain");
+    setDraggedSceneId(null);
+    setDragOverSceneId(null);
+
+    if (sourceSceneId && sourceSceneId !== targetSceneId) {
+      const sourceIndex = scenesForSelectedChapter.findIndex(
+        (scene) => scene.id === sourceSceneId
+      );
+      const targetIndex = scenesForSelectedChapter.findIndex(
+        (scene) => scene.id === targetSceneId
+      );
+
+      if (sourceIndex !== -1 && targetIndex !== -1) {
+        const reorderedScenes = [...scenesForSelectedChapter];
+        const [draggedItem] = reorderedScenes.splice(sourceIndex, 1);
+        reorderedScenes.splice(targetIndex, 0, draggedItem);
+
+        setScenesForSelectedChapter(reorderedScenes);
+        persistSceneOrder(reorderedScenes);
+      }
+    }
+  };
 
   // Character states
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -726,6 +835,19 @@ ProjectDashboardClientProps) {
                     secondaryText={`${scene.word_count || 0} words`} // Changed description to secondaryText
                     onClick={() => handleSceneSelect(scene)}
                     isSelected={selectedScene?.id === scene.id} // Changed isActive to isSelected
+                    draggable={true}
+                    dataId={scene.id}
+                    onDragStart={(e) => handleDragStart(e, scene.id)}
+                    onDragOver={handleDragOver}
+                    onDragEnter={(e) => handleDragEnter(e, scene.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, scene.id)}
+                    className={cn(
+                      draggedSceneId === scene.id && "opacity-30",
+                      dragOverSceneId === scene.id &&
+                        draggedSceneId !== scene.id &&
+                        "border-t-2 border-primary pt-[calc(0.75rem-2px)] pb-[0.75rem]"
+                    )}
                   />
                 ))
               ) : (

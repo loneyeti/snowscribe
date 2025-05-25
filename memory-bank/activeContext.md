@@ -6,6 +6,8 @@ _(Updated: 2025-05-25 (AI-Generated Update))_
 
 The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented. **Additionally, users can now delete projects directly from the homepage, enhancing project management capabilities. A new "Edit Project Details" modal has been implemented, allowing users to modify a project's title, genre, description, and target word count from the project dashboard header. Furthermore, AI-assisted scene outline description generation has been implemented, allowing users to generate concise summaries for their scenes directly within the outline view. The AI-assisted one-page synopsis generation feature has also been implemented, allowing users to generate a draft for their "One Page Synopsis" using an AI assistant within the "Outline > Synopsis" view.**
 
+We also added drag and drop reordering for scenes.
+
 ## Recent Changes
 
 - **AI-Assisted One-Page Synopsis Generation**:

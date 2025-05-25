@@ -27,6 +27,7 @@ _(Updated: 2025-05-25 (AI-Generated Update))_
 - **Project Dashboard (`ProjectDashboardClient.tsx` & `AppShell.tsx`)**:
   - **Navigation**: Functional sidebar (`PrimarySidebar.tsx`) and header (`AppHeader.tsx`) managed by `AppShell.tsx`.
   - **Project Editing**: A new "Edit Project Details" modal is implemented, allowing users to modify a project's title, genre, description, and target word count from the project dashboard header.
+    - **Scene Drag and Drop**: Scenes can be dragged to reorder them and it updates the UI and database seamlessly
   - **Manuscript Section**:
     - Dynamic chapter and scene listing/creation.
     - `ManuscriptEditor.tsx` for scene content editing with auto-save and word count.

@@ -12,6 +12,15 @@ interface ListItemProps extends React.HTMLAttributes<HTMLDivElement> {
   onClick?: () => void;
   actions?: React.ReactNode; // New prop for action buttons
   asChild?: boolean; // For potential composition with other components
+
+  // Drag and drop props
+  draggable?: boolean;
+  onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragOver?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragEnter?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragLeave?: (event: React.DragEvent<HTMLDivElement>) => void;
+  dataId?: string;
 }
 
 const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
@@ -25,6 +34,13 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
       onClick,
       actions, // Destructure new prop
       asChild = false,
+      draggable,
+      onDragStart,
+      onDragOver,
+      onDrop,
+      onDragEnter,
+      onDragLeave,
+      dataId,
       ...props
     },
     ref
@@ -35,6 +51,13 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
       <Comp
         ref={ref}
         onClick={onClick}
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onDragEnter={onDragEnter}
+        onDragLeave={onDragLeave}
+        data-id={dataId}
         className={cn(
           "group flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200",
           "hover:bg-accent hover:shadow-sm dark:hover:bg-dark-accent",
