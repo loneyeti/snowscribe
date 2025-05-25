@@ -15,7 +15,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { vendorId } = params;
+  const { vendorId } = await params;
 
   if (!vendorId) {
     return NextResponse.json({ error: "Vendor ID is required" }, { status: 400 });
@@ -58,7 +58,7 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { vendorId } = params;
+  const { vendorId } = await params;
 
   if (!vendorId) {
     return NextResponse.json({ error: "Vendor ID is required" }, { status: 400 });
@@ -121,7 +121,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { vendorId } = params;
+  const { vendorId } = await params;
 
   if (!vendorId) {
     return NextResponse.json({ error: "Vendor ID is required" }, { status: 400 });

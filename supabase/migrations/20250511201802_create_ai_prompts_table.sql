@@ -1,3 +1,4 @@
+-- Create table without the inline unique constraint
 CREATE TABLE IF NOT EXISTS ai_prompts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -6,12 +7,18 @@ CREATE TABLE IF NOT EXISTS ai_prompts (
     prompt_text TEXT NOT NULL,
     category TEXT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    CONSTRAINT uq_ai_prompt_scope_name UNIQUE (
-        COALESCE(project_id, '00000000-0000-0000-0000-000000000000'::uuid),
-        COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid),
-        name
-    )
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+    -- The problematic CONSTRAINT uq_ai_prompt_scope_name has been removed from here
+);
+
+-- Add the unique index separately
+-- Using "IF NOT EXISTS" for idempotency, though "supabase db reset" typically drops everything first.
+-- Good practice for standalone script execution.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ai_prompt_scope_name_idx -- Changed name slightly to indicate it's an index
+ON ai_prompts (
+    COALESCE(project_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    name
 );
 
 -- Enable RLS
@@ -27,24 +34,14 @@ TO authenticated
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
 
--- Allow users to read prompts associated with projects they own/collaborate on (assuming a project ownership check)
--- This policy is a bit more complex if we introduce collaboration. For now, let's assume project_id implies ownership via other checks.
--- A simpler version: Allow users to read prompts linked to their projects if user_id on prompt matches auth.uid() OR if prompt is project-specific and user has access to project.
--- For now, let's focus on user-owned prompts and project-specific prompts created by the user.
--- System/Global prompts (project_id IS NULL AND user_id IS NULL) should be readable by all authenticated users.
-
+-- Allow authenticated users to read global prompts
 CREATE POLICY "Allow authenticated users to read global prompts"
 ON ai_prompts
 FOR SELECT
 TO authenticated
 USING (project_id IS NULL AND user_id IS NULL);
 
--- Allow users to read prompts linked to projects they are part of.
--- This requires joining with projects table or having a helper function.
--- For simplicity now, if a prompt is project-specific, the user must be the creator to see it via the "manage their own prompts" policy.
--- A more advanced policy would check project membership.
--- Let's add a policy that allows users to read prompts for projects they own.
--- This assumes that `projects` table has RLS ensuring user can only access their own projects.
+-- Allow users to read prompts for their projects
 CREATE POLICY "Allow users to read prompts for their projects"
 ON ai_prompts
 FOR SELECT
@@ -53,20 +50,29 @@ USING (
     EXISTS (
         SELECT 1
         FROM projects p
-        WHERE p.id = ai_prompts.project_id AND p.user_id = auth.uid()
+        WHERE p.id = ai_prompts.project_id AND p.user_id = auth.uid() -- Assuming projects.user_id exists and identifies the owner
     )
 );
-
 
 -- Allow service_role to do anything
 CREATE POLICY "Allow all access for service_role"
 ON ai_prompts
 FOR ALL
 TO service_role
-USING (true);
-
+USING (true)
+WITH CHECK (true); -- Added WITH CHECK (true) for completeness, though often omitted for service_role
 
 -- Trigger to update "updated_at" timestamp
+-- Ensure the function update_updated_at_column() exists.
+-- If it doesn't, you need to create it, e.g.:
+-- CREATE OR REPLACE FUNCTION update_updated_at_column()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--    NEW.updated_at = now();
+--    RETURN NEW;
+-- END;
+-- $$ language 'plpgsql';
+
 CREATE TRIGGER trigger_ai_prompts_updated_at
 BEFORE UPDATE ON ai_prompts
 FOR EACH ROW

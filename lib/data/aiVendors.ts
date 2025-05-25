@@ -2,16 +2,9 @@
 
 import type { AIVendor } from "@/lib/types";
 import type { AIVendorFormData } from "@/lib/schemas/aiVendor.schema";
-import { cookies } from "next/headers";
+import { getCookieHeader } from "./dataUtils";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-// Helper to get cookies for server-side fetch
-async function getCookieHeader() {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.getAll().map((cookie: {name: string, value: string}) => `${cookie.name}=${cookie.value}`).join('; ');
-  return cookieHeader;
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function getAIVendors(): Promise<AIVendor[]> {
   const cookieHeader = await getCookieHeader();

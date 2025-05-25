@@ -22,7 +22,7 @@ ALTER TABLE ai_models ENABLE ROW LEVEL SECURITY;
 -- Allow read access to all authenticated users
 CREATE POLICY "Allow read access to authenticated users"
 ON ai_models
-FOR SELECT
+FOR ALL
 TO authenticated
 USING (true);
 

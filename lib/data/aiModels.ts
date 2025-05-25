@@ -2,15 +2,9 @@
 
 import type { AIModel } from "@/lib/types";
 import type { AIModelFormData } from "@/lib/schemas/aiModel.schema";
-import { cookies } from "next/headers";
+import { getCookieHeader } from "./dataUtils";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-async function getCookieHeader() {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.getAll().map((cookie: {name: string, value: string}) => `${cookie.name}=${cookie.value}`).join('; ');
-  return cookieHeader;
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function getAIModels(vendorId?: string): Promise<AIModel[]> {
   const cookieHeader = await getCookieHeader();
@@ -35,6 +29,7 @@ export async function getAIModels(vendorId?: string): Promise<AIModel[]> {
 
 export async function getAIModelById(modelId: string): Promise<AIModel | null> {
   if (!modelId) return null;
+  console.log(`About to fetch model from the API using this modelID: ` + modelId)
   const cookieHeader = await getCookieHeader();
   const response = await fetch(`${API_BASE_URL}/api/ai/models/${modelId}`, {
     headers: {

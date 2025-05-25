@@ -1,15 +1,7 @@
 import type { Chapter } from "@/lib/types";
-import { cookies } from 'next/headers'; // Import cookies
-// countWords and createClient are no longer needed here.
+import { getCookieHeader } from "./dataUtils";
 
-// Helper function to get the base URL for API calls
-function getApiBaseUrl() {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
-  }
-  // Fallback for local development if NEXT_PUBLIC_APP_URL is not set
-  return 'http://localhost:3000';
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function getChaptersByProjectId(projectId: string): Promise<Chapter[]> {
   if (!projectId) {
@@ -17,14 +9,10 @@ export async function getChaptersByProjectId(projectId: string): Promise<Chapter
     return [];
   }
 
-  const baseUrl = getApiBaseUrl();
-  const apiUrl = `${baseUrl}/api/projects/${projectId}/chapters`;
+  const apiUrl = `${API_BASE_URL}/api/projects/${projectId}/chapters`;
 
   try {
-    // Get cookies from the incoming request
-    const cookieStore = await cookies();
-    const cookieHeader = cookieStore.getAll().map((cookie: { name: string; value: string }) => `${cookie.name}=${cookie.value}`).join('; ');
-
+    const cookieHeader = await getCookieHeader();
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {

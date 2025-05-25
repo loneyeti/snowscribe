@@ -50,7 +50,8 @@ import { CharacterList } from "@/components/characters/CharacterList";
 import { WorldNoteList } from "@/components/world-notes/WorldNoteList"; // Added
 import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteModal"; // Added
 import { WorldNoteEditor } from "@/components/world-notes/WorldNoteEditor"; // Added
-import { PlusCircle, ArrowLeft, FileText, ClipboardList } from "lucide-react"; // Added FileText, ClipboardList
+import { PlusCircle, ArrowLeft, FileText, ClipboardList, Sparkles } from "lucide-react"; // Added FileText, ClipboardList
+import { AISidePanel } from "@/components/ai/AISidePanel";
 
 // Define view states for the manuscript section
 type ManuscriptView = "chapters" | "scenes";
@@ -89,6 +90,7 @@ ProjectDashboardClientProps) {
   >([]);
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
   const [currentSceneWordCount, setCurrentSceneWordCount] = useState(0); // State for word count
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false); // State for AI panel visibility
   const [isLoadingScenes, setIsLoadingScenes] = useState(false);
   const [isCreateChapterModalOpen, setIsCreateChapterModalOpen] =
     useState(false);
@@ -739,9 +741,30 @@ ProjectDashboardClientProps) {
             return (
               <div className="flex flex-col h-full items-center">
                 <div className="text-center p-2">
-                  <h1 className={`text-2xl ${cactusSerif.className} font-bold`}>
-                    {selectedScene.title || "&nbsp;"}
-                  </h1>
+                  <div className="flex items-center">
+                    <h1 className={`text-2xl ${cactusSerif.className} font-bold mr-2`}>
+                      {selectedScene.title || "&nbsp;"}
+                    </h1>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsAIPanelOpen(true);
+                      }}
+                      className="p-1 rounded-full hover:bg-muted transition-colors"
+                      aria-label="Open AI Assistant"
+                    >
+                      <Sparkles className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <AISidePanel 
+                    isOpen={isAIPanelOpen} 
+                    onClose={() => setIsAIPanelOpen(false)}
+                    title={`AI Assistant - ${selectedScene.title || 'Scene'}`}
+                    componentType="tool"
+                    toolName="scene_helper"
+                    defaultPrompt={`Help me improve this scene: ${selectedScene.content || 'Untitled Scene'}`}
+                    defaultSystemPrompt="You are a helpful writing assistant specialized in fiction. Help the user improve their scene by providing constructive feedback and suggestions."
+                  />
                   <span className="text-sm italic text-gray-500">
                     {currentSceneWordCount} words
                   </span>

@@ -15,7 +15,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { modelId } = params;
+  const { modelId } = await params; // Await params
 
   if (!modelId) {
     return NextResponse.json({ error: "Model ID is required" }, { status: 400 });
@@ -61,7 +61,9 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { modelId } = params;
+  const { modelId } = await params;
+  console.log('Received params:', params);
+  console.log('Extracted modelId:', modelId);
 
   if (!modelId) {
     return NextResponse.json({ error: "Model ID is required" }, { status: 400 });
@@ -69,6 +71,8 @@ export async function PUT(
 
   const json = await request.json();
   const result = aiModelSchema.safeParse(json);
+
+  console.log(result);
 
   if (!result.success) {
     return NextResponse.json(
@@ -138,10 +142,7 @@ export async function PUT(
   return NextResponse.json(updatedModel);
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { modelId: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { modelId: string } }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -151,7 +152,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { modelId } = params;
+  const { modelId } = await params; // Await params
 
   if (!modelId) {
     return NextResponse.json({ error: "Model ID is required" }, { status: 400 });

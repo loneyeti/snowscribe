@@ -10,6 +10,7 @@ interface ListItemProps extends React.HTMLAttributes<HTMLDivElement> {
   secondaryText?: string;
   isSelected?: boolean;
   onClick?: () => void;
+  actions?: React.ReactNode; // New prop for action buttons
   asChild?: boolean; // For potential composition with other components
 }
 
@@ -22,6 +23,7 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
       secondaryText,
       isSelected,
       onClick,
+      actions, // Destructure new prop
       asChild = false,
       ...props
     },
@@ -76,6 +78,8 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
             </div>
           )}
         </div>
+        {/* Render actions if provided */}
+        {actions && <div className="ml-auto flex-shrink-0">{actions}</div>}
       </Comp>
     );
   }

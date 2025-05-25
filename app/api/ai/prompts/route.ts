@@ -4,6 +4,7 @@ import { aiPromptSchema } from "@/lib/schemas/aiPrompt.schema";
 import { verifyProjectOwnership } from "@/lib/supabase/guards";
 
 export async function GET(request: NextRequest) {
+  console.log('[API] GET /api/ai/prompts - Request received');
   const supabase = await createClient();
   const {
     data: { user },
@@ -11,20 +12,50 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
+    console.error('[API] GET /api/ai/prompts - Unauthorized:', userError);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get("project_id");
   const scope = searchParams.get("scope"); // 'global', 'user', 'project'
+  const category = searchParams.get("category"); // Filter by category
+  
+  console.log('[API] GET /api/ai/prompts - Query params:', {
+    projectId,
+    scope,
+    category,
+    hasUser: !!user,
+    userId: user.id
+  });
 
+  // Only select the fields we need to avoid unnecessary joins
   let query = supabase.from("ai_prompts").select(`
-    *,
-    projects (id, title),
-    users (id)
+    id,
+    name,
+    prompt_text,
+    category,
+    project_id,
+    user_id,
+    created_at,
+    updated_at
   `);
+  
+  console.log('[API] GET /api/ai/prompts - Base query created');
 
-  if (projectId) {
+  if (category) {
+    console.log(`[API] GET /api/ai/prompts - Filtering by category: ${category}`);
+    query = query.eq("category", category);
+    
+    // For global scope or when no scope is specified, only return prompts with no user_id and no project_id
+    if (scope === 'global' || !scope) {
+      console.log(`[API] GET /api/ai/prompts - Filtering by global scope`);
+      query = query.is("user_id", null).is("project_id", null);
+    } else if (scope === 'user') {
+      console.log(`[API] GET /api/ai/prompts - Filtering by user scope`);
+      query = query.eq("user_id", user.id).is("project_id", null);
+    }
+  } else if (projectId) {
     // Verify project ownership if project_id is provided
     const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
     if (ownershipVerification.error) {
@@ -42,14 +73,25 @@ export async function GET(request: NextRequest) {
   
   query = query.order("name", { ascending: true });
 
+  console.log('[API] GET /api/ai/prompts - Executing query...');
   const { data: prompts, error: promptsError } = await query;
 
   if (promptsError) {
-    console.error("Error fetching AI prompts:", promptsError);
+    console.error('[API] GET /api/ai/prompts - Error executing query:', promptsError);
     return NextResponse.json(
       { error: "Failed to fetch AI prompts" },
       { status: 500 }
     );
+  }
+
+  console.log(`[API] GET /api/ai/prompts - Query successful, found ${prompts?.length || 0} prompts`);
+  if (prompts && prompts.length > 0) {
+    console.log('[API] GET /api/ai/prompts - First prompt details:', {
+      id: prompts[0].id,
+      name: prompts[0].name,
+      category: prompts[0].category,
+      prompt_text_length: prompts[0].prompt_text?.length
+    });
   }
 
   return NextResponse.json(prompts);

@@ -1,6 +1,7 @@
 "use client"; // AppShell needs to be a client component to manage state
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
 import { AppHeader } from "./AppHeader";
 import { PrimarySidebar } from "./PrimarySidebar";
 import type { Project, Genre } from "@/lib/types";
@@ -17,9 +18,14 @@ interface AppShellProps {
 
 export function AppShell({ children, project }: AppShellProps) {
   const [activeSection, setActiveSection] = useState<string>("manuscript");
+  const router = useRouter(); // Initialize useRouter
 
   const handleSectionChange = (sectionId: string) => {
-    setActiveSection(sectionId);
+    if (sectionId === "settings") {
+      router.push("/settings");
+    } else {
+      setActiveSection(sectionId);
+    }
   };
 
   const childrenWithProps = React.Children.map(children, (child) => {

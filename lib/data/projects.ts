@@ -1,17 +1,7 @@
 import type { Project, Genre } from "@/lib/types";
-import { cookies } from 'next/headers'; // Import cookies
-// Note: getChaptersByProjectId is no longer needed here as word count is handled by the API route.
-// Note: createClient for direct Supabase access is no longer needed here.
+import { getCookieHeader } from "./dataUtils";
 
-// Helper function to get the base URL for API calls
-// This should ideally come from environment variables or a more robust config
-function getApiBaseUrl() {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
-  }
-  // Fallback for local development if NEXT_PUBLIC_APP_URL is not set
-  return 'http://localhost:3000';
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function getProjectById(projectId: string): Promise<(Project & { genres: Genre | null; wordCount: number }) | null> {
   if (!projectId) {
@@ -19,8 +9,7 @@ export async function getProjectById(projectId: string): Promise<(Project & { ge
     return null;
   }
 
-  const baseUrl = getApiBaseUrl();
-  const apiUrl = `${baseUrl}/api/projects/${projectId}`;
+  const apiUrl = `${API_BASE_URL}/api/projects/${projectId}`;
 
   try {
     // Log the outgoing fetch request details
@@ -28,8 +17,7 @@ export async function getProjectById(projectId: string): Promise<(Project & { ge
     console.log(`[getProjectById] Fetching Method: GET`);
 
     // Get cookies from the incoming request
-    const cookieStore = await cookies(); // Re-add await based on TS error and activeContext.md
-    const cookieHeader = cookieStore.getAll().map((cookie: { name: string; value: string }) => `${cookie.name}=${cookie.value}`).join('; ');
+    const cookieHeader = await getCookieHeader();
 
     const response = await fetch(apiUrl, {
       method: 'GET',
