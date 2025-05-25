@@ -1,6 +1,6 @@
 # Project Progress
 
-_(Updated: 2025-05-24 (AI-Generated Update))_
+_(Updated: 2025-05-25 (AI-Generated Update))_
 
 ## What Works
 
@@ -42,6 +42,7 @@ _(Updated: 2025-05-24 (AI-Generated Update))_
     - `ManageSceneCharactersModal.tsx` and `ManageSceneTagsModal.tsx` for linking characters/tags to scenes.
     - `CreateSceneModal` callable from outline view.
     - **Outline Section - Synopsis View**: Implemented display and editing of project log line and one-page synopsis using `ProjectSynopsisEditor`. Added basic display of character names/nicknames in `CharacterCardQuickViewList` with loading state.
+    - **AI-Assisted One-Page Synopsis Generation**: Implemented AI assistance for generating one-page synopses based on project context (title, genre, log line, scene descriptions).
 - **AI Integration (Foundational)**:
   - `snowgander` integrated in `lib/data/chat.ts`.
   - `AISidePanel.tsx` and `AIToolButton.tsx` for triggering AI tools based on `tool_model` config.
@@ -88,7 +89,7 @@ _(Updated: 2025-05-24 (AI-Generated Update))_
   - [ ] Token tracking and usage limits per user (requires backend and UI).
 - [ ] Specific AI Tools Implementation:
   - [x] **Snowflake Log Line Outliner**: Integrate AI to assist with one-sentence synopses based on user input or existing project content. (Log line generation refactored to background modality).
-  - [ ] **Snowflake Synopsis Outliner**: Integrate AI to assist with one-page synopses based on user input or existing project content.
+  - [x] **Snowflake Synopsis Outliner**: Integrate AI to assist with one-page synopses based on user input or existing project content.
   - [ ] **Snowflake Scene Outliner**: Integrate AI to assist with generating a summary of the scene based on the scene text.
   - [ ] **Character Enhancer**: Develop prompts and UI for AI to help flesh out characters.
   - [ ] **Research Assistant**: Tool for AI-powered research within the app.
@@ -147,3 +148,4 @@ The immediate focus areas are:
 | 2025-05-24 (AI Update)     | **Outline Section - Synopsis View**: Implemented display and editing of project log line and one-page synopsis using `ProjectSynopsisEditor`. Added basic display of character names/nicknames in `CharacterCardQuickViewList` with loading state. | To bring the Synopsis sub-view of the Outline section to life, enabling users to manage high-level project summaries and see associated characters. |
 | 2025-05-24 (AI Update)     | Implemented project deletion from the homepage.                                                                                                                                                                                                    | To provide users with a direct and intuitive way to manage and remove their projects from the main application entry point.                         |
 | 2025-05-25 (AI Update)     | Implemented "Edit Project Details" modal.                                                                                                                                                                                                          | To allow users to modify core project details (title, genre, description, target word count) after project creation, enhancing project management.  |
+| 2025-05-25 (AI Update)     | Implemented AI-assisted one-page synopsis generation.                                                                                                                                                                                              | To provide AI assistance for generating comprehensive one-page synopses, leveraging existing project context.                                       |

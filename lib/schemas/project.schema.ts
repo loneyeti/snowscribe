@@ -14,7 +14,7 @@ export const projectBaseSchema = z.object({
 // For now, createProjectSchema will also allow these as optional and nullable.
 export const createProjectSchema = projectBaseSchema; 
 
-export const updateProjectSchema = projectBaseSchema.partial().omit({ genre: true, log_line: true, one_page_synopsis: true });
+export const updateProjectSchema = projectBaseSchema.partial().omit({ genre: true });
 
 export type CreateProjectValues = z.infer<typeof createProjectSchema>;
 export type UpdateProjectValues = z.infer<typeof updateProjectSchema>;

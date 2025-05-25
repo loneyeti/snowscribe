@@ -78,3 +78,13 @@ INSERT INTO public.ai_prompts (name, prompt_text, category, user_id, project_id)
 
 INSERT INTO public.tool_model (name, model_id) VALUES
   ('scene_outliner', (SELECT id FROM public.ai_models WHERE name = 'Claude 3.7 Sonnet' LIMIT 1));
+
+-- System Prompt for One-Page Synopsis Generator
+INSERT INTO public.ai_prompts (name, prompt_text, category, user_id, project_id) VALUES
+  ('One-Page Synopsis Generator Default System Prompt', 'You are an AI assistant specializing in narrative development and storytelling. Your task is to generate a draft of a one-page synopsis for a novel based on the provided project title, genre, log line, and existing scene outline descriptions. The synopsis should cover the main plot points, key characters, major conflicts, and the overall arc of the story, weaving together information from all provided context. It should be approximately 300-500 words. Return only the generated synopsis as plain text, without any introductory phrases, explanations, or markdown formatting.', 'synopsis_generator', NULL, NULL);
+
+-- Map the 'synopsis_generator' tool to an existing AI model (e.g., Claude 3.7 Sonnet)
+-- Ensure the model_id selected here exists in your ai_models table.
+-- If 'Claude 3.7 Sonnet' doesn't exist or you prefer another, adjust the WHERE clause.
+INSERT INTO public.tool_model (name, model_id)
+SELECT 'synopsis_generator', id FROM public.ai_models WHERE name = 'Claude 3.7 Sonnet' LIMIT 1;

@@ -132,29 +132,18 @@ export async function PUT(request: Request, { params }: { params: Params }) {
 
   // The verifyProjectOwnership guard has already confirmed the project exists and belongs to the user.
   // So, we can proceed directly to the update.
-  const { data: updatedProject, error: updateError } = await supabase
+  const { error: updateError } = await supabase
     .from('projects')
     .update(validationResult.data)
     .eq('id', projectId)
-    .eq('user_id', user.id) // Keep this for explicit safety on the update operation itself
-    .select('id') // Only select the id to confirm the update
-    .single();
+    .eq('user_id', user.id); // Keep this for explicit safety on the update operation itself
 
   if (updateError) {
     console.error(`Error updating project ${projectId}:`, updateError);
-    // The original error from Supabase might be more informative here
     return NextResponse.json({ error: `Failed to update project: ${updateError.message}`, code: updateError.code, details: updateError.details, hint: updateError.hint }, { status: 500 });
   }
 
-  if (!updatedProject || !updatedProject.id) {
-    // This case should ideally not be reached if updateError is not triggered,
-    // but it's a safeguard.
-    console.error(`Error updating project ${projectId}: Update succeeded but no ID was returned.`);
-    return NextResponse.json({ error: 'Failed to update project: No ID returned after update.' }, { status: 500 });
-  }
-
-  // Now, fetch the full project details separately to ensure RLS for SELECT is applied correctly
-  // This mimics part of the GET handler logic but is more targeted.
+  // Fetch the full project details after a successful update
   const { data: projectDetails, error: fetchError } = await supabase
     .from('projects')
     .select(`

@@ -4,10 +4,30 @@
 
 _(Updated: 2025-05-25 (AI-Generated Update))_
 
-The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented. **Additionally, users can now delete projects directly from the homepage, enhancing project management capabilities. A new "Edit Project Details" modal has been implemented, allowing users to modify a project's title, genre, description, and target word count from the project dashboard header. Furthermore, AI-assisted scene outline description generation has been implemented, allowing users to generate concise summaries for their scenes directly within the outline view.**
+The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented. **Additionally, users can now delete projects directly from the homepage, enhancing project management capabilities. A new "Edit Project Details" modal has been implemented, allowing users to modify a project's title, genre, description, and target word count from the project dashboard header. Furthermore, AI-assisted scene outline description generation has been implemented, allowing users to generate concise summaries for their scenes directly within the outline view. The AI-assisted one-page synopsis generation feature has also been implemented, allowing users to generate a draft for their "One Page Synopsis" using an AI assistant within the "Outline > Synopsis" view.**
 
 ## Recent Changes
 
+- **AI-Assisted One-Page Synopsis Generation**:
+  - Added a new system prompt for `synopsis_generator` to `supabase/seed.sql` to guide AI in generating one-page synopses.
+  - Mapped the `synopsis_generator` tool to the `Claude 3.7 Sonnet` AI model in the `tool_model` table within `supabase/seed.sql`.
+  - Modified `app/(dashboard)/project/[projectId]/ProjectDashboardClient.tsx` to:
+    - Aggregate all non-empty `scene.outline_description` strings from chapters and scenes, including scene titles for context.
+    - Pass the `projectGenreName` and the aggregated `sceneOutlineDescriptions` as new props to the `ProjectSynopsisEditor` component.
+  - Modified `components/outline/ProjectSynopsisEditor.tsx` to:
+    - Update `ProjectSynopsisEditorProps` interface to include `projectGenreName` and `sceneOutlineDescriptions`.
+    - Add `isGeneratingSynopsis` state variable to manage loading.
+    - Implement the `handleGenerateSynopsis` asynchronous function:
+      - Checks if sufficient context (title, genre, log line, or scene descriptions) is available.
+      - Fetches the AI model configuration and system prompt for `synopsis_generator`.
+      - Constructs a comprehensive user prompt using project title, genre name, log line, and aggregated scene outline descriptions.
+      - Calls the `chat` function from `lib/data/chat.ts` to interact with the AI.
+      - Processes the AI response, extracts the plain text synopsis, and updates the `onePageSynopsis` state.
+      - Displays `sonner` toast notifications for success or error.
+      - Manages the `isGeneratingSynopsis` state to show/hide loading indicators.
+    - Updated the "One Page Synopsis" `Textarea` to be disabled during generation or saving.
+    - Ensured the "Generate Synopsis with AI" `Button` correctly calls `handleGenerateSynopsis` and displays loading states.
+    - Updated the `disabled` props on the "Generate Log Line with AI" and "Save Synopses" buttons to account for the `isGeneratingSynopsis` state.
 - **AI-Assisted Scene Outline Description Generation**:
   - Added a new system prompt for `scene_outliner` to `supabase/seed.sql` to guide AI in generating concise scene outline descriptions.
   - Mapped the `scene_outliner` tool to the `Claude 3.7 Sonnet` AI model in the `tool_model` table within `supabase/seed.sql`.
@@ -97,62 +117,3 @@ The application now includes full CRUD management for AI Prompts in the Site Set
   - Refactored Data Access Layer (`lib/data`) to call internal APIs, ensuring cookie forwarding for authenticated server-side requests.
   - Centralized project ownership verification using a guard in `lib/supabase/guards.ts`.
   - Addressed Next.js 15 asynchronous API requirements (`await params`, `await cookies()`).
-
-## Next Steps
-
-The following are the prioritized next steps:
-
-1.  **Complete Outline Feature UI**:
-
-    - [ ] Enhance `ChapterSceneOutlineList.tsx` to allow full editing of scene outline details (description, POV, etc.) directly or via improved modals.
-    - [ ] Consider UI for reordering scenes/chapters within the outline view.
-    - [ ] Ensure seamless data synchronization between manuscript and outline views.
-
-2.  **Expand AI Service Integration & Features**:
-
-    - [ ] Implement specific AI tools (e.g., Snowflake Outliner, Character Enhancer) using the `AISidePanel`, `AIToolButton`, and `tool_model` pattern.
-    - [ ] Develop system prompts for each AI feature and store them in the `ai_prompts` table.
-    - [ ] Implement token tracking and usage limits (future consideration for business model).
-
-3.  **Authentication & User Profile Refinements**:
-
-    - [ ] Refine error handling and user feedback for all auth flows using `sonner` for toasts consistently.
-    - [ ] Implement a user profile page where users can manage their account details (e.g., update profile info, change password).
-
-4.  **Core UI Components & Manuscript Refinements**:
-
-    - [ ] Continue refinement and expansion of the UI component library.
-    - [ ] Improve display of chapter/scene metadata (e.g., scene counts, word counts) in lists.
-    - [ ] Consider adding more advanced features to `ManuscriptEditor` (e.g., basic formatting toolbar).
-
-5.  **Testing and Polish**:
-    - [ ] Add unit and integration tests for critical components and API routes.
-    - [ ] Conduct thorough UI/UX testing and polish.
-
-## Active Decisions and Considerations
-
-- **Typography Selection**: `Inter` and `Cactus_Classical_Serif` have been chosen and integrated. Ongoing assessment for optimal readability and aesthetics.
-- **AI Integration Strategy**: The pattern of using `tool_model` to link named tools to specific AI models (via `snowgander`) and presenting them in `AISidePanel` seems to be the chosen direction. System prompts will be key.
-- **Editor Experience**: `ManuscriptEditor` provides basic text editing with auto-save and word count. Further enhancements (formatting, collaboration features) are future considerations.
-
-## Important Patterns and Preferences
-
-- **Server Components by Default**: Use React Server Components for all non-interactive UI.
-- **Strong TypeScript**: Use explicit typing for all functions, components, and data structures.
-- **Component-Driven Development**: Build from small, reusable components up to larger features.
-- **Accessibility First**: Build with accessibility in mind from the beginning.
-- **API Route Handlers**: Use Next.js Route Handlers for backend logic, secured by middleware and RLS.
-- **Zod for Validation**: Enforce data integrity through Zod schemas at the API boundary.
-- **Sonner for Notifications**: Utilize `sonner` for user-facing toast notifications.
-- **Client-side data fetching within feature components**: Components like `ProjectDashboardClient` fetch their own data using functions from `lib/data/*` which in turn call internal API routes.
-- **Asynchronous Dynamic APIs (Next.js 15+)**: Ensure `params` and `cookies()` are `await`ed in server-side code.
-- **Project Ownership Guard**: Utilize the `verifyProjectOwnership` guard in `lib/supabase/guards.ts`.
-- **Internal API Cookie Forwarding**: Explicitly forward cookies for server-to-server API calls.
-
-## Learnings and Project Insights
-
-- The Supabase Auth SSR pattern, with explicit cookie handling, provides robust authentication.
-- AI integration requires a flexible data model for vendors, models, and prompts, which has now been established. The `tool_model` mapping is key for abstracting specific model choices for named tools.
-- Simplifying the Outline data model by integrating fields directly into `projects` and `scenes` enhances data consistency and aligns better with a unified manuscript/outline vision.
-- Centralized data access (`lib/data`) and authorization (`lib/supabase/guards`) improve code maintainability and security.
-- **Project deletion from homepage is now implemented, providing a direct way for users to manage their projects.**

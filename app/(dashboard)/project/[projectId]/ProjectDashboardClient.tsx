@@ -944,6 +944,38 @@ ProjectDashboardClientProps) {
   };
 
   const renderOutlineSynopsisView = () => {
+    let allSceneOutlineDescriptions = "";
+    // Ensure chapters and their scenes are properly loaded and structured.
+    // The `chapters` state should be populated by `fetchProjectChapters` which,
+    // according to `app/api/projects/[projectId]/chapters/route.ts`, includes scenes with their details.
+    if (chapters && chapters.length > 0) {
+      const descriptionsArray: string[] = [];
+      chapters.forEach((chapter) => {
+        // Ensure chapter.scenes exists and is an array
+        if (Array.isArray(chapter.scenes)) {
+          chapter.scenes.forEach((scene) => {
+            if (
+              scene.outline_description &&
+              scene.outline_description.trim() !== ""
+            ) {
+              // Add scene title for context if available
+              const sceneTitlePrefix = scene.title
+                ? `Scene (Title: ${scene.title}): `
+                : "Scene: ";
+              descriptionsArray.push(
+                sceneTitlePrefix + scene.outline_description
+              );
+            }
+          });
+        }
+      });
+      if (descriptionsArray.length > 0) {
+        allSceneOutlineDescriptions =
+          "Existing Scene Outline Descriptions:\n" +
+          descriptionsArray.join("\n\n");
+      }
+    }
+
     return (
       <div className="p-4 space-y-6">
         <div>
@@ -956,9 +988,11 @@ ProjectDashboardClientProps) {
               id: currentProjectDetails.id,
               log_line: currentProjectDetails.log_line,
               one_page_synopsis: currentProjectDetails.one_page_synopsis,
-              title: currentProjectDetails.title, // Add title
-              genre_id: currentProjectDetails.genre_id, // Add genre_id
+              title: currentProjectDetails.title,
+              genre_id: currentProjectDetails.genre_id,
             }}
+            projectGenreName={currentProjectDetails.genres?.name}
+            sceneOutlineDescriptions={allSceneOutlineDescriptions} // <<< ENSURE THIS PROP IS PASSED
             onSynopsisUpdate={handleSynopsisUpdate}
           />
         </div>
