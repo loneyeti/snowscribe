@@ -8,17 +8,22 @@ import { ListSectionHeader } from "@/components/ui/ListSectionHeader"; // For ch
 import { Textarea } from "@/components/ui/Textarea"; // Uncommented
 import { Button } from "@/components/ui/Button";
 import {
+  Loader2,
+  Sparkles,
+  Edit3,
+  Save,
+  PlusCircle,
   ChevronDown,
   ChevronRight,
-  Edit3,
-  Save, // Uncommented
-  PlusCircle,
-} from "lucide-react";
+} from "lucide-react"; // Added Loader2, Sparkles
+import { toast } from "sonner"; // For notifications
+import { chat } from "@/lib/data/chat"; // For AI calls
+import { getToolModelByToolName } from "@/lib/data/toolModels"; // To get model config
+import { getSystemPromptByCategory } from "@/lib/data/aiPrompts"; // To get system prompt
+import type { TextBlock, ChatResponse } from "snowgander"; // For AI response typing
 import { ManageSceneCharactersModal } from "@/components/modals/ManageSceneCharactersModal";
 import { ManageSceneTagsModal } from "@/components/modals/ManageSceneTagsModal";
 import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal"; // Added
-
-// import { SceneOutlineCard } from "./SceneOutlineCard"; // This might be the individual editable scene item
 
 interface ChapterSceneOutlineListProps {
   chapters: Chapter[]; // Chapters should include their scenes, or scenes are fetched separately
@@ -30,19 +35,13 @@ interface ChapterSceneOutlineListProps {
     sceneId: string,
     updatedData: Partial<Scene>
   ) => void;
-  // isLoadingSceneTags?: boolean; // Added for loading state of all scene tags
-  // onSceneOrderChange: (...) => void;
-  // onChapterOrderChange: (...) => void;
 }
-
-// TODO: Define a more specific type for scenes within this outline context if needed
-// e.g., SceneWithOutlineDetails extends Scene { ... }
 
 export function ChapterSceneOutlineList({
   chapters,
   characters,
-  sceneTags, // Uncommented
-  projectId, // Uncommented
+  sceneTags,
+  projectId,
   onSceneUpdate,
 }: ChapterSceneOutlineListProps) {
   console.log("ChapterSceneOutlineList:");
@@ -52,6 +51,9 @@ export function ChapterSceneOutlineList({
   );
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Scene>>({});
+  const [isGeneratingOutline, setIsGeneratingOutline] = useState<string | null>(
+    null
+  ); // Stores the ID of the scene being generated for
 
   useEffect(() => {
     if (chapters && chapters.length > 0) {
@@ -60,6 +62,128 @@ export function ChapterSceneOutlineList({
       setExpandedChapters(new Set()); // Clear if chapters are empty or undefined
     }
   }, [chapters]);
+
+  const handleGenerateSceneOutlineDescription = async (scene: Scene) => {
+    if (!scene.id) {
+      toast.error("Scene ID is missing.");
+      return;
+    }
+
+    const sceneTitle = scene.title || "Untitled Scene";
+    const sceneContent = scene.content || "";
+
+    if (!sceneTitle && !sceneContent) {
+      toast.info(
+        "Please provide a scene title or some content before generating an outline description."
+      );
+      return;
+    }
+
+    setIsGeneratingOutline(scene.id); // Set loading state for this specific scene
+    try {
+      const toolName = "scene_outliner"; // Matches the category in ai_prompts and name in tool_model
+
+      // Fetch Tool Model configuration (to get model_id)
+      const toolModelConfig = await getToolModelByToolName(toolName);
+      if (!toolModelConfig || !toolModelConfig.model_id) {
+        console.error(
+          `AI model configuration for '${toolName}' not found or model_id is missing.`
+        );
+        throw new Error(
+          `AI model configuration for '${toolName}' not found or incomplete.`
+        );
+      }
+      const modelId = toolModelConfig.model_id;
+
+      // Fetch System Prompt
+      const systemPromptText = await getSystemPromptByCategory(toolName);
+      if (!systemPromptText) {
+        console.error(`System prompt for '${toolName}' not found.`);
+        throw new Error(
+          `System prompt for '${toolName}' not found. Please ensure it's configured.`
+        );
+      }
+
+      // Construct User Prompt for the AI
+      let userPrompt = `Generate an outline description for the following scene.\n\n`;
+      if (sceneTitle) {
+        userPrompt += `Scene Title: ${sceneTitle}\n`;
+      }
+      if (sceneContent) {
+        userPrompt += `Scene Content (excerpt):\n${sceneContent.substring(
+          0,
+          1000
+        )}\n\n`; // Limit content length for prompt
+      }
+      userPrompt += `Return only the outline description itself, as plain text, without any additional formatting or conversational text.`;
+
+      // Make AI Query using lib/data/chat.ts
+      const aiResponse: ChatResponse = await chat(
+        modelId,
+        [], // No previous messages for this one-shot generation
+        userPrompt,
+        systemPromptText
+      );
+
+      // Process Response
+      if (aiResponse && aiResponse.content && aiResponse.content.length > 0) {
+        const firstTextBlock = aiResponse.content.find(
+          (block) => block.type === "text"
+        ) as TextBlock | undefined;
+
+        if (firstTextBlock && typeof firstTextBlock.text === "string") {
+          let generatedDescription = firstTextBlock.text.trim();
+          // Basic cleanup (optional, good system prompts reduce need for this)
+          generatedDescription = generatedDescription
+            .replace(/^description:/i, "")
+            .trim();
+          generatedDescription = generatedDescription
+            .replace(/^here's the description:/i, "")
+            .trim();
+          generatedDescription = generatedDescription
+            .replace(/^"|"$/g, "")
+            .trim();
+
+          // Update the editFormData state for the currently editing scene
+          setEditFormData((prev) => ({
+            ...prev,
+            outline_description: generatedDescription,
+          }));
+          toast.success("Scene outline description generated!");
+        } else {
+          const errorBlock = aiResponse.content.find(
+            (block) => block.type === "error"
+          );
+          let errorMessage =
+            "AI response was empty or not in the expected text format.";
+          if (
+            errorBlock &&
+            "publicMessage" in errorBlock &&
+            typeof errorBlock.publicMessage === "string"
+          ) {
+            errorMessage = errorBlock.publicMessage;
+          }
+          console.error("AI response error or unexpected format:", aiResponse);
+          throw new Error(errorMessage);
+        }
+      } else {
+        console.error(
+          "AI returned an empty or invalid response structure:",
+          aiResponse
+        );
+        throw new Error("AI returned an empty or invalid response.");
+      }
+    } catch (error) {
+      console.error("Error generating scene outline description:", error);
+      const displayMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to generate description.";
+      toast.error(displayMessage);
+    } finally {
+      setIsGeneratingOutline(null); // Clear loading state
+    }
+  };
 
   const [isManageCharsModalOpen, setIsManageCharsModalOpen] = useState(false);
   const [managingCharsForScene, setManagingCharsForScene] =
@@ -241,7 +365,29 @@ export function ChapterSceneOutlineList({
                                 }
                                 rows={3}
                                 className="text-xs"
+                                disabled={isGeneratingOutline === scene.id} // Disable textarea while generating for this scene
                               />
+                              {/* START NEW BUTTON */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mt-1 text-xs text-primary hover:text-primary/90"
+                                onClick={() =>
+                                  handleGenerateSceneOutlineDescription(scene)
+                                }
+                                disabled={isGeneratingOutline === scene.id}
+                                title="Generate Outline Description with AI"
+                              >
+                                {isGeneratingOutline === scene.id ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Sparkles className="w-3 h-3 mr-1" />
+                                )}
+                                {isGeneratingOutline === scene.id
+                                  ? "Generating..."
+                                  : "Generate with AI"}
+                              </Button>
+                              {/* END NEW BUTTON */}
                             </div>
                             <div className="mb-3">
                               <label

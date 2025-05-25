@@ -72,3 +72,9 @@ INSERT INTO public.tool_model (name, model_id) VALUES
 
 INSERT INTO public.tool_model (name, model_id) VALUES
   ('log_line_generator', (SELECT id FROM public.ai_models WHERE name = 'Claude 3.7 Sonnet' LIMIT 1));
+
+INSERT INTO public.ai_prompts (name, prompt_text, category, user_id, project_id) VALUES
+  ('Scene Outline Generator Default System Prompt', 'You are an AI assistant specializing in narrative structure and storytelling. Your task is to generate a concise and informative outline description for a given scene. The outline description should summarize the key events, character actions, and plot significance of the scene in 1-3 sentences. Focus on clarity and brevity, providing just enough detail to understand the scene''s purpose within the larger story. Return only the generated outline description as plain text, without any introductory phrases, explanations, or markdown formatting.', 'scene_outliner', NULL, NULL);
+
+INSERT INTO public.tool_model (name, model_id) VALUES
+  ('scene_outliner', (SELECT id FROM public.ai_models WHERE name = 'Claude 3.7 Sonnet' LIMIT 1));

@@ -92,7 +92,7 @@ export function EditProjectModal({
     };
     // Remove 'genre' string field if present, as we use genre_id
     if ("genre" in payload) {
-      delete (payload as any).genre;
+      delete payload.genre;
     }
 
     try {

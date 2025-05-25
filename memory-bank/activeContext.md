@@ -4,10 +4,27 @@
 
 _(Updated: 2025-05-25 (AI-Generated Update))_
 
-The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented. **Additionally, users can now delete projects directly from the homepage, enhancing project management capabilities. A new "Edit Project Details" modal has been implemented, allowing users to modify a project's title, genre, description, and target word count from the project dashboard header.**
+The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented. **Additionally, users can now delete projects directly from the homepage, enhancing project management capabilities. A new "Edit Project Details" modal has been implemented, allowing users to modify a project's title, genre, description, and target word count from the project dashboard header. Furthermore, AI-assisted scene outline description generation has been implemented, allowing users to generate concise summaries for their scenes directly within the outline view.**
 
 ## Recent Changes
 
+- **AI-Assisted Scene Outline Description Generation**:
+  - Added a new system prompt for `scene_outliner` to `supabase/seed.sql` to guide AI in generating concise scene outline descriptions.
+  - Mapped the `scene_outliner` tool to the `Claude 3.7 Sonnet` AI model in the `tool_model` table within `supabase/seed.sql`.
+  - Modified `components/outline/ChapterSceneOutlineList.tsx` to:
+    - Import `Loader2`, `Sparkles` for UI, `toast` for notifications, and `chat`, `getToolModelByToolName`, `getSystemPromptByCategory`, `TextBlock`, `ChatResponse` for AI integration.
+    - Introduce `isGeneratingOutline` state to manage the loading status for AI generation on a per-scene basis.
+    - Implement `handleGenerateSceneOutlineDescription` asynchronous function:
+      - Fetches the AI model configuration and system prompt for `scene_outliner`.
+      - Constructs a user prompt using the scene's title and content (limited to 1000 characters).
+      - Calls the `chat` function from `lib/data/chat.ts` to interact with the AI.
+      - Processes the AI response, extracts the plain text description, and performs basic cleanup.
+      - Updates the `editFormData.outline_description` state with the generated text.
+      - Displays `sonner` toast notifications for success or error.
+      - Manages the `isGeneratingOutline` state to show/hide loading indicators.
+    - Added a "Generate with AI" `Button` within the scene's edit form, which triggers `handleGenerateSceneOutlineDescription`.
+    - Disabled the `outline_description` `Textarea` and the "Generate with AI" button while AI generation is in progress for that specific scene.
+    - Confirmed that the existing "Save" button in the scene edit form correctly saves the AI-generated (or manually edited) `outline_description` to the backend.
 - **Edit Project Details Modal**:
   - Implemented `EditProjectModal.tsx` in `components/projects/` to allow users to modify a project's title, genre, description, and target word count.
   - Integrated `react-hook-form` and `zod` for form management and validation within the modal.
