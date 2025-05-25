@@ -4,6 +4,11 @@ export const sceneBaseSchema = z.object({
   title: z.string().min(1, { message: 'Title is required.' }).max(255, { message: 'Title must be 255 characters or less.' }),
   content: z.string().optional(), // Content can be large, specific validation might be needed elsewhere or deferred
   order: z.number().int({ message: 'Order must be an integer.' }).min(0, { message: 'Order must be a non-negative number.' }).optional(),
+  // Outline-related fields
+  outline_description: z.string().nullable().optional(),
+  pov_character_id: z.string().uuid().nullable().optional(),
+  // other_character_ids: z.array(z.string().uuid()).optional(),
+  tag_ids: z.array(z.string().uuid()).optional(),
   // word_count is handled by a database trigger, so not included in client-side schema for creation/update
 });
 

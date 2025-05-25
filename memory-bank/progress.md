@@ -131,6 +131,7 @@ The immediate focus areas are:
 - When no characters exist in a project, the app keeps querying characters over and over non-stop when on the outline page
 - The total project word count does not get updated in real time, only after a refresh
 - The optional character image is incorrectly set up as required.
+- The Other Characters feature in the Scene Outliner seems to not be saving with a 405 error.
 
 ## Evolution of Project Decisions
 

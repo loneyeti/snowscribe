@@ -14,7 +14,8 @@ import type {
   SceneTag, // Will be needed for outline
 } from "@/lib/types";
 // import { getChaptersByProjectId } from "@/lib/data/chapters";
-import { getScenesByChapterId } from "@/lib/data/scenes";
+import { getScenesByChapterId, updateScene } from "@/lib/data/scenes";
+import type { UpdateSceneValues } from "@/lib/schemas/scene.schema";
 import {
   getCharacters,
   getCharacter,
@@ -673,9 +674,13 @@ ProjectDashboardClientProps) {
                 chapters.map((chapter) => (
                   <ListItem
                     key={chapter.id}
-                    title={chapter.title}
+                    title={`Chapter ${chapter.order + 1}: ${chapter.title}`}
                     // TODO: Add scene count and word count to Chapter type or fetch separately
-                    secondaryText={`Order: ${chapter.order}`}
+                    secondaryText={
+                      chapter.word_count
+                        ? `${chapter.word_count} words`
+                        : "No word count"
+                    }
                     onClick={() => handleChapterSelect(chapter)}
                     isSelected={selectedChapter?.id === chapter.id}
                   />
@@ -1030,51 +1035,71 @@ ProjectDashboardClientProps) {
       // Already handled by CharacterCardQuickViewList's internal loading/empty state for synopsis
     }
 
-    // TODO: Add a handler for scene updates from ChapterSceneOutlineList
-    const handleSceneOutlineUpdate = (
+    // Handler for scene updates from ChapterSceneOutlineList
+    const handleSceneOutlineUpdate = async (
       chapterId: string,
       sceneId: string,
       updatedData: Partial<Scene>
     ) => {
-      console.log(
-        "Scene outline update triggered in ProjectDashboardClient:",
-        `Chapter ID: ${chapterId}, Scene ID: ${sceneId}`,
-        updatedData
-      );
+      try {
+        // Only send fields allowed by UpdateSceneValues
+        const payload: UpdateSceneValues = {
+          ...(updatedData.outline_description !== undefined && {
+            outline_description: updatedData.outline_description,
+          }),
+          ...(updatedData.pov_character_id !== undefined && {
+            pov_character_id: updatedData.pov_character_id,
+          }),
+          // other_character_ids removed: handled via dedicated API
+          ...(updatedData.tag_ids !== undefined && {
+            tag_ids: updatedData.tag_ids,
+          }),
+          // Add any other updatable fields as needed
+        };
 
-      setChapters((prevChapters) =>
-        prevChapters.map((ch) => {
-          if (ch.id === chapterId) {
-            const existingScene = (ch.scenes || []).find(
-              (sc) => sc.id === sceneId
-            );
-            if (existingScene) {
-              // Update existing scene
-              return {
-                ...ch,
-                scenes: (ch.scenes || []).map((sc) =>
-                  sc.id === sceneId ? { ...sc, ...updatedData } : sc
-                ),
-              };
-            } else {
-              // Add new scene (updatedData is the new Scene object)
-              // Ensure the new scene has all required fields from Scene type
-              const newScene = updatedData as Scene;
-              return {
-                ...ch,
-                scenes: [...(ch.scenes || []), newScene].sort(
-                  (a, b) => a.order - b.order
-                ),
-              };
+        const updatedScene = await updateScene(
+          project.id,
+          chapterId,
+          sceneId,
+          payload
+        );
+
+        setChapters((prevChapters) =>
+          prevChapters.map((ch) => {
+            if (ch.id === chapterId) {
+              const existingScene = (ch.scenes || []).find(
+                (sc) => sc.id === sceneId
+              );
+              if (existingScene) {
+                // Update existing scene
+                return {
+                  ...ch,
+                  scenes: (ch.scenes || []).map((sc) =>
+                    sc.id === sceneId ? { ...sc, ...updatedScene } : sc
+                  ),
+                };
+              } else {
+                // Add new scene (updatedScene is the new Scene object)
+                return {
+                  ...ch,
+                  scenes: [...(ch.scenes || []), updatedScene].sort(
+                    (a, b) => a.order - b.order
+                  ),
+                };
+              }
             }
-          }
-          return ch;
-        })
-      );
-      // Toasting success here might be premature if the API call (done in modal) fails.
-      // The modal itself handles success/error toasts for the API call.
-      // This handler is purely for local state update.
-      // toast.success("Scene details updated locally.");
+            return ch;
+          })
+        );
+        toast.success("Scene details saved.");
+      } catch (error) {
+        console.error("Failed to save scene details:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not save scene details."
+        );
+      }
     };
 
     return (

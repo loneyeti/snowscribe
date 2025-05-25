@@ -1,6 +1,8 @@
 // import { cookies } from "next/headers"; // Removed as this is for client-side fetch
 import type { Scene } from "@/lib/types";
 
+import type { UpdateSceneValues } from "@/lib/schemas/scene.schema";
+
 // This function is designed to be called from Client Components,
 // so it will use `fetch` directly.
 // If we need a server-side version (e.g., for initial props in page.tsx),
@@ -52,5 +54,71 @@ export async function getScenesByChapterId(
   } catch (error) {
     console.error(`Network or other error fetching scenes for chapter ${chapterId}:`, error);
     return [];
+  }
+}
+
+// Update a scene (PUT)
+// This function aligns with the API route at /api/projects/[projectId]/chapters/[chapterId]/scenes/[sceneId]
+// and the Zod schema for updateSceneSchema.
+export async function updateScene(
+  projectId: string,
+  chapterId: string,
+  sceneId: string,
+  data: UpdateSceneValues
+): Promise<Scene> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) {
+    throw new Error("NEXT_PUBLIC_APP_URL is not set. API calls will fail.");
+  }
+
+  const response = await fetch(
+    `${appUrl}/api/projects/${projectId}/chapters/${chapterId}/scenes/${sceneId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }
+  );
+
+  if (!response.ok) {
+    let errorMsg = "Failed to update scene.";
+    try {
+      const errorData = await response.json();
+      errorMsg = errorData.error || errorMsg;
+    } catch {}
+    throw new Error(errorMsg);
+  }
+
+  return response.json();
+}
+
+// Update scene characters (many-to-many, via join table)
+// Calls /api/projects/[projectId]/scenes/[sceneId]/characters (POST)
+export async function updateSceneCharacters(
+  projectId: string,
+  sceneId: string,
+  characterIds: string[]
+): Promise<void> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) {
+    throw new Error("NEXT_PUBLIC_APP_URL is not set. API calls will fail.");
+  }
+
+  const response = await fetch(
+    `${appUrl}/api/projects/${projectId}/scenes/${sceneId}/characters`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ characterIds }),
+    }
+  );
+
+  if (!response.ok) {
+    let errorMsg = "Failed to update scene characters.";
+    try {
+      const errorData = await response.json();
+      errorMsg = errorData.error || errorMsg;
+    } catch {}
+    throw new Error(errorMsg);
   }
 }

@@ -24,6 +24,7 @@ import type { TextBlock, ChatResponse } from "snowgander"; // For AI response ty
 import { ManageSceneCharactersModal } from "@/components/modals/ManageSceneCharactersModal";
 import { ManageSceneTagsModal } from "@/components/modals/ManageSceneTagsModal";
 import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal"; // Added
+import { updateSceneCharacters } from "@/lib/data/scenes";
 
 interface ChapterSceneOutlineListProps {
   chapters: Chapter[]; // Chapters should include their scenes, or scenes are fetched separately
@@ -513,12 +514,21 @@ export function ChapterSceneOutlineList({
                   sceneId, // Use sceneId from callback
                   selectedCharacterIds
                 );
-                // TODO: Implement actual state update or re-fetch logic
-                // For now, we can call onSceneUpdate to potentially trigger a refresh
-                // or update the local scene data directly if the parent component handles it.
-                onSceneUpdate(managingCharsForScene.chapter_id, sceneId, {
-                  other_character_ids: selectedCharacterIds,
-                });
+                // Update scene characters via dedicated API
+                updateSceneCharacters(projectId, sceneId, selectedCharacterIds)
+                  .then(() => {
+                    // Optionally, trigger a refresh or update local state if needed
+                    // onSceneUpdate(managingCharsForScene.chapter_id, sceneId, {}); // No-op, just to trigger parent update if needed
+                    toast.success("Other characters updated.");
+                  })
+                  .catch((error: unknown) => {
+                    console.error("Failed to update scene characters:", error);
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Could not update other characters."
+                    );
+                  });
                 // Optionally, refresh data from ProjectDashboardClient or update local state here
               }
             }}
