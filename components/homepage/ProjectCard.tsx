@@ -1,7 +1,22 @@
+"use client";
+
 import * as React from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Heading, Paragraph } from "@/components/typography"; // Assuming typography components are exported from here
+import { Heading, Paragraph } from "@/components/typography";
+import { IconButton } from "@/components/ui/IconButton";
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/AlertDialog";
 
 // Define a type for the project data prop
 export interface ProjectData {
@@ -15,55 +30,108 @@ export interface ProjectData {
 
 export interface ProjectCardProps extends React.HTMLAttributes<HTMLDivElement> {
   projectData: ProjectData;
+  onDelete?: (projectId: string) => void;
 }
 
 const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
-  ({ className, projectData, ...props }, ref) => {
+  ({ className, projectData, onDelete, ...props }, ref) => {
     const { id, title, genre, wordCount, lastUpdated, thumbnailUrl } =
       projectData;
+    const [isAlertOpen, setIsAlertOpen] = useState(false);
 
     return (
-      <Link href={`/project/${id}`} passHref>
-        <div
-          ref={ref}
-          className={cn(
-            "rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow cursor-pointer",
-            className
-          )}
-          {...props}
-        >
-          {thumbnailUrl && (
-            <img
-              src={thumbnailUrl}
-              alt={`${title} thumbnail`}
-              className="rounded-t-lg object-cover h-48 w-full" // Example styling
+      <div
+        ref={ref}
+        className={cn(
+          "rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow relative",
+          className
+        )}
+        {...props}
+      >
+        {/* Delete Button */}
+        {onDelete && (
+          <div className="absolute top-2 right-2 z-10">
+            <IconButton
+              icon={Trash2}
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              aria-label={`Delete project ${title}`}
+              onClick={(e) => {
+                e.preventDefault(); // Prevent Link navigation
+                e.stopPropagation(); // Prevent Link navigation
+                setIsAlertOpen(true);
+              }}
             />
-          )}
-          <div className="p-6">
-            <Heading level={3} className="mb-2">
-              {title}
-            </Heading>
-            {genre && (
-              <Paragraph variant="muted" className="mb-1 text-sm">
-                {genre}
-              </Paragraph>
-            )}
-            {wordCount !== undefined && (
-              <Paragraph variant="small" className="mb-1">
-                {wordCount.toLocaleString()} words
-              </Paragraph>
-            )}
-            {lastUpdated && (
-              <Paragraph
-                variant="small"
-                className="text-xs text-muted-foreground"
-              >
-                Last updated: {lastUpdated}
-              </Paragraph>
-            )}
           </div>
-        </div>
-      </Link>
+        )}
+
+        <Link href={`/project/${id}`} passHref legacyBehavior>
+          <a className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-lg">
+            {thumbnailUrl && (
+              <img
+                src={thumbnailUrl}
+                alt={`${title} thumbnail`}
+                className="rounded-t-lg object-cover h-48 w-full"
+              />
+            )}
+            <div className="p-6">
+              <Heading level={3} className="mb-2 pr-8">
+                {title}
+              </Heading>
+              {genre && (
+                <Paragraph variant="muted" className="mb-1 text-sm">
+                  {genre}
+                </Paragraph>
+              )}
+              {wordCount !== undefined && (
+                <Paragraph variant="small" className="mb-1">
+                  {wordCount.toLocaleString()} words
+                </Paragraph>
+              )}
+              {lastUpdated && (
+                <Paragraph
+                  variant="small"
+                  className="text-xs text-muted-foreground"
+                >
+                  Last updated: {lastUpdated}
+                </Paragraph>
+              )}
+            </div>
+          </a>
+        </Link>
+
+        {/* Confirmation Dialog */}
+        {onDelete && (
+          <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the
+                  project {title} and all its associated data (chapters, scenes,
+                  characters, etc.).
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive hover:bg-destructive/90"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(id);
+                    setIsAlertOpen(false);
+                  }}
+                >
+                  Yes, delete project
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
     );
   }
 );

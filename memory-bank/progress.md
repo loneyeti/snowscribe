@@ -23,6 +23,7 @@ _(Updated: 2025-05-24 (AI-Generated Update))_
 - **Homepage Functionality**:
   - `HomePageClientWrapper.tsx` displays projects for logged-in user.
   - `CreateProjectModal.tsx` for new project creation.
+  - **Project Deletion**: Users can now delete projects from the homepage via a delete button on `ProjectCard.tsx`, a confirmation dialog, and an API call to `DELETE /api/projects/[projectId]`. The UI updates immediately.
 - **Project Dashboard (`ProjectDashboardClient.tsx` & `AppShell.tsx`)**:
   - **Navigation**: Functional sidebar (`PrimarySidebar.tsx`) and header (`AppHeader.tsx`) managed by `AppShell.tsx`.
   - **Manuscript Section**:
@@ -69,7 +70,7 @@ _(Updated: 2025-05-24 (AI-Generated Update))_
 
 - [ ] Project Management (Client-Side):
   - [ ] Project editing interface (e.g., update title, genre, target word count).
-  - [ ] Project deletion confirmation and functionality from homepage/dashboard.
+  - [x] Project deletion confirmation and functionality from homepage/dashboard.
 - [ ] Outlines (Client-Side Enhancements):
   - [ ] More robust editing experience within `ChapterSceneOutlineList.tsx` (e.g., inline editing or more comprehensive modals for all scene outline fields).
   - [ ] UI for reordering scenes within chapters, and chapters within the project.
@@ -134,3 +135,4 @@ The immediate focus areas are:
 | 2025-05-24 (AI Update)     | Implemented full CRUD UI for AI Vendors in Site Settings, including modals and confirmation dialogs, matching the AI Model management pattern.                                                                                                     | To allow robust configuration of AI Vendors, a prerequisite for advanced AI integration and model management.                                       |
 | 2025-05-24 (AI Update)     | Implemented full CRUD UI for AI Prompts in Site Settings, including modals and confirmation dialogs, matching the AI Model and Vendor pattern.                                                                                                     | To allow robust configuration of AI Prompts, a prerequisite for advanced AI tool and system prompt management.                                      |
 | 2025-05-24 (AI Update)     | **Outline Section - Synopsis View**: Implemented display and editing of project log line and one-page synopsis using `ProjectSynopsisEditor`. Added basic display of character names/nicknames in `CharacterCardQuickViewList` with loading state. | To bring the Synopsis sub-view of the Outline section to life, enabling users to manage high-level project summaries and see associated characters. |
+| 2025-05-24 (AI Update)     | Implemented project deletion from the homepage.                                                                                                                                                                                                    | To provide users with a direct and intuitive way to manage and remove their projects from the main application entry point.                         |

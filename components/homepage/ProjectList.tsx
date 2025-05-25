@@ -4,17 +4,13 @@ import { ProjectCard, type ProjectData } from "./ProjectCard";
 
 export interface ProjectListProps extends React.HTMLAttributes<HTMLDivElement> {
   projects: ProjectData[];
-  listLayout?: "grid" | "list"; // Optional prop to control layout
+  listLayout?: "grid" | "list";
+  onDeleteProject?: (projectId: string) => void;
 }
 
 const ProjectList = React.forwardRef<HTMLDivElement, ProjectListProps>(
   (
-    {
-      className,
-      projects,
-      listLayout = "grid", // Default to grid layout
-      ...props
-    },
+    { className, projects, listLayout = "grid", onDeleteProject, ...props },
     ref
   ) => {
     if (!projects || projects.length === 0) {
@@ -25,7 +21,6 @@ const ProjectList = React.forwardRef<HTMLDivElement, ProjectListProps>(
           {...props}
         >
           <p className="text-muted-foreground">No projects found.</p>
-          {/* Optionally, add a button or link to create a new project */}
         </div>
       );
     }
@@ -38,7 +33,11 @@ const ProjectList = React.forwardRef<HTMLDivElement, ProjectListProps>(
     return (
       <div ref={ref} className={cn(layoutClasses, className)} {...props}>
         {projects.map((project) => (
-          <ProjectCard key={project.id} projectData={project} />
+          <ProjectCard
+            key={project.id}
+            projectData={project}
+            onDelete={onDeleteProject}
+          />
         ))}
       </div>
     );

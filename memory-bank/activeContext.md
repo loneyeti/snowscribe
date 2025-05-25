@@ -4,10 +4,16 @@
 
 _(Updated: 2025-05-24 (AI-Generated Update))_
 
-The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented.
+The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented. **Additionally, users can now delete projects directly from the homepage, enhancing project management capabilities.**
 
 ## Recent Changes
 
+- **Project Deletion from Homepage**:
+  - Implemented `deleteProject` function in `lib/data/projects.ts` for API interaction.
+  - Enhanced `components/homepage/ProjectCard.tsx` with a delete button and `AlertDialog` for confirmation.
+  - Modified `components/homepage/ProjectList.tsx` to pass the delete handler to `ProjectCard`.
+  - Updated `components/homepage/HomePageClientWrapper.tsx` to manage project state, handle deletion logic (API call, UI update), and display `sonner` toasts.
+  - Adapted `app/HomePageClientContent.tsx` to receive and pass the `onDeleteProject` handler.
 - **Outline Section - Synopsis View & Basic Character Quick View**: Implemented display and editing of project log line and one-page synopsis using `ProjectSynopsisEditor`. Added basic display of character names/nicknames in `CharacterCardQuickViewList` with loading state.
 - **AI Prompt CRUD Management (Site Settings):**
   - Implemented full Create, Read, Update, Delete UI for AI Prompts in `SiteSettingsClient.tsx`.
@@ -34,7 +40,7 @@ The application now includes full CRUD management for AI Prompts in the Site Set
   - Implemented `MarkdownComponent` for rendering AI responses.
 - **Outline Feature Refactor & Partial UI Implementation:**
   - Refactored Outline data model: removed `outline_items` table, added fields (`one_page_synopsis`, `outline_description`, `pov_character_id`) to `projects` and `scenes` tables.
-  - Implemented `ProjectSynopsisEditor.tsx` for editing project log_line and one_page_synopsis.
+  - Implemented `ProjectSynopsisEditor.tsx` for editing project log_line and one-page_synopsis.
   - Implemented `ChapterSceneOutlineList.tsx` to display scenes within chapters for outline view.
   - Implemented `ManageSceneCharactersModal.tsx` and `ManageSceneTagsModal.tsx` for linking characters and tags to scenes within the outline.
   - Added API routes for managing scene-character and scene-tag relationships.
@@ -107,3 +113,4 @@ The following are the prioritized next steps:
 - AI integration requires a flexible data model for vendors, models, and prompts, which has now been established. The `tool_model` mapping is key for abstracting specific model choices for named tools.
 - Simplifying the Outline data model by integrating fields directly into `projects` and `scenes` enhances data consistency and aligns better with a unified manuscript/outline vision.
 - Centralized data access (`lib/data`) and authorization (`lib/supabase/guards`) improve code maintainability and security.
+- **Project deletion from homepage is now implemented, providing a direct way for users to manage their projects.**

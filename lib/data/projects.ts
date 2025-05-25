@@ -68,3 +68,51 @@ export async function getProjectById(projectId: string): Promise<(Project & { ge
     return null;
   }
 }
+
+export async function deleteProject(projectId: string): Promise<void> {
+  if (!projectId) {
+    console.error("deleteProject called with no projectId");
+    throw new Error("Project ID is required to delete a project.");
+  }
+
+  const apiUrl = `${API_BASE_URL}/api/projects/${projectId}`;
+  const cookieHeader = await getCookieHeader();
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'DELETE',
+      headers: {
+        // 'Content-Type': 'application/json', // Not typically needed for DELETE with no body
+        ...(cookieHeader && { 'Cookie': cookieHeader }),
+      },
+    });
+
+    if (!response.ok) {
+      let errorBody = 'Could not read error body';
+      try {
+        // Attempt to parse error response if API sends one
+        const errorData = await response.json();
+        errorBody = errorData.error || errorData.message || JSON.stringify(errorData);
+      } catch (e) {
+        // If parsing fails, use the status text
+        errorBody = response.statusText;
+      }
+      console.error(`API error deleting project ${projectId} from ${apiUrl}: ${response.status} ${errorBody}`);
+      throw new Error(`Failed to delete project: ${errorBody}`);
+    }
+
+    // DELETE request was successful, typically no body is returned or a simple success message
+    // If your API returns a JSON message like { message: "Project deleted successfully" },
+    // you can parse it, but it's often not necessary for a void return type.
+    // console.log(`Project ${projectId} deleted successfully.`);
+
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(`Network or other error deleting project ${projectId} from ${apiUrl}:`, error.message);
+      throw error; // Re-throw the caught error
+    } else {
+      console.error(`An unknown error occurred while deleting project ${projectId} from ${apiUrl}:`, error);
+      throw new Error("An unknown error occurred during project deletion.");
+    }
+  }
+}

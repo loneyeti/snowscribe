@@ -10,11 +10,13 @@ import type { Project } from "@/lib/types"; // Assuming a Project type exists or
 interface HomePageClientContentProps {
   projects: Project[] | null;
   errorOccurred: boolean;
+  onDeleteProject: (projectId: string) => void;
 }
 
 export default function HomePageClientContent({
   projects,
   errorOccurred,
+  onDeleteProject,
 }: HomePageClientContentProps) {
   if (errorOccurred) {
     return (
@@ -40,12 +42,12 @@ export default function HomePageClientContent({
           projects={projects.map((p) => ({
             id: p.id,
             title: p.title,
-            genre: p.genre ?? undefined, // Ensure null becomes undefined
-            // wordCount: p.word_count, // Assuming word_count might be added later
+            genre: p.genre ?? undefined,
             lastUpdated: p.updated_at
               ? new Date(p.updated_at).toLocaleDateString()
               : undefined,
           }))}
+          onDeleteProject={onDeleteProject}
         />
       ) : (
         <div className="flex flex-col items-center justify-center text-center py-12 h-full min-h-[calc(100vh-10rem)]">
@@ -72,7 +74,7 @@ export default function HomePageClientContent({
             No Projects Yet
           </Heading>
           <Paragraph className="text-muted-foreground mb-8 max-w-md">
-            It looks like you haven&apos;t started any novels. Let&apos;s change
+            It looks like you haven&apost started any novels. Let&apos;s change
             that and bring your stories to life!
           </Paragraph>
           <Button asChild size="lg">
