@@ -2,12 +2,22 @@
 
 ## Current Work Focus
 
-_(Updated: 2025-05-24 (AI-Generated Update))_
+_(Updated: 2025-05-25 (AI-Generated Update))_
 
-The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented. **Additionally, users can now delete projects directly from the homepage, enhancing project management capabilities.**
+The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented. **Additionally, users can now delete projects directly from the homepage, enhancing project management capabilities. A new "Edit Project Details" modal has been implemented, allowing users to modify a project's title, genre, description, and target word count from the project dashboard header.**
 
 ## Recent Changes
 
+- **Edit Project Details Modal**:
+  - Implemented `EditProjectModal.tsx` in `components/projects/` to allow users to modify a project's title, genre, description, and target word count.
+  - Integrated `react-hook-form` and `zod` for form management and validation within the modal.
+  - Added logic to fetch available genres from `/api/genres` and pre-fill the form with existing project data.
+  - Handled `PUT` requests to `/api/projects/[projectId]` for updating project details, including client-side validation and `sonner` toast notifications.
+  - Updated `components/layouts/AppHeader.tsx` to include a `Pencil` icon button that triggers the `EditProjectModal`.
+  - Modified `components/layouts/AppShell.tsx` to manage the `currentProjectData` state and pass necessary props (`projectId`, `initialProjectData`, `onProjectDetailsUpdated`) to `AppHeader`.
+  - Ensured `AppShell`'s `handleProjectUpdate` function updates local state and calls `router.refresh()` for data consistency.
+  - Exported `EditProjectModal` from `components/projects/index.ts`.
+  - Adjusted `lib/schemas/project.schema.ts` to ensure `updateProjectSchema` correctly omits fields not editable by this modal (`genre`, `log_line`, `one_page_synopsis`).
 - **AI-Powered Log Line Generation (Refactored to Background Modality)**:
   - Updated the system prompt for 'Log Line Generator' in `supabase/seed.sql` to return a single, plain text log line.
   - Modified `components/outline/ProjectSynopsisEditor.tsx`:

@@ -26,6 +26,7 @@ _(Updated: 2025-05-24 (AI-Generated Update))_
   - **Project Deletion**: Users can now delete projects from the homepage via a delete button on `ProjectCard.tsx`, a confirmation dialog, and an API call to `DELETE /api/projects/[projectId]`. The UI updates immediately.
 - **Project Dashboard (`ProjectDashboardClient.tsx` & `AppShell.tsx`)**:
   - **Navigation**: Functional sidebar (`PrimarySidebar.tsx`) and header (`AppHeader.tsx`) managed by `AppShell.tsx`.
+  - **Project Editing**: A new "Edit Project Details" modal is implemented, allowing users to modify a project's title, genre, description, and target word count from the project dashboard header.
   - **Manuscript Section**:
     - Dynamic chapter and scene listing/creation.
     - `ManuscriptEditor.tsx` for scene content editing with auto-save and word count.
@@ -69,7 +70,7 @@ _(Updated: 2025-05-24 (AI-Generated Update))_
 ### Main Features
 
 - [ ] Project Management (Client-Side):
-  - [ ] Project editing interface (e.g., update title, genre, target word count).
+  - [x] Project editing interface (e.g., update title, genre, target word count).
   - [x] Project deletion confirmation and functionality from homepage/dashboard.
 - [ ] Outlines (Client-Side Enhancements):
   - [ ] More robust editing experience within `ChapterSceneOutlineList.tsx` (e.g., inline editing or more comprehensive modals for all scene outline fields).
@@ -107,7 +108,7 @@ _(Updated: 2025-05-24 (AI-Generated Update))_
 
 **Phase**: Foundational AI Integration & Outline UI Implemented -> **Focusing on Expanding Specific AI Tools (beyond log line), Completing Outline/Settings UI, and AI Prompts Management**
 
-The project has a robust backend API, a functional authentication system, and a well-structured frontend with key dashboard sections (Manuscript, Characters, World Notes, basic Outline, AI Model, Vendor & Prompt Settings) implemented. `snowgander` is integrated for AI calls, and the log line generation feature now operates in a background modality.
+The project has a robust backend API, a functional authentication system, and a well-structured frontend with key dashboard sections (Manuscript, Characters, World Notes, basic Outline, AI Model, Vendor & Prompt Settings) implemented. `snowgander` is integrated for AI calls, and the log line generation feature now operates in a background modality. The "Edit Project Details" modal has been successfully implemented, allowing users to update core project information.
 
 The immediate focus areas are:
 
@@ -145,3 +146,4 @@ The immediate focus areas are:
 | 2025-05-24 (AI Update)     | Implemented full CRUD UI for AI Prompts in Site Settings, including modals and confirmation dialogs, matching the AI Model and Vendor pattern.                                                                                                     | To allow robust configuration of AI Prompts, a prerequisite for advanced AI tool and system prompt management.                                      |
 | 2025-05-24 (AI Update)     | **Outline Section - Synopsis View**: Implemented display and editing of project log line and one-page synopsis using `ProjectSynopsisEditor`. Added basic display of character names/nicknames in `CharacterCardQuickViewList` with loading state. | To bring the Synopsis sub-view of the Outline section to life, enabling users to manage high-level project summaries and see associated characters. |
 | 2025-05-24 (AI Update)     | Implemented project deletion from the homepage.                                                                                                                                                                                                    | To provide users with a direct and intuitive way to manage and remove their projects from the main application entry point.                         |
+| 2025-05-25 (AI Update)     | Implemented "Edit Project Details" modal.                                                                                                                                                                                                          | To allow users to modify core project details (title, genre, description, target word count) after project creation, enhancing project management.  |

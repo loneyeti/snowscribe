@@ -1,7 +1,7 @@
 "use client"; // AppShell needs to be a client component to manage state
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation"; // Import useRouter
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AppHeader } from "./AppHeader";
 import { PrimarySidebar } from "./PrimarySidebar";
 import type { Project, Genre } from "@/lib/types";
@@ -18,7 +18,12 @@ interface AppShellProps {
 
 export function AppShell({ children, project }: AppShellProps) {
   const [activeSection, setActiveSection] = useState<string>("manuscript");
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter();
+  const [currentProjectData, setCurrentProjectData] = useState(project);
+
+  useEffect(() => {
+    setCurrentProjectData(project); // Sync with initial or refreshed server prop
+  }, [project]);
 
   const handleSectionChange = (sectionId: string) => {
     if (sectionId === "settings") {
@@ -26,6 +31,13 @@ export function AppShell({ children, project }: AppShellProps) {
     } else {
       setActiveSection(sectionId);
     }
+  };
+
+  const handleProjectUpdate = (
+    updatedProject: Project & { genres?: Genre | null }
+  ) => {
+    setCurrentProjectData((prev) => ({ ...prev, ...updatedProject }));
+    router.refresh(); // Refresh server data to ensure consistency everywhere
   };
 
   const childrenWithProps = React.Children.map(children, (child) => {
@@ -46,10 +58,13 @@ export function AppShell({ children, project }: AppShellProps) {
       />
       <div className="flex flex-col flex-1 overflow-hidden">
         <AppHeader
-          projectTitle={project.title}
-          projectGenre={project.genres?.name || "N/A"}
-          currentWords={project.wordCount || 0}
-          targetWords={project.target_word_count || 0}
+          projectTitle={currentProjectData.title}
+          projectGenre={currentProjectData.genres?.name || "N/A"}
+          currentWords={currentProjectData.wordCount || 0}
+          targetWords={currentProjectData.target_word_count || 0}
+          projectId={currentProjectData.id}
+          initialProjectData={currentProjectData}
+          onProjectDetailsUpdated={handleProjectUpdate}
         />
         <main className="flex-1 overflow-y-auto p-6">
           {" "}
