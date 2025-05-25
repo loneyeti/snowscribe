@@ -4,10 +4,11 @@
 
 _(Updated: 2025-05-24 (AI-Generated Update))_
 
-The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement.
+The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented.
 
 ## Recent Changes
 
+- **Outline Section - Synopsis View & Basic Character Quick View**: Implemented display and editing of project log line and one-page synopsis using `ProjectSynopsisEditor`. Added basic display of character names/nicknames in `CharacterCardQuickViewList` with loading state.
 - **AI Prompt CRUD Management (Site Settings):**
   - Implemented full Create, Read, Update, Delete UI for AI Prompts in `SiteSettingsClient.tsx`.
   - Created `CreateAIPromptModal.tsx` and `EditAIPromptModal.tsx` for prompt creation and editing, using `react-hook-form`, Zod validation, and project UI primitives.
