@@ -1,6 +1,6 @@
 # Project Progress
 
-_(Updated: YYYY-MM-DD (AI-Generated Update))_
+_(Updated: 2025-05-24 (AI-Generated Update))_
 
 ## What Works
 
@@ -45,6 +45,8 @@ _(Updated: YYYY-MM-DD (AI-Generated Update))_
   - `MarkdownComponent.tsx` for rendering AI responses.
 - **Site Settings (`SiteSettingsClient.tsx`)**:
   - UI for managing AI Models (List, Create, Edit, Delete), including fetching AI Vendors for selection.
+  - UI for managing AI Vendors (List, Create, Edit, Delete) with modals and confirmation dialogs, fully integrated and matching the AI Model management pattern.
+  - **UI for managing AI Prompts (List, Create, Edit, Delete) with modals and confirmation dialogs, fully integrated and matching the AI Model and Vendor management pattern.**
 - **UI Components (`components/ui`)**: Extensive library including Button, Input, Modal, DropdownMenu, List components, etc.
 - **Technical Foundations**:
   - Next.js 15 async API compatibility (`await params`, `await cookies()`).
@@ -89,8 +91,7 @@ _(Updated: YYYY-MM-DD (AI-Generated Update))_
   - [ ] **Writing Coach**: AI feedback on writing style, prose.
   - [ ] **Editor Assistant**: AI suggestions for tightening prose (respecting "AI never writes final text" principle).
 - [ ] AI Settings Expansion:
-    - [ ] UI in `SiteSettingsClient.tsx` for managing AI Vendors (CRUD).
-    - [ ] UI in `SiteSettingsClient.tsx` for managing AI Prompts (CRUD), potentially with categorization.
+  - [ ] UI in `SiteSettingsClient.tsx` for managing AI Prompts (CRUD), potentially with categorization.
 
 ### Deployment & DevOps
 
@@ -100,14 +101,15 @@ _(Updated: YYYY-MM-DD (AI-Generated Update))_
 
 ## Current Status
 
-**Phase**: Foundational AI Integration & Outline UI Implemented -> **Focusing on Expanding Specific AI Tools & Completing Outline/Settings UI**
+**Phase**: Foundational AI Integration & Outline UI Implemented -> **Focusing on Expanding Specific AI Tools, Completing Outline/Settings UI, and AI Prompts Management**
 
-The project has a robust backend API, a functional authentication system, and a well-structured frontend with key dashboard sections (Manuscript, Characters, World Notes, basic Outline, AI Model Settings) implemented. `snowgander` is integrated for AI calls.
+The project has a robust backend API, a functional authentication system, and a well-structured frontend with key dashboard sections (Manuscript, Characters, World Notes, basic Outline, AI Model, Vendor & Prompt Settings) implemented. `snowgander` is integrated for AI calls.
 
 The immediate focus areas are:
+
 1.  **Flesh out AI Tools**: Implement specific AI assistance features using the established `AISidePanel` and `AIToolButton` pattern, leveraging `tool_model` and `ai_prompts`.
 2.  **Complete Outline UI**: Enhance the scene outline editing capabilities and consider chapter/scene reordering.
-3.  **Complete AI Settings UI**: Add management for AI Vendors and AI Prompts.
+3.  **Complete AI Settings UI**: Add management for AI Prompts.
 4.  **User Profile Management**: Basic profile page.
 5.  **Refine UX & Error Handling**: Improve user feedback across the application.
 
@@ -119,12 +121,14 @@ The immediate focus areas are:
 
 ## Evolution of Project Decisions
 
-| Date                          | Decision                                                                                                                                                                 | Rationale                                                                                                                                                                                                                                                                        |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ... (previous entries) ...    | ...                                                                                                                                                                      | ...                                                                                                                                                                                                                                                                              |
-| YYYY-MM-DD (AI Update)        | Implemented `SiteSettingsClient` for AI Model management.                                                                                                                | Provide users/admins a way to configure available AI models.                                                                                                                                                                                                                     |
-| YYYY-MM-DD (AI Update)        | Added `tool_model` table and API.                                                                                                                                        | To map abstract tool names (e.g., "summarizer") to specific AI models, allowing flexibility.                                                                                                                                                                                     |
-| YYYY-MM-DD (AI Update)        | Integrated `snowgander` via `lib/data/chat.ts` and UI components (`AISidePanel`, `AIToolButton`).                                                                        | To enable actual AI interactions based on configured models and prompts.                                                                                                                                                                                                         |
-| YYYY-MM-DD (AI Update)        | Developed initial Outline UI (`ProjectSynopsisEditor`, `ChapterSceneOutlineList`) and modals for scene characters/tags.                                                  | To provide the user interface for the refactored outlining feature.                                                                                                                                                                                                              |
-| YYYY-MM-DD (AI Update)        | Added API routes for managing Scene-Character and Scene-Tag relationships.                                                                                               | To support the linking of characters and tags to scenes, essential for detailed outlining and manuscript organization.                                                                                                                                                         |
-| YYYY-MM-DD (AI Update)        | Implemented password reset and update password flows.                                                                                                                      | To provide full authentication lifecycle management.                                                                                                                                                                                                                             |
+| Date                       | Decision                                                                                                                                       | Rationale                                                                                                              |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| ... (previous entries) ... | ...                                                                                                                                            | ...                                                                                                                    |
+| YYYY-MM-DD (AI Update)     | Implemented `SiteSettingsClient` for AI Model management.                                                                                      | Provide users/admins a way to configure available AI models.                                                           |
+| YYYY-MM-DD (AI Update)     | Added `tool_model` table and API.                                                                                                              | To map abstract tool names (e.g., "summarizer") to specific AI models, allowing flexibility.                           |
+| YYYY-MM-DD (AI Update)     | Integrated `snowgander` via `lib/data/chat.ts` and UI components (`AISidePanel`, `AIToolButton`).                                              | To enable actual AI interactions based on configured models and prompts.                                               |
+| YYYY-MM-DD (AI Update)     | Developed initial Outline UI (`ProjectSynopsisEditor`, `ChapterSceneOutlineList`) and modals for scene characters/tags.                        | To provide the user interface for the refactored outlining feature.                                                    |
+| YYYY-MM-DD (AI Update)     | Added API routes for managing Scene-Character and Scene-Tag relationships.                                                                     | To support the linking of characters and tags to scenes, essential for detailed outlining and manuscript organization. |
+| YYYY-MM-DD (AI Update)     | Implemented password reset and update password flows.                                                                                          | To provide full authentication lifecycle management.                                                                   |
+| 2025-05-24 (AI Update)     | Implemented full CRUD UI for AI Vendors in Site Settings, including modals and confirmation dialogs, matching the AI Model management pattern. | To allow robust configuration of AI Vendors, a prerequisite for advanced AI integration and model management.          |
+| 2025-05-24 (AI Update)     | Implemented full CRUD UI for AI Prompts in Site Settings, including modals and confirmation dialogs, matching the AI Model and Vendor pattern. | To allow robust configuration of AI Prompts, a prerequisite for advanced AI tool and system prompt management.         |

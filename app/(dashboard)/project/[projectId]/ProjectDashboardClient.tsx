@@ -50,7 +50,14 @@ import { CharacterList } from "@/components/characters/CharacterList";
 import { WorldNoteList } from "@/components/world-notes/WorldNoteList"; // Added
 import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteModal"; // Added
 import { WorldNoteEditor } from "@/components/world-notes/WorldNoteEditor"; // Added
-import { PlusCircle, ArrowLeft, FileText, ClipboardList, Sparkles } from "lucide-react"; // Added FileText, ClipboardList
+import { Paragraph } from "@/components/typography/Paragraph"; // Added Paragraph import
+import {
+  PlusCircle,
+  ArrowLeft,
+  FileText,
+  ClipboardList,
+  Sparkles,
+} from "lucide-react"; // Added FileText, ClipboardList
 import { AISidePanel } from "@/components/ai/AISidePanel";
 
 // Define view states for the manuscript section
@@ -215,7 +222,8 @@ ProjectDashboardClientProps) {
       project.id &&
       activeSection === "outline" &&
       outlineView === "synopsis" &&
-      characters.length === 0 // Only fetch if not already loaded
+      characters.length === 0 && // Only fetch if characters array is empty
+      !isLoadingCharactersData // And not already loading
     ) {
       fetchProjectCharacters();
     }
@@ -227,7 +235,7 @@ ProjectDashboardClientProps) {
       outlineView === "scenes" &&
       chapters.length === 0 // Only fetch if not already loaded or manuscript hasn't loaded them
     ) {
-      fetchProjectChapters(); // This should ideally fetch chapters with scenes including outline fields
+      fetchProjectChapters(); // This should ideally fetch chapters with their scenes including outline fields
     }
 
     // Fetch all scene tags if in Outline section and tags aren't loaded
@@ -237,7 +245,8 @@ ProjectDashboardClientProps) {
     activeSection,
     fetchProjectWorldNotes,
     outlineView,
-    // characters.length, // Removed to prevent loop if fetch results in empty
+    characters.length, // Add characters.length to dependencies
+    isLoadingCharactersData, // Add isLoadingCharactersData to dependencies
     fetchProjectCharacters,
     // chapters.length, // Removed to prevent loop if fetch results in empty
     fetchProjectChapters,
@@ -742,10 +751,12 @@ ProjectDashboardClientProps) {
               <div className="flex flex-col h-full items-center">
                 <div className="text-center p-2">
                   <div className="flex items-center">
-                    <h1 className={`text-2xl ${cactusSerif.className} font-bold mr-2`}>
+                    <h1
+                      className={`text-2xl ${cactusSerif.className} font-bold mr-2`}
+                    >
                       {selectedScene.title || "&nbsp;"}
                     </h1>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setIsAIPanelOpen(true);
@@ -756,13 +767,15 @@ ProjectDashboardClientProps) {
                       <Sparkles className="h-5 w-5" />
                     </button>
                   </div>
-                  <AISidePanel 
-                    isOpen={isAIPanelOpen} 
+                  <AISidePanel
+                    isOpen={isAIPanelOpen}
                     onClose={() => setIsAIPanelOpen(false)}
-                    title={`AI Assistant - ${selectedScene.title || 'Scene'}`}
+                    title={`AI Assistant - ${selectedScene.title || "Scene"}`}
                     componentType="tool"
                     toolName="scene_helper"
-                    defaultPrompt={`Help me improve this scene: ${selectedScene.content || 'Untitled Scene'}`}
+                    defaultPrompt={`Help me improve this scene: ${
+                      selectedScene.content || "Untitled Scene"
+                    }`}
                     defaultSystemPrompt="You are a helpful writing assistant specialized in fiction. Help the user improve their scene by providing constructive feedback and suggestions."
                   />
                   <span className="text-sm italic text-gray-500">
@@ -951,10 +964,10 @@ ProjectDashboardClientProps) {
           <h3 className="text-lg font-semibold mt-6 mb-2">
             Character Quick View
           </h3>
-          {isLoadingCharactersData ? (
-            <p className="text-sm text-muted-foreground">
+          {isLoadingCharactersData && characters.length === 0 ? ( // Show loading if actively fetching and no characters yet
+            <Paragraph className="text-sm text-muted-foreground italic">
               Loading characters...
-            </p>
+            </Paragraph>
           ) : (
             <CharacterCardQuickViewList characters={characters} />
           )}

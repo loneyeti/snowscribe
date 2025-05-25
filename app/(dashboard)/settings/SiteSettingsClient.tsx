@@ -6,340 +6,446 @@ import { ListContainer } from "@/components/ui/ListContainer";
 import { ListItem } from "@/components/ui/ListItem";
 import { ContextualHeader } from "@/components/ui/ContextualHeader";
 import { SettingsItemList } from "@/components/settings/SettingsItemList";
-import { type AIModel, type AIVendor } from "@/lib/types"; // Added AIVendor
-import { getAIModels } from "@/lib/data/aiModels";
-import { getAIVendors } from "@/lib/data/aiVendors"; // Added getAIVendors
-import { CreateAIModelModal } from "@/components/settings/CreateAIModelModal";
-import { EditAIModelModal } from "@/components/settings/EditAIModelModal"; // Import Edit Modal
+import { IconButton } from "@/components/ui/IconButton";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/AlertDialog"; // Import AlertDialog components
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/AlertDialog";
 import { toast } from "sonner";
 import { Cpu, Database, FileText, Pencil, Trash2 } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { deleteAIModel } from "@/lib/data/aiModels"; // Import delete function
+import { type AIModel, type AIVendor, type AIPrompt } from "@/lib/types";
+import { getAIModels, deleteAIModel } from "@/lib/data/aiModels";
+import { getAIVendors, deleteAIVendor } from "@/lib/data/aiVendors";
+import { getAIPrompts, deleteAIPrompt } from "@/lib/data/aiPrompts";
+import { CreateAIModelModal } from "@/components/settings/CreateAIModelModal";
+import { EditAIModelModal } from "@/components/settings/EditAIModelModal";
+import { CreateAIVendorModal } from "@/components/settings/CreateAIVendorModal";
+import { EditAIVendorModal } from "@/components/settings/EditAIVendorModal";
+import { CreateAIPromptModal } from "@/components/settings/CreateAIPromptModal";
+import { EditAIPromptModal } from "@/components/settings/EditAIPromptModal";
 
-// TODO: Add admin role check here in the future
-
-type SettingsCategory = "AI" | null; // Extend later with "Appearance", "Account", etc.
+type SettingsCategory = "AI" | null;
 type AISubCategory = "AI Models" | "AI Vendors" | "AI Prompts" | null;
 
 export function SiteSettingsClient() {
   const [selectedCategory, setSelectedCategory] =
-    useState<SettingsCategory>("AI"); // Default to AI for now
+    useState<SettingsCategory>("AI");
   const [selectedSubCategory, setSelectedSubCategory] =
     useState<AISubCategory>(null);
 
-  // State for AI Models
+  // Models
   const [aiModels, setAIModels] = useState<AIModel[]>([]);
   const [isLoadingAIModels, setIsLoadingAIModels] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  // State for AI Vendors
-  const [aiVendors, setAIVendors] = useState<AIVendor[]>([]);
-  const [isLoadingAIVendors, setIsLoadingAIVendors] = useState(false);
-
-  // State for Edit AI Model Modal
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateModelModalOpen, setIsCreateModelModalOpen] = useState(false);
+  const [isEditModelModalOpen, setIsEditModelModalOpen] = useState(false);
   const [editingAIModel, setEditingAIModel] = useState<AIModel | null>(null);
-
-  // State for Delete AI Model Confirmation
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteModelDialogOpen, setIsDeleteModelDialogOpen] = useState(false);
   const [deletingAIModelId, setDeletingAIModelId] = useState<string | null>(
     null
   );
 
-  // State for AI Vendors (add later)
-  // const [aiVendors, setAIVendors] = useState<AIVendor[]>([]);
-  // const [isLoadingAIVendors, setIsLoadingAIVendors] = useState(false);
+  // Vendors
+  const [aiVendors, setAIVendors] = useState<AIVendor[]>([]);
+  const [isLoadingAIVendors, setIsLoadingAIVendors] = useState(false);
+  const [isCreateVendorModalOpen, setIsCreateVendorModalOpen] = useState(false);
+  const [isEditVendorModalOpen, setIsEditVendorModalOpen] = useState(false);
+  const [editingAIVendor, setEditingAIVendor] = useState<AIVendor | null>(null);
+  const [isDeleteVendorDialogOpen, setIsDeleteVendorDialogOpen] =
+    useState(false);
+  const [deletingAIVendorId, setDeletingAIVendorId] = useState<string | null>(
+    null
+  );
 
-  // State for AI Prompts (add later)
-  // const [aiPrompts, setAIPrompts] = useState<AIPrompt[]>([]);
-  // const [isLoadingAIPrompts, setIsLoadingAIPrompts] = useState(false);
+  // Prompts
+  const [aiPrompts, setAIPrompts] = useState<AIPrompt[]>([]);
+  const [isLoadingAIPrompts, setIsLoadingAIPrompts] = useState(false);
+  const [isCreatePromptModalOpen, setIsCreatePromptModalOpen] = useState(false);
+  const [isEditPromptModalOpen, setIsEditPromptModalOpen] = useState(false);
+  const [editingAIPrompt, setEditingAIPrompt] = useState<AIPrompt | null>(null);
+  const [isDeletePromptDialogOpen, setIsDeletePromptDialogOpen] =
+    useState(false);
+  const [deletingAIPromptId, setDeletingAIPromptId] = useState<string | null>(
+    null
+  );
 
-  // Fetch AI Models
+  // Fetch functions
   const fetchAIModels = useCallback(async () => {
     setIsLoadingAIModels(true);
     try {
-      const models = await getAIModels();
-      setAIModels(models);
-    } catch (error) {
-      console.error("Failed to fetch AI models:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to load AI models."
-      );
+      setAIModels(await getAIModels());
+    } catch {
+      toast.error("Failed to load AI Models.");
     } finally {
       setIsLoadingAIModels(false);
     }
   }, []);
 
-  // Fetch AI Vendors
   const fetchAIVendors = useCallback(async () => {
     setIsLoadingAIVendors(true);
     try {
-      const fetchedVendors = await getAIVendors();
-      setAIVendors(fetchedVendors);
-    } catch (error) {
-      console.error("Failed to fetch AI vendors:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to load AI vendors."
-      );
+      setAIVendors(await getAIVendors());
+    } catch {
+      toast.error("Failed to load AI Vendors.");
     } finally {
       setIsLoadingAIVendors(false);
     }
   }, []);
 
-  // Fetch data when the relevant subcategory is selected or component mounts for vendors
+  const fetchAIPrompts = useCallback(async () => {
+    setIsLoadingAIPrompts(true);
+    try {
+      setAIPrompts(await getAIPrompts());
+    } catch {
+      toast.error("Failed to load AI Prompts.");
+    } finally {
+      setIsLoadingAIPrompts(false);
+    }
+  }, []);
+
+  // Load on category/subcategory change
   useEffect(() => {
-    // Fetch vendors as they are needed for the "Create Model" modal
-    // This could be fetched on component mount or when AI category is selected
-    if (selectedCategory === "AI") {
-      fetchAIVendors();
-    }
+    if (selectedCategory === "AI") fetchAIVendors();
+    if (selectedSubCategory === "AI Models") fetchAIModels();
+    else if (selectedSubCategory === "AI Vendors") fetchAIVendors();
+    else if (selectedSubCategory === "AI Prompts") fetchAIPrompts();
+  }, [
+    selectedCategory,
+    selectedSubCategory,
+    fetchAIModels,
+    fetchAIVendors,
+    fetchAIPrompts,
+  ]);
 
-    if (selectedSubCategory === "AI Models") {
-      fetchAIModels();
-    }
-    // Add similar blocks for Vendors and Prompts later
-    // else if (selectedSubCategory === "AI Vendors") { fetchAIVendors(); } // Already fetched if AI is category
-    // else if (selectedSubCategory === "AI Prompts") { fetchAIPrompts(); }
-  }, [selectedCategory, selectedSubCategory, fetchAIModels, fetchAIVendors]);
-
-  const handleModelCreated = (newModel: AIModel) => {
-    setAIModels((prevModels) =>
-      [...prevModels, newModel].sort((a, b) => a.name.localeCompare(b.name))
+  // Model Handlers
+  const handleModelCreated = (m: AIModel) => {
+    setAIModels((prev) =>
+      [...prev, m].sort((a, b) => a.name.localeCompare(b.name))
     );
-    setIsCreateModalOpen(false);
+    setIsCreateModelModalOpen(false);
   };
-
-  // Placeholder handlers for item actions
-  const handleAddModel = () => {
-    if (aiVendors.length === 0 && !isLoadingAIVendors) {
-      toast.error("Vendors not loaded yet. Please wait or try refreshing.", {
-        description: "AI Models need an associated AI Vendor.",
-      });
-      fetchAIVendors(); // Attempt to re-fetch if empty
-      return;
-    }
-    setIsCreateModalOpen(true);
+  const handleEditModel = (m: AIModel) => {
+    setEditingAIModel(m);
+    setIsEditModelModalOpen(true);
   };
-
-  const handleModelUpdated = (updatedModel: AIModel) => {
-    setAIModels((prevModels) =>
-      prevModels.map((model) =>
-        model.id === updatedModel.id ? updatedModel : model
-      )
-    );
+  const handleModelUpdated = (m: AIModel) => {
+    setAIModels((prev) => prev.map((x) => (x.id === m.id ? m : x)));
+    setIsEditModelModalOpen(false);
     setEditingAIModel(null);
-    setIsEditModalOpen(false);
   };
-
-  const handleEditModel = (model: AIModel) => {
-    setEditingAIModel(model);
-    setIsEditModalOpen(true);
+  const handleDeleteModelClick = (id: string) => {
+    setDeletingAIModelId(id);
+    setIsDeleteModelDialogOpen(true);
   };
-
-  const handleDeleteModelClick = (modelId: string) => {
-    setDeletingAIModelId(modelId);
-    setIsDeleteDialogOpen(true);
-  };
-
   const handleConfirmDeleteModel = async () => {
     if (!deletingAIModelId) return;
-
-    setIsDeleteDialogOpen(false); // Close dialog immediately
-    const modelIdToDelete = deletingAIModelId; // Store ID before clearing state
-    setDeletingAIModelId(null); // Clear state
-
     try {
-      await deleteAIModel(modelIdToDelete);
-      setAIModels((prevModels) =>
-        prevModels.filter((model) => model.id !== modelIdToDelete)
-      );
-      toast.success("AI Model deleted successfully.");
-    } catch (error) {
-      console.error(`Failed to delete AI model ${modelIdToDelete}:`, error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : `Could not delete AI model ${modelIdToDelete}.`
-      );
+      await deleteAIModel(deletingAIModelId);
+      setAIModels((prev) => prev.filter((x) => x.id !== deletingAIModelId));
+      toast.success("AI Model deleted.");
+    } catch {
+      toast.error("Delete failed.");
+    } finally {
+      setIsDeleteModelDialogOpen(false);
+      setDeletingAIModelId(null);
     }
   };
 
-  // Render function for AI Model list items
-  const renderAIModelItem = (model: AIModel) => {
-    const vendor = aiVendors.find((v) => v.id === model.vendor_id);
-    const vendorName = vendor ? vendor.name : "Unknown Vendor";
+  // Vendor Handlers
+  const handleVendorCreated = (v: AIVendor) => {
+    setAIVendors((prev) =>
+      [...prev, v].sort((a, b) => a.name.localeCompare(b.name))
+    );
+    setIsCreateVendorModalOpen(false);
+  };
+  const handleEditVendor = (v: AIVendor) => {
+    setEditingAIVendor(v);
+    setIsEditVendorModalOpen(true);
+  };
+  const handleVendorUpdated = (v: AIVendor) => {
+    setAIVendors((prev) => prev.map((x) => (x.id === v.id ? v : x)));
+    setIsEditVendorModalOpen(false);
+    setEditingAIVendor(null);
+  };
+  const handleDeleteVendorClick = (id: string) => {
+    setDeletingAIVendorId(id);
+    setIsDeleteVendorDialogOpen(true);
+  };
+  const handleConfirmDeleteVendor = async () => {
+    if (!deletingAIVendorId) return;
+    try {
+      await deleteAIVendor(deletingAIVendorId);
+      setAIVendors((prev) => prev.filter((x) => x.id !== deletingAIVendorId));
+      toast.success("AI Vendor deleted.");
+    } catch {
+      toast.error("Delete failed.");
+    } finally {
+      setIsDeleteVendorDialogOpen(false);
+      setDeletingAIVendorId(null);
+    }
+  };
 
+  // Prompt Handlers
+  const handlePromptCreated = (p: AIPrompt) => {
+    setAIPrompts((prev) =>
+      [...prev, p].sort((a, b) => a.name.localeCompare(b.name))
+    );
+    setIsCreatePromptModalOpen(false);
+  };
+  const handleEditPrompt = (p: AIPrompt) => {
+    setEditingAIPrompt(p);
+    setIsEditPromptModalOpen(true);
+  };
+  const handlePromptUpdated = (p: AIPrompt) => {
+    setAIPrompts((prev) => prev.map((x) => (x.id === p.id ? p : x)));
+    setIsEditPromptModalOpen(false);
+    setEditingAIPrompt(null);
+  };
+  const handleDeletePromptClick = (id: string) => {
+    setDeletingAIPromptId(id);
+    setIsDeletePromptDialogOpen(true);
+  };
+  const handleConfirmDeletePrompt = async () => {
+    if (!deletingAIPromptId) return;
+    try {
+      await deleteAIPrompt(deletingAIPromptId);
+      setAIPrompts((prev) => prev.filter((x) => x.id !== deletingAIPromptId));
+      toast.success("AI Prompt deleted.");
+    } catch {
+      toast.error("Delete failed.");
+    } finally {
+      setIsDeletePromptDialogOpen(false);
+      setDeletingAIPromptId(null);
+    }
+  };
+
+  // Renderers
+  const renderAIModelItem = (m: AIModel) => {
+    const v = aiVendors.find((x) => x.id === m.vendor_id);
     return (
       <ListItem
-        key={model.id}
-        title={model.name}
-        secondaryText={`Vendor: ${vendorName} | API Name: ${model.api_name}`}
+        key={m.id}
+        title={m.name}
+        secondaryText={`Vendor: ${v?.name || "Unknown"} | API: ${m.api_name}`}
         actions={
-          <div className="flex items-center space-x-1">
+          <div className="flex space-x-1">
             <IconButton
               icon={Pencil}
               size="sm"
               variant="ghost"
-              aria-label={`Edit ${model.name}`}
+              aria-label="Edit"
               onClick={(e) => {
-                e.stopPropagation(); // Prevent ListItem click
-                handleEditModel(model); // Pass the full model object
+                e.stopPropagation();
+                handleEditModel(m);
               }}
             />
             <IconButton
               icon={Trash2}
               size="sm"
               variant="ghost"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              aria-label={`Delete ${model.name}`}
+              className="text-destructive"
+              aria-label="Delete"
               onClick={(e) => {
-                e.stopPropagation(); // Prevent ListItem click
-                handleDeleteModelClick(model.id); // Pass the model ID
+                e.stopPropagation();
+                handleDeleteModelClick(m.id);
               }}
             />
           </div>
         }
-        // Optional: Add onClick to view details if not editing directly
-        // onClick={() => handleEditModel(model)} // Or a dedicated view handler
+      />
+    );
+  };
+  const renderAIVendorItem = (v: AIVendor) => (
+    <ListItem
+      key={v.id}
+      title={v.name}
+      secondaryText={
+        v.api_key_env_var ? `Key Env: ${v.api_key_env_var}` : "No key env"
+      }
+      actions={
+        <div className="flex space-x-1">
+          <IconButton
+            icon={Pencil}
+            size="sm"
+            variant="ghost"
+            aria-label="Edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditVendor(v);
+            }}
+          />
+          <IconButton
+            icon={Trash2}
+            size="sm"
+            variant="ghost"
+            className="text-destructive"
+            aria-label="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteVendorClick(v.id);
+            }}
+          />
+        </div>
+      }
+    />
+  );
+  const renderAIPromptItem = (p: AIPrompt) => {
+    let scope = "User Global";
+    if (p.project_id) scope = "Project-specific";
+    else if (!p.user_id) scope = "System Global";
+    return (
+      <ListItem
+        key={p.id}
+        title={p.name}
+        secondaryText={`Category: ${p.category || "N/A"} | Scope: ${scope}`}
+        actions={
+          <div className="flex space-x-1">
+            <IconButton
+              icon={Pencil}
+              size="sm"
+              variant="ghost"
+              aria-label="Edit"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditPrompt(p);
+              }}
+            />
+            <IconButton
+              icon={Trash2}
+              size="sm"
+              variant="ghost"
+              className="text-destructive"
+              aria-label="Delete"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeletePromptClick(p.id);
+              }}
+            />
+          </div>
+        }
       />
     );
   };
 
-  const middleColumnContent = (
+  const middleColumn = (
     <>
       <ContextualHeader title="Settings Categories" />
       <ListContainer>
-        {/* Top Level Category: AI */}
         <ListItem
           title="AI"
           icon={Cpu}
-          onClick={() => {
-            setSelectedCategory("AI");
-            // Optionally reset subcategory when changing main category
-            // setSelectedSubCategory(null);
-          }}
+          onClick={() => setSelectedCategory("AI")}
           isSelected={selectedCategory === "AI"}
         />
-
-        {/* AI Sub-categories shown when 'AI' is selected */}
         {selectedCategory === "AI" && (
           <div className="pl-4 border-l ml-4 border-border">
-            {" "}
-            {/* Indentation */}
             <ListItem
               title="AI Models"
-              icon={Database} // Example icon
+              icon={Database}
               onClick={() => setSelectedSubCategory("AI Models")}
               isSelected={selectedSubCategory === "AI Models"}
-              secondaryText="Manage available models"
+              secondaryText="Manage models"
             />
             <ListItem
               title="AI Vendors"
-              icon={Database} // Example icon, maybe differentiate later
+              icon={Database}
               onClick={() => setSelectedSubCategory("AI Vendors")}
               isSelected={selectedSubCategory === "AI Vendors"}
-              secondaryText="Configure API providers"
+              secondaryText="Configure vendors"
             />
             <ListItem
               title="AI Prompts"
-              icon={FileText} // Example icon
+              icon={FileText}
               onClick={() => setSelectedSubCategory("AI Prompts")}
               isSelected={selectedSubCategory === "AI Prompts"}
-              secondaryText="Define reusable prompts"
+              secondaryText="Define prompts"
             />
           </div>
         )}
-        {/* Add other top-level categories here later (e.g., Appearance, Account) */}
       </ListContainer>
     </>
   );
 
-  const mainDetailColumnContent = (
+  const mainDetail = (
     <>
       {selectedSubCategory === "AI Models" && (
         <SettingsItemList
           title="AI Models"
           items={aiModels}
           isLoading={isLoadingAIModels}
-          onAddItem={handleAddModel}
+          onAddItem={() => setIsCreateModelModalOpen(true)}
           renderItem={renderAIModelItem}
-          emptyStateMessage="No AI models configured yet."
+          emptyStateMessage="No models"
         />
       )}
-      {/* TODO: Add rendering for AI Vendors and AI Prompts */}
-      {/* {selectedSubCategory === "AI Vendors" && <SettingsItemList ... />} */}
-      {/* {selectedSubCategory === "AI Prompts" && <SettingsItemList ... />} */}
-
-      {/* Placeholder for when no subcategory is selected or it's not AI Models yet */}
-      {selectedSubCategory !== "AI Models" && (
-        <div className="p-8 flex items-center justify-center h-full">
-          <p className="text-muted-foreground">
-            {selectedSubCategory
-              ? `Content for ${selectedSubCategory} not implemented yet.`
-              : "Select a setting sub-category to view details."}
-          </p>
+      {selectedSubCategory === "AI Vendors" && (
+        <SettingsItemList
+          title="AI Vendors"
+          items={aiVendors}
+          isLoading={isLoadingAIVendors}
+          onAddItem={() => setIsCreateVendorModalOpen(true)}
+          renderItem={renderAIVendorItem}
+          emptyStateMessage="No vendors"
+        />
+      )}
+      {selectedSubCategory === "AI Prompts" && (
+        <SettingsItemList
+          title="AI Prompts"
+          items={aiPrompts}
+          isLoading={isLoadingAIPrompts}
+          onAddItem={() => setIsCreatePromptModalOpen(true)}
+          renderItem={renderAIPromptItem}
+          emptyStateMessage="No prompts"
+        />
+      )}
+      {!selectedSubCategory && (
+        <div className="p-8 flex items-center justify-center h-full text-muted-foreground">
+          Select a setting sub-category to view details.
         </div>
       )}
     </>
   );
 
-  // Add fragment <> around the SecondaryViewLayout to allow modal rendering alongside it
   return (
     <>
       <SecondaryViewLayout
-        middleColumn={middleColumnContent}
-        mainDetailColumn={mainDetailColumnContent}
+        middleColumn={middleColumn}
+        mainDetailColumn={mainDetail}
       />
 
-      {/* Render the Create AI Model Modal */}
+      {/* Model Modals & Dialog */}
       <CreateAIModelModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        isOpen={isCreateModelModalOpen}
+        onClose={() => setIsCreateModelModalOpen(false)}
         onModelCreated={handleModelCreated}
-        vendors={aiVendors} // Pass the fetched vendors
+        vendors={aiVendors}
       />
-
-      {/* Render the Edit AI Model Modal */}
       <EditAIModelModal
-        isOpen={isEditModalOpen}
+        isOpen={isEditModelModalOpen}
         onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingAIModel(null); // Clear editing state on close
+          setIsEditModelModalOpen(false);
+          setEditingAIModel(null);
         }}
         onModelUpdated={handleModelUpdated}
         vendors={aiVendors}
         initialData={editingAIModel}
       />
-
-      {/* Render the Delete AI Model Confirmation Dialog */}
       <AlertDialog
-        open={isDeleteDialogOpen} // Use 'open' instead of 'isOpen'
+        open={isDeleteModelDialogOpen}
         onOpenChange={(open) => {
-          // Use 'onOpenChange' instead of 'onClose'
-          setIsDeleteDialogOpen(open);
-          if (!open) {
-            // Clear deleting state when dialog is closed
-            setDeletingAIModelId(null);
-          }
+          setIsDeleteModelDialogOpen(open);
+          if (!open) setDeletingAIModelId(null);
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this AI Model? This action cannot
-              be undone.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Delete AI Model?</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -349,6 +455,78 @@ export function SiteSettingsClient() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </> // Close the fragment
+
+      {/* Vendor Modals & Dialog */}
+      <CreateAIVendorModal
+        isOpen={isCreateVendorModalOpen}
+        onClose={() => setIsCreateVendorModalOpen(false)}
+        onVendorCreated={handleVendorCreated}
+      />
+      <EditAIVendorModal
+        isOpen={isEditVendorModalOpen}
+        onClose={() => {
+          setIsEditVendorModalOpen(false);
+          setEditingAIVendor(null);
+        }}
+        onVendorUpdated={handleVendorUpdated}
+        initialData={editingAIVendor}
+      />
+      <AlertDialog
+        open={isDeleteVendorDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteVendorDialogOpen(open);
+          if (!open) setDeletingAIVendorId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>Delete AI Vendor?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteVendor}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Prompt Modals & Dialog */}
+      <CreateAIPromptModal
+        isOpen={isCreatePromptModalOpen}
+        onClose={() => setIsCreatePromptModalOpen(false)}
+        onPromptCreated={handlePromptCreated}
+      />
+      <EditAIPromptModal
+        isOpen={isEditPromptModalOpen}
+        onClose={() => {
+          setIsEditPromptModalOpen(false);
+          setEditingAIPrompt(null);
+        }}
+        onPromptUpdated={handlePromptUpdated}
+        initialData={editingAIPrompt}
+      />
+      <AlertDialog
+        open={isDeletePromptDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeletePromptDialogOpen(open);
+          if (!open) setDeletingAIPromptId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>Delete AI Prompt?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeletePrompt}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

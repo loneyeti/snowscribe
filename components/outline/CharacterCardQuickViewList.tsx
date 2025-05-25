@@ -2,11 +2,11 @@
 
 import React from "react";
 import type { Character } from "@/lib/types";
-// import { CharacterCard } from "@/components/characters/CharacterCard"; // Assuming a compact card component might exist or be created
+import { Paragraph } from "@/components/typography/Paragraph"; // Use Paragraph for list items
 
 interface CharacterCardQuickViewListProps {
   characters: Character[];
-  // onCharacterSelect?: (characterId: string) => void; // Optional: if clicking a card should do something
+  // onCharacterSelect?: (characterId: string) => void; // Keep for future potential interaction
 }
 
 export function CharacterCardQuickViewList({
@@ -14,31 +14,35 @@ export function CharacterCardQuickViewList({
 }: CharacterCardQuickViewListProps) {
   if (!characters || characters.length === 0) {
     return (
-      <p className="text-sm text-slate-500 dark:text-slate-400">
-        No characters found for this project. Add characters in the Characters
-        section.
-      </p>
+      <Paragraph className="text-sm text-muted-foreground italic mt-0">
+        {/* Ensure mt-0 if it's the first element after a heading */}
+        No characters found. Add characters in the Characters section.
+      </Paragraph>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {/* 
-        This will be a list or grid of character cards.
-        Each card should be a compact, read-only summary.
-        Example: Name, Image (if any), a very short description snippet.
-      */}
-      <p className="text-sm text-slate-600 dark:text-slate-300">
-        Character quick view list will be implemented here. Displaying{" "}
-        {characters.length} character(s).
-      </p>
-      {/* Placeholder rendering */}
-      {/* {characters.map((character) => (
-        <div key={character.id} className="p-2 border rounded bg-slate-50 dark:bg-slate-700">
-          <h4 className="font-semibold text-slate-800 dark:text-slate-200">{character.name}</h4>
-          <p className="text-xs text-slate-600 dark:text-slate-400 truncate">{character.description || "No description"}</p>
-        </div>
-      ))} */}
+    <div className="space-y-1">
+      {" "}
+      {/* Reduced space between items */}
+      <ul className="list-none pl-0 space-y-1">
+        {" "}
+        {/* Removed list-disc, list-inside, adjusted spacing */}
+        {characters.map((character) => (
+          <li key={character.id}>
+            <Paragraph variant="small" className="text-foreground mt-0">
+              {" "}
+              {/* Use Paragraph with small variant */}
+              {character.name}
+              {character.nickname && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  ({character.nickname})
+                </span>
+              )}
+            </Paragraph>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

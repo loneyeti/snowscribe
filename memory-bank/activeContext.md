@@ -2,18 +2,24 @@
 
 ## Current Work Focus
 
-_(Updated: YYYY-MM-DD (AI-Generated Update))_
+_(Updated: 2025-05-24 (AI-Generated Update))_
 
-The core data models for AI Configurations (Vendors, Models, Prompts, Tool-to-Model Mappings) and the refactored Outline feature are implemented. User interface for managing AI Models within settings is functional. Integration of `snowgander` for AI chat/tool execution is underway, with `AISidePanel` and `AIToolButton` providing the UI. The Outline feature UI is partially implemented with synopsis editing and scene list capabilities.
-
-The immediate next steps involve:
-1.  Completing the UI for the Outlining feature (detailed scene editing, potentially chapter-level outlining).
-2.  Expanding the AI Settings UI to manage AI Vendors and Prompts.
-3.  Implementing specific AI tools using the `AISidePanel` and `AIToolButton` pattern, leveraging the `tool_model` and `ai_prompts` configurations.
-4.  Refining authentication UI/UX and general error handling.
+The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement.
 
 ## Recent Changes
 
+- **AI Prompt CRUD Management (Site Settings):**
+  - Implemented full Create, Read, Update, Delete UI for AI Prompts in `SiteSettingsClient.tsx`.
+  - Created `CreateAIPromptModal.tsx` and `EditAIPromptModal.tsx` for prompt creation and editing, using `react-hook-form`, Zod validation, and project UI primitives.
+  - Added state, handler functions, and list rendering for prompts, matching the AI Model and Vendor management pattern.
+  - Integrated prompt modals and delete confirmation dialog into the settings client.
+  - Confirmed all supporting types, schemas, and data functions (`AIPrompt`, Zod schema, `lib/data/aiPrompts.ts`) are correct and in use.
+- **AI Vendor CRUD Management (Site Settings):**
+  - Implemented full Create, Read, Update, Delete UI for AI Vendors in `SiteSettingsClient.tsx`.
+  - Created `CreateAIVendorModal.tsx` and `EditAIVendorModal.tsx` for vendor creation and editing, using `react-hook-form`, Zod validation, and project UI primitives.
+  - Added state, handler functions, and list rendering for vendors, matching the AI Model management pattern.
+  - Integrated vendor modals and delete confirmation dialog into the settings client.
+  - Confirmed all supporting types, schemas, and data functions (`AIVendor`, Zod schema, `lib/data/aiVendors.ts`) are correct and in use.
 - **AI Configuration Implementation (Data & Basic UI):**
   - Created database tables (`ai_vendors`, `ai_models`, `ai_prompts`, `tool_model`) with Supabase migrations.
   - Defined corresponding TypeScript types and Zod schemas.
@@ -48,21 +54,24 @@ The immediate next steps involve:
 The following are the prioritized next steps:
 
 1.  **Complete Outline Feature UI**:
+
     - [ ] Enhance `ChapterSceneOutlineList.tsx` to allow full editing of scene outline details (description, POV, etc.) directly or via improved modals.
     - [ ] Consider UI for reordering scenes/chapters within the outline view.
     - [ ] Ensure seamless data synchronization between manuscript and outline views.
 
 2.  **Expand AI Service Integration & Features**:
-    - [ ] Develop UI in `SiteSettingsClient.tsx` for managing AI Vendors and AI Prompts.
+
     - [ ] Implement specific AI tools (e.g., Snowflake Outliner, Character Enhancer) using the `AISidePanel`, `AIToolButton`, and `tool_model` pattern.
     - [ ] Develop system prompts for each AI feature and store them in the `ai_prompts` table.
     - [ ] Implement token tracking and usage limits (future consideration for business model).
 
 3.  **Authentication & User Profile Refinements**:
+
     - [ ] Refine error handling and user feedback for all auth flows using `sonner` for toasts consistently.
     - [ ] Implement a user profile page where users can manage their account details (e.g., update profile info, change password).
 
 4.  **Core UI Components & Manuscript Refinements**:
+
     - [ ] Continue refinement and expansion of the UI component library.
     - [ ] Improve display of chapter/scene metadata (e.g., scene counts, word counts) in lists.
     - [ ] Consider adding more advanced features to `ManuscriptEditor` (e.g., basic formatting toolbar).
@@ -87,7 +96,7 @@ The following are the prioritized next steps:
 - **Zod for Validation**: Enforce data integrity through Zod schemas at the API boundary.
 - **Sonner for Notifications**: Utilize `sonner` for user-facing toast notifications.
 - **Client-side data fetching within feature components**: Components like `ProjectDashboardClient` fetch their own data using functions from `lib/data/*` which in turn call internal API routes.
-- **Asynchronous Dynamic APIs (Next.js 15+):** Ensure `params` and `cookies()` are `await`ed in server-side code.
+- **Asynchronous Dynamic APIs (Next.js 15+)**: Ensure `params` and `cookies()` are `await`ed in server-side code.
 - **Project Ownership Guard**: Utilize the `verifyProjectOwnership` guard in `lib/supabase/guards.ts`.
 - **Internal API Cookie Forwarding**: Explicitly forward cookies for server-to-server API calls.
 
