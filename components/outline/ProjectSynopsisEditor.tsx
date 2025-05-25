@@ -5,8 +5,11 @@ import type { Project } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
-import { AISidePanel } from "@/components/ai/AISidePanel"; // Add this import
+import { Loader2, Sparkles } from "lucide-react";
+import { chat } from "@/lib/data/chat";
+import { getToolModelByToolName } from "@/lib/data/toolModels";
+import { getSystemPromptByCategory } from "@/lib/data/aiPrompts";
+import type { TextBlock, ChatResponse } from "snowgander";
 
 interface ProjectSynopsisEditorProps {
   project: Pick<
@@ -28,7 +31,7 @@ export function ProjectSynopsisEditor({
     project.one_page_synopsis || ""
   );
   const [isSaving, setIsSaving] = useState(false);
-  const [isLogLineAIPanelOpen, setIsLogLineAIPanelOpen] = useState(false);
+  const [isGeneratingLogLine, setIsGeneratingLogLine] = useState(false);
 
   useEffect(() => {
     setLogLine(project.log_line || "");
@@ -68,6 +71,126 @@ export function ProjectSynopsisEditor({
     }
   };
 
+  const handleGenerateLogLine = async () => {
+    // 1. Synopsis Check
+    if (!onePageSynopsis || onePageSynopsis.trim() === "") {
+      toast.error(
+        "Log Line is generated with the Synopsis field, so that needs to be filled out first."
+      );
+      return;
+    }
+
+    setIsGeneratingLogLine(true);
+    try {
+      // 2. Fetch Tool Model configuration (to get model_id)
+      const toolName = "log_line_generator"; // This should match the category in ai_prompts
+      const toolModelConfig = await getToolModelByToolName(toolName);
+
+      if (!toolModelConfig || !toolModelConfig.model_id) {
+        console.error(
+          `AI model configuration for '${toolName}' not found or model_id is missing. Full config:`,
+          toolModelConfig
+        );
+        throw new Error(
+          `AI model configuration for '${toolName}' not found or incomplete.`
+        );
+      }
+      const modelId = toolModelConfig.model_id;
+
+      // 3. Fetch System Prompt
+      const systemPromptText = await getSystemPromptByCategory(toolName);
+      if (!systemPromptText) {
+        console.error(`System prompt for '${toolName}' not found.`);
+        // You could use a hardcoded fallback, but the DB should be the source of truth.
+        throw new Error(
+          `System prompt for '${toolName}' not found. Please ensure it's configured in the database.`
+        );
+      }
+
+      // 4. Construct User Prompt for the AI
+      // Ensure all parts of the prompt are strings and handle potential null/undefined values.
+      const titlePart = project.title
+        ? `Project Title: ${project.title}\n`
+        : "";
+      const genrePart = project.genre_id
+        ? `Genre ID: ${project.genre_id}\n`
+        : ""; // Genre name would be better if available
+      const synopsisPart = `Synopsis:\n${onePageSynopsis}\n\n`;
+      const instructionPart = `Return only the log line itself, as plain text, without any additional formatting or conversational text.`;
+
+      const userPrompt =
+        `Based on the following project information, please generate a single, impactful log line.\n\n` +
+        titlePart +
+        genrePart +
+        synopsisPart +
+        instructionPart;
+
+      // 5. Make AI Query
+      // The 'messages' array is empty for a one-shot request like this.
+      const aiResponse: ChatResponse = await chat(
+        modelId,
+        [],
+        userPrompt,
+        systemPromptText
+      );
+
+      // 6. Process Response and Update Log Line Field
+      if (aiResponse && aiResponse.content && aiResponse.content.length > 0) {
+        const firstTextBlock = aiResponse.content.find(
+          (block) => block.type === "text"
+        ) as TextBlock | undefined;
+
+        if (firstTextBlock && typeof firstTextBlock.text === "string") {
+          let generatedLogLine = firstTextBlock.text.trim();
+
+          // Basic cleanup: remove common AI prefixes/suffixes if the system prompt isn't perfectly respected.
+          generatedLogLine = generatedLogLine.replace(/^logline:/i, "").trim();
+          generatedLogLine = generatedLogLine.replace(/^log line:/i, "").trim();
+          generatedLogLine = generatedLogLine
+            .replace(/^here's a log line:/i, "")
+            .trim();
+          generatedLogLine = generatedLogLine
+            .replace(/^here is your log line:/i, "")
+            .trim();
+          generatedLogLine = generatedLogLine.replace(/^"|"$/g, "").trim(); // Remove surrounding quotes
+
+          setLogLine(generatedLogLine); // Update state, which updates Textarea
+          toast.success("Log line generated!");
+        } else {
+          let errorMessage =
+            "AI response was empty or not in the expected text format.";
+          const errorBlock = aiResponse.content.find(
+            (block) => block.type === "error"
+          );
+          if (
+            errorBlock &&
+            "publicMessage" in errorBlock &&
+            typeof errorBlock.publicMessage === "string"
+          ) {
+            errorMessage = errorBlock.publicMessage;
+          }
+          console.error("AI response error or unexpected format:", aiResponse);
+          throw new Error(errorMessage);
+        }
+      } else {
+        console.error(
+          "AI returned an empty or invalid response structure:",
+          aiResponse
+        );
+        throw new Error("AI returned an empty or invalid response.");
+      }
+    } catch (error) {
+      console.error("Error generating log line:", error);
+      const displayMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to generate log line. Please try again.";
+      toast.error(displayMessage);
+    } finally {
+      setIsGeneratingLogLine(false);
+    }
+  };
+
   return (
     <div className="space-y-6 p-1">
       {" "}
@@ -86,16 +209,22 @@ export function ProjectSynopsisEditor({
           placeholder="A compelling one-sentence summary of your novel."
           rows={2}
           className="max-w-xl"
+          disabled={isGeneratingLogLine || isSaving} // Optionally disable while generating
         />
         <Button
           variant="ghost"
           size="sm"
           className="mt-1 text-xs text-primary hover:text-primary/90"
-          onClick={() => setIsLogLineAIPanelOpen(true)} // Updated onClick
-          // title="Generate Log Line with AI" // Optional: Add a title attribute for better accessibility/tooltip
+          onClick={handleGenerateLogLine}
+          disabled={isGeneratingLogLine || isSaving}
+          title="Generate Log Line with AI"
         >
-          <Sparkles className="w-3 h-3 mr-1" />
-          Generate Log Line with AI
+          {isGeneratingLogLine ? (
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+          ) : (
+            <Sparkles className="w-3 h-3 mr-1" />
+          )}
+          {isGeneratingLogLine ? "Generating..." : "Generate Log Line with AI"}
         </Button>
       </div>
       <div>
@@ -127,33 +256,6 @@ export function ProjectSynopsisEditor({
           {isSaving ? "Saving..." : "Save Synopses"}
         </Button>
       </div>
-      {isLogLineAIPanelOpen && (
-        <AISidePanel
-          isOpen={isLogLineAIPanelOpen}
-          onClose={() => setIsLogLineAIPanelOpen(false)}
-          title="Log Line Generator"
-          componentType="tool"
-          toolName="log_line_generator" // This MUST match the 'name' in tool_model and 'category' in ai_prompts
-          // Construct a helpful default prompt using project context
-          defaultPrompt={
-            `Based on the following project information, please generate log line options:\n\n` +
-            `Project Title: ${project.title || "Not specified"}\n` +
-            `${project.genre_id ? `Genre: (ID: ${project.genre_id}) \n` : ""}` + // If you have genre name, use it
-            `${
-              onePageSynopsis
-                ? `\nOne-Page Synopsis Excerpt:\n${onePageSynopsis.substring(
-                    0,
-                    500
-                  )}${onePageSynopsis.length > 500 ? "..." : ""}\n\n`
-                : "\nNo one-page synopsis provided.\n\n"
-            }` +
-            `Remember to provide 3-5 distinct, concise, and intriguing log line options suitable for pitching.`
-          }
-          // defaultSystemPrompt is now primarily fetched by AISidePanel based on toolName/category.
-          // You can provide an override here if absolutely necessary, but the goal is to use the DB prompt.
-          // defaultSystemPrompt="Your override system prompt if needed..."
-        />
-      )}
     </div>
   );
 }

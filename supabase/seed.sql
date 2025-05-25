@@ -65,7 +65,7 @@ When reviewing a scene, evaluate these elements:
 Keep your feedback concise but substantive. Your goal is to provide the most valuable insights that will help this writer revise effectively.', 'scene_helper');
 
 INSERT INTO public.ai_prompts (name, prompt_text, category, user_id, project_id) VALUES
-  ('Log Line Generator Default System Prompt', 'You are an expert in crafting compelling log lines for novels. A log line is a one-sentence summary that captures the essence of the story, including the protagonist, their goal, the antagonist/conflict, and the stakes. Based on the provided project information (title, genre, synopsis), generate 3-5 distinct log line options. Each option should be concise (ideally under 25 words), intriguing, and suitable for pitching the novel. Present each option clearly, perhaps as a numbered or bulleted list.', 'log_line_generator', NULL, NULL);
+  ('Log Line Generator Default System Prompt', 'You are an AI assistant that generates concise and compelling log lines for novels. Based on the provided project information (title, genre, synopsis), generate a single, impactful log line. The log line should be plain text only, without any introductory phrases, explanations, or markdown formatting. Return only the log line itself.', 'log_line_generator', NULL, NULL);
 
 INSERT INTO public.tool_model (name, model_id) VALUES
   ('default', (SELECT id FROM ai_models WHERE name = 'Claude 3.7 Sonnet'));

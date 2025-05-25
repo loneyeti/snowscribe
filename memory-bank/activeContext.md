@@ -8,16 +8,21 @@ The application now includes full CRUD management for AI Prompts in the Site Set
 
 ## Recent Changes
 
-- **AI-Powered Log Line Generation**:
-  - Added a new system prompt for 'Log Line Generator' to `supabase/seed.sql`.
-  - Linked the 'log_line_generator' tool name to an AI model in `supabase/seed.sql`.
-  - Updated the `GET` handler in `app/api/ai/tool-models/route.ts` to correctly fetch tool models by `name`.
-  - Updated the `getToolModelByToolName` function in `lib/data/toolModels.ts` to use the corrected API query parameter and handle the response.
-  - Added state for `AISidePanel` visibility in `components/outline/ProjectSynopsisEditor.tsx`.
-  - Modified the "Generate with AI" button for the log line in `components/outline/ProjectSynopsisEditor.tsx` to toggle the `AISidePanel` visibility.
-  - Integrated the `AISidePanel` component into `components/outline/ProjectSynopsisEditor.tsx`, configuring it for the "log_line_generator" tool and passing relevant project context.
-  - Updated the `ProjectSynopsisEditorProps` interface in `components/outline/ProjectSynopsisEditor.tsx` to include `title` and `genre_id` from the `Project` type.
-  - Updated the `ProjectSynopsisEditor` component usage in `app/(dashboard)/project/[projectId]/ProjectDashboardClient.tsx` to pass the `title` and `genre_id` props.
+- **AI-Powered Log Line Generation (Refactored to Background Modality)**:
+  - Updated the system prompt for 'Log Line Generator' in `supabase/seed.sql` to return a single, plain text log line.
+  - Modified `components/outline/ProjectSynopsisEditor.tsx`:
+    - Removed `AISidePanel` import and related state (`isLogLineAIPanelOpen`).
+    - Added imports for `Loader2`, `chat`, `getToolModelByToolName`, `getSystemPromptByCategory`, `TextBlock`, and `ChatResponse`.
+    - Introduced `isGeneratingLogLine` state to manage loading.
+    - Refactored the "Generate Log Line with AI" button to trigger a new `handleGenerateLogLine` function, display a loading spinner, and be disabled during generation/saving.
+    - Implemented `handleGenerateLogLine` to:
+      - Validate synopsis presence.
+      - Fetch AI tool model configuration and system prompt.
+      - Construct a detailed user prompt using project context (title, genre, synopsis).
+      - Make a direct AI call using `chat` (without `AISidePanel`).
+      - Process the AI response, extract the plain text log line, clean it (remove prefixes/suffixes), and update the `logLine` state directly.
+      - Provide toast notifications for success or error.
+    - Ensured the `Log Line` textarea is disabled during generation.
 - **Project Deletion from Homepage**:
   - Implemented `deleteProject` function in `lib/data/projects.ts` for API interaction.
   - Enhanced `components/homepage/ProjectCard.tsx` with a delete button and `AlertDialog` for confirmation.

@@ -86,7 +86,9 @@ _(Updated: 2025-05-24 (AI-Generated Update))_
 - [ ] AI Service Integration:
   - [ ] Token tracking and usage limits per user (requires backend and UI).
 - [ ] Specific AI Tools Implementation:
-  - [ ] **Snowflake Outliner**: Integrate AI to assist with one-sentence and one-page synopses based on user input or existing project content.
+  - [x] **Snowflake Log Line Outliner**: Integrate AI to assist with one-sentence synopses based on user input or existing project content. (Log line generation refactored to background modality).
+  - [ ] **Snowflake Synopsis Outliner**: Integrate AI to assist with one-page synopses based on user input or existing project content.
+  - [ ] **Snowflake Scene Outliner**: Integrate AI to assist with generating a summary of the scene based on the scene text.
   - [ ] **Character Enhancer**: Develop prompts and UI for AI to help flesh out characters.
   - [ ] **Research Assistant**: Tool for AI-powered research within the app.
   - [ ] **Plot Assistant**: Tools for identifying plot holes, brainstorming plot points.
@@ -103,13 +105,13 @@ _(Updated: 2025-05-24 (AI-Generated Update))_
 
 ## Current Status
 
-**Phase**: Foundational AI Integration & Outline UI Implemented -> **Focusing on Expanding Specific AI Tools, Completing Outline/Settings UI, and AI Prompts Management**
+**Phase**: Foundational AI Integration & Outline UI Implemented -> **Focusing on Expanding Specific AI Tools (beyond log line), Completing Outline/Settings UI, and AI Prompts Management**
 
-The project has a robust backend API, a functional authentication system, and a well-structured frontend with key dashboard sections (Manuscript, Characters, World Notes, basic Outline, AI Model, Vendor & Prompt Settings) implemented. `snowgander` is integrated for AI calls.
+The project has a robust backend API, a functional authentication system, and a well-structured frontend with key dashboard sections (Manuscript, Characters, World Notes, basic Outline, AI Model, Vendor & Prompt Settings) implemented. `snowgander` is integrated for AI calls, and the log line generation feature now operates in a background modality.
 
 The immediate focus areas are:
 
-1.  **Flesh out AI Tools**: Implement specific AI assistance features using the established `AISidePanel` and `AIToolButton` pattern, leveraging `tool_model` and `ai_prompts`.
+1.  **Flesh out AI Tools**: Implement specific AI assistance features (beyond log line generation) using the established `AISidePanel` and `AIToolButton` pattern, leveraging `tool_model` and `ai_prompts`.
 2.  **Complete Outline UI**: Enhance the scene outline editing capabilities and consider chapter/scene reordering.
 3.  **Complete AI Settings UI**: Add management for AI Prompts.
 4.  **User Profile Management**: Basic profile page.
@@ -120,6 +122,13 @@ The immediate focus areas are:
 - Client-side error handling for some data operations could be more robust with `sonner` toasts.
 - Full word count aggregation for chapters/project is present in API responses but might need more prominent UI display beyond `AppHeader`.
 - AI Tool specific system prompts need to be created and managed.
+- The UI needs a lot of refinement and polish.
+
+### Bugs
+
+- When no characters exist in a project, the app keeps querying characters over and over non-stop when on the outline page
+- The total project word count does not get updated in real time, only after a refresh
+- The optional character image is incorrectly set up as required.
 
 ## Evolution of Project Decisions
 
