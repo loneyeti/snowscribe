@@ -43,19 +43,20 @@ const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
       <div
         ref={ref}
         className={cn(
-          "rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow relative",
+          "group relative rounded-xl border border-border/50 bg-card text-card-foreground shadow-sm hover:shadow-xl transition-all duration-300 hover:border-primary/20 hover:-translate-y-1",
+          "dark:border-dark-border/50 dark:bg-dark-card dark:text-dark-card-foreground dark:hover:border-primary/20",
           className
         )}
         {...props}
       >
         {/* Delete Button */}
         {onDelete && (
-          <div className="absolute top-2 right-2 z-10">
+          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             <IconButton
               icon={Trash2}
               variant="ghost"
               size="sm"
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-lg hover:bg-destructive hover:text-destructive-foreground"
               aria-label={`Delete project ${title}`}
               onClick={(e) => {
                 e.preventDefault(); // Prevent Link navigation
@@ -69,11 +70,14 @@ const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
         <Link href={`/project/${id}`} passHref legacyBehavior>
           <a className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-lg">
             {thumbnailUrl && (
-              <img
-                src={thumbnailUrl}
-                alt={`${title} thumbnail`}
-                className="rounded-t-lg object-cover h-48 w-full"
-              />
+              <div className="relative">
+                <img
+                  src={thumbnailUrl}
+                  alt={`${title} thumbnail`}
+                  className="rounded-t-xl object-cover h-48 w-full"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-t-xl" />
+              </div>
             )}
             <div className="p-6">
               <Heading level={3} className="mb-2 pr-8">

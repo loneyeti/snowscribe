@@ -36,33 +36,32 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
         ref={ref}
         onClick={onClick}
         className={cn(
-          "flex items-center px-4 py-3 rounded-md cursor-pointer transition-colors", // Updated padding
-          "hover:bg-muted/50",
+          "group flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-200",
+          "hover:bg-accent hover:shadow-sm dark:hover:bg-dark-accent",
           isSelected
-            ? "bg-primary/10 relative" // Removed text-primary-foreground, text color handled by inner elements
-            : "bg-card text-card-foreground",
+            ? "bg-primary/10 shadow-sm relative before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary before:rounded-l-lg"
+            : "bg-transparent",
           className
         )}
         {...props}
       >
-        {isSelected && (
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-md" />
-        )}
         {Icon && (
           <Icon
             className={cn(
-              "mr-3 h-5 w-5 flex-shrink-0",
-              isSelected ? "text-primary" : "text-muted-foreground" // Icon color updates on selection
+              "mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200",
+              isSelected
+                ? "text-primary"
+                : "text-muted-foreground group-hover:text-foreground dark:group-hover:text-dark-foreground"
             )}
           />
         )}
         <div className="flex-grow">
           <div
             className={cn(
-              "text-sm", // Base text size
+              "text-sm transition-all duration-200",
               isSelected
                 ? "font-semibold text-primary"
-                : "font-medium text-foreground" // Updated font weight and color for selection
+                : "font-medium text-foreground group-hover:text-foreground dark:text-dark-foreground dark:group-hover:text-dark-foreground"
             )}
           >
             {title}
@@ -70,8 +69,10 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
           {secondaryText && (
             <div
               className={cn(
-                "text-xs",
-                isSelected ? "text-primary/90" : "text-muted-foreground" // Slightly more opaque for selected secondary text
+                "text-xs transition-colors duration-200",
+                isSelected
+                  ? "text-primary/80 dark:text-primary/70"
+                  : "text-muted-foreground dark:text-dark-muted-foreground"
               )}
             >
               {secondaryText}

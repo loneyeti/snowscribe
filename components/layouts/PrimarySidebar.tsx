@@ -47,16 +47,13 @@ export function PrimarySidebar({
   // Removed internal activeItem state and handleNavItemClick
 
   return (
-    <aside className="w-16 bg-gray-900 text-gray-100 flex flex-col items-center py-6 shadow-lg">
+    <aside className="w-16 bg-gradient-to-b from-gray-900 to-gray-950 text-gray-100 flex flex-col items-center py-6 shadow-2xl border-r border-gray-800">
       {/* Logo or App Icon placeholder */}
-      <div className="mb-6">
-        {" "}
-        {/* Increased margin for logo */}
-        <span className="text-4xl cursor-pointer" title="Snowscribe Home">
-          {" "}
-          {/* Slightly larger icon */}
-          ❄️
-        </span>
+      <div className="mb-8 relative">
+        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
+          <span className="text-3xl">❄️</span>
+        </div>
+        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse" />
       </div>
 
       <nav className="flex-grow flex flex-col items-center space-y-2 w-full px-2">

@@ -21,18 +21,20 @@ export function PrimarySidebarNavItem({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center justify-center w-12 h-12 rounded-lg transition-colors duration-150 ease-in-out", // Added duration and easing
-        // Focus state updated for dark background
-        "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-sky-400",
+        "relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 group",
+        "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900",
         isActive
-          ? "bg-primary text-primary-foreground" // Active state using primary color
-          : "text-gray-400 hover:bg-gray-700 hover:text-gray-100" // Inactive and hover states for dark sidebar
+          ? "bg-primary text-white shadow-lg shadow-primary/25"
+          : "text-gray-400 hover:bg-gray-800 hover:text-gray-100 hover:shadow-md"
       )}
       title={label}
       aria-label={label}
       aria-current={isActive ? "page" : undefined}
     >
       {icon}
+      <div className="absolute left-full ml-3 px-2 py-1 bg-gray-800 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap">
+        {label}
+      </div>
       <span className="sr-only">{label}</span>
     </button>
   );
