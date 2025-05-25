@@ -8,6 +8,16 @@ The application now includes full CRUD management for AI Prompts in the Site Set
 
 ## Recent Changes
 
+- **AI-Powered Log Line Generation**:
+  - Added a new system prompt for 'Log Line Generator' to `supabase/seed.sql`.
+  - Linked the 'log_line_generator' tool name to an AI model in `supabase/seed.sql`.
+  - Updated the `GET` handler in `app/api/ai/tool-models/route.ts` to correctly fetch tool models by `name`.
+  - Updated the `getToolModelByToolName` function in `lib/data/toolModels.ts` to use the corrected API query parameter and handle the response.
+  - Added state for `AISidePanel` visibility in `components/outline/ProjectSynopsisEditor.tsx`.
+  - Modified the "Generate with AI" button for the log line in `components/outline/ProjectSynopsisEditor.tsx` to toggle the `AISidePanel` visibility.
+  - Integrated the `AISidePanel` component into `components/outline/ProjectSynopsisEditor.tsx`, configuring it for the "log_line_generator" tool and passing relevant project context.
+  - Updated the `ProjectSynopsisEditorProps` interface in `components/outline/ProjectSynopsisEditor.tsx` to include `title` and `genre_id` from the `Project` type.
+  - Updated the `ProjectSynopsisEditor` component usage in `app/(dashboard)/project/[projectId]/ProjectDashboardClient.tsx` to pass the `title` and `genre_id` props.
 - **Project Deletion from Homepage**:
   - Implemented `deleteProject` function in `lib/data/projects.ts` for API interaction.
   - Enhanced `components/homepage/ProjectCard.tsx` with a delete button and `AlertDialog` for confirmation.

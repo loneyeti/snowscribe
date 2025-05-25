@@ -34,7 +34,7 @@ export async function getProjectById(projectId: string): Promise<(Project & { ge
       let errorBody = 'Could not read error body';
       try {
         errorBody = await response.text();
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
       console.error(`API error fetching project ${projectId} from ${apiUrl}: ${response.status} ${response.statusText}. Body: ${errorBody.substring(0, 500)}`);
       return null; // Covers 404 and other non-ok statuses
     }
@@ -93,7 +93,7 @@ export async function deleteProject(projectId: string): Promise<void> {
         // Attempt to parse error response if API sends one
         const errorData = await response.json();
         errorBody = errorData.error || errorData.message || JSON.stringify(errorData);
-      } catch (e) {
+      } catch {
         // If parsing fails, use the status text
         errorBody = response.statusText;
       }

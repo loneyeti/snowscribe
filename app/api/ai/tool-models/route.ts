@@ -13,30 +13,41 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const modelId = searchParams.get("model_id");
+  const toolName = searchParams.get("name"); // Changed from model_id to name for tool lookup
 
-  let query = supabase.from("tool_model").select(`
+  let queryBuilder = supabase.from("tool_model").select(`
     *,
     ai_models (id, name, vendor_id, ai_vendors (id, name))
   `);
 
-  if (modelId) {
-    query = query.eq("model_id", modelId);
+  if (toolName) { // If toolName is provided, filter by it
+    queryBuilder = queryBuilder.eq("name", toolName); 
+  } else {
+    // If no specific toolName, list all tool_models
+    queryBuilder = queryBuilder.order("name", { ascending: true });
   }
 
-  query = query.order("name", { ascending: true });
-
-  const { data: toolModels, error } = await query;
+  const { data: toolModelsData, error } = toolName
+    ? await queryBuilder.single() // Apply .single() only if toolName is present
+    : await queryBuilder; // Otherwise, await the query builder directly
 
   if (error) {
     console.error("Error fetching tool models:", error);
+    if (toolName && error.code === 'PGRST116') { // PostgREST code for "No rows found"
+        return NextResponse.json({ error: `Tool model with name '${toolName}' not found` }, { status: 404 });
+    }
     return NextResponse.json(
       { error: "Failed to fetch tool models" },
       { status: 500 }
     );
   }
+  
+  // If querying by specific toolName and no data found (should be caught by PGRST116, but safeguard)
+  if (toolName && !toolModelsData) {
+    return NextResponse.json({ error: `Tool model with name '${toolName}' not found` }, { status: 404 });
+  }
 
-  return NextResponse.json(toolModels);
+  return NextResponse.json(toolModelsData); // Will be a single object if toolName was used, else an array
 }
 
 export async function POST(request: NextRequest) {

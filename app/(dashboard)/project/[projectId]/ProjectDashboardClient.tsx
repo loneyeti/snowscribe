@@ -956,6 +956,8 @@ ProjectDashboardClientProps) {
               id: currentProjectDetails.id,
               log_line: currentProjectDetails.log_line,
               one_page_synopsis: currentProjectDetails.one_page_synopsis,
+              title: currentProjectDetails.title, // Add title
+              genre_id: currentProjectDetails.genre_id, // Add genre_id
             }}
             onSynopsisUpdate={handleSynopsisUpdate}
           />

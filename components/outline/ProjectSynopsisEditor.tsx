@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
+import { AISidePanel } from "@/components/ai/AISidePanel"; // Add this import
 
 interface ProjectSynopsisEditorProps {
-  project: Pick<Project, "id" | "log_line" | "one_page_synopsis">;
+  project: Pick<
+    Project,
+    "id" | "log_line" | "one_page_synopsis" | "title" | "genre_id"
+  >; // Added title and genre_id
   onSynopsisUpdate: (updatedData: {
     log_line?: string | null;
     one_page_synopsis?: string | null;
@@ -24,6 +28,7 @@ export function ProjectSynopsisEditor({
     project.one_page_synopsis || ""
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isLogLineAIPanelOpen, setIsLogLineAIPanelOpen] = useState(false);
 
   useEffect(() => {
     setLogLine(project.log_line || "");
@@ -86,10 +91,11 @@ export function ProjectSynopsisEditor({
           variant="ghost"
           size="sm"
           className="mt-1 text-xs text-primary hover:text-primary/90"
-          // onClick={() => console.log("AI for Log Line clicked")} // Placeholder
+          onClick={() => setIsLogLineAIPanelOpen(true)} // Updated onClick
+          // title="Generate Log Line with AI" // Optional: Add a title attribute for better accessibility/tooltip
         >
           <Sparkles className="w-3 h-3 mr-1" />
-          Generate with AI
+          Generate Log Line with AI
         </Button>
       </div>
       <div>
@@ -121,6 +127,33 @@ export function ProjectSynopsisEditor({
           {isSaving ? "Saving..." : "Save Synopses"}
         </Button>
       </div>
+      {isLogLineAIPanelOpen && (
+        <AISidePanel
+          isOpen={isLogLineAIPanelOpen}
+          onClose={() => setIsLogLineAIPanelOpen(false)}
+          title="Log Line Generator"
+          componentType="tool"
+          toolName="log_line_generator" // This MUST match the 'name' in tool_model and 'category' in ai_prompts
+          // Construct a helpful default prompt using project context
+          defaultPrompt={
+            `Based on the following project information, please generate log line options:\n\n` +
+            `Project Title: ${project.title || "Not specified"}\n` +
+            `${project.genre_id ? `Genre: (ID: ${project.genre_id}) \n` : ""}` + // If you have genre name, use it
+            `${
+              onePageSynopsis
+                ? `\nOne-Page Synopsis Excerpt:\n${onePageSynopsis.substring(
+                    0,
+                    500
+                  )}${onePageSynopsis.length > 500 ? "..." : ""}\n\n`
+                : "\nNo one-page synopsis provided.\n\n"
+            }` +
+            `Remember to provide 3-5 distinct, concise, and intriguing log line options suitable for pitching.`
+          }
+          // defaultSystemPrompt is now primarily fetched by AISidePanel based on toolName/category.
+          // You can provide an override here if absolutely necessary, but the goal is to use the DB prompt.
+          // defaultSystemPrompt="Your override system prompt if needed..."
+        />
+      )}
     </div>
   );
 }
