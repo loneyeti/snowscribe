@@ -20,34 +20,22 @@ Many current AI writing tools are built around AI generating the final text, rem
 
 ### Organization
 
-- Project > Chapters > Scenes (manuscript text) structure
-- Character cards to organize character information
-- World building/research notes section
-- Outlining tools using the snowflake method
-- Project information (title, genre, word count, goals)
-- Scene tagging and character tracking
-- Filtering and reporting capabilities
+- **Project > Chapters > Scenes Structure**: Core manuscript organization is implemented.
+- **Character Cards**: Functionality for creating, viewing, and editing character information is implemented.
+- **World Building/Research Notes**: Section for creating, viewing, and editing world-building notes is implemented.
+- **Outlining Tools**:
+    - **Synopsis**: Project-level log line and one-page synopsis fields are available, with a dedicated editor UI (`ProjectSynopsisEditor`).
+    - **Scene-Level Outlining**: Scenes can have an `outline_description`, a Point-of-View (`pov_character_id`) character, links to other characters involved (`other_character_ids`), and scene tags (`tag_ids`). A dedicated UI (`ChapterSceneOutlineList`) allows viewing and managing these details.
+    - **Shared Manuscript & Outline Records**: Chapters and Scenes are the same records whether viewed in the manuscript or outline section, ensuring consistency.
+- **Project Information**: Title, genre, word count tracking (current vs. target) are implemented.
+- **Scene Tagging & Character Tracking**: Implemented with UI modals for managing tags and characters per scene.
+- **Filtering and Reporting Capabilities**: Not yet implemented.
 
 ### AI Integration
 
-- AI features accessible throughout but can fade into background when not needed
-- Specialized AI tools for specific writing tasks
-- AI never generates the final manuscript text
-
-### Outlining Feature
-
-- Allows the user to write a one sentence synopsis (Snowflake method)
-- Allows the user to write a one page synopsis (Snowflake method)
-- Allows the user to create a list of scenes with:
-  - A very brief description
-  - The POV character (links to one of the project's Characters)
-  - Other characters (links to one or more of the project's Characters)
-  - Scene tag(s) for a uniform way of describing what type of scene it is.
-- Scenes can be grouped into chapters
-- These scenes and chapters are the same objects as the scenes and chapters in the manuscript.
-- A common workflow is that a user creates their outline and the chapter and scenes are there waiting for them in the manuscript section just waiting to be written.
-- Another workflow is that a user can start writing their novel in the manuscript section and the outline section is automatically populated (because they share chapter and scene records). In this case, the scene descriptions will be blank but the user can populate manually or use AI to generate descriptions from the manusctript text.
-- A hybrid workflow works too since the two sections share records. A user can start with an incomplete outline, expand through the manuscript section, then use the outline section to refine.
+- **AI Features Accessible**: AI tools are designed to be accessible (e.g., via `AISidePanel`) but can fade into the background.
+- **Specialized AI Tools**: The backend (`tool_model` table, `snowgander` integration via `lib/data/chat.ts`) and frontend (`AIToolButton`, `AISidePanel`) support the concept of specialized AI tools. Specific tools (e.g., scene helper) are being integrated.
+- **AI Never Generates Final Manuscript Text**: This remains a core design principle.
 
 ## Business Model
 
