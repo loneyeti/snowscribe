@@ -1,7 +1,9 @@
+// app/api/projects/[projectId]/chapters/[chapterId]/scenes/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { verifyProjectOwnership } from '@/lib/supabase/guards'; // Import the guard
+import { verifyProjectOwnership } from '@/lib/supabase/guards';
 import { createSceneSchema } from '@/lib/schemas/scene.schema';
+import type { Scene as SceneType } from '@/lib/types'; // Import SceneType
 
 interface ChapterSceneParams {
   projectId: string;
@@ -23,31 +25,31 @@ export async function GET(request: Request, { params }: { params: ChapterScenePa
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // First, verify project ownership
   const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
   if (ownershipVerification.error) {
     return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
   }
 
-  // Then, verify the chapter exists within the verified project
   const { data: chapter, error: chapterFetchError } = await supabase
     .from('chapters')
     .select('id, project_id')
     .eq('id', chapterId)
     .eq('project_id', projectId)
-    // RLS policy on chapters table ensures user owns the project associated with this chapter
     .single();
 
   if (chapterFetchError || !chapter) {
     return NextResponse.json({ error: 'Chapter not found or access denied' }, { status: 404 });
   }
 
-  const { data: scenes, error: scenesError } = await supabase
+  // MODIFICATION START: Fetch scenes with related character and tag IDs
+  const { data: scenesFromDb, error: scenesError } = await supabase
     .from('scenes')
-    .select('*')
+    .select(`
+      *, 
+      scene_characters(character_id), 
+      scene_applied_tags(tag_id)
+    `) // Fetch related IDs
     .eq('chapter_id', chapterId)
-    // .eq('project_id', projectId) // Technically redundant if chapter check is solid, but good for safety
-    // .eq('user_id', user.id) // Also redundant if chapter check is solid
     .order('order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });
 
@@ -56,11 +58,45 @@ export async function GET(request: Request, { params }: { params: ChapterScenePa
     return NextResponse.json({ error: 'Failed to fetch scenes', details: scenesError.message }, { status: 500 });
   }
 
-  return NextResponse.json(scenes);
+  if (!scenesFromDb) {
+    return NextResponse.json([]);
+  }
+
+  // Process scenes to add other_character_ids and tag_ids
+  const processedScenes = scenesFromDb.map(scene_raw => {
+    const sceneWithRawRelations = scene_raw as Omit<SceneType, 'other_character_ids' | 'tag_ids'> & {
+      scene_characters: { character_id: string }[] | null;
+      scene_applied_tags: { tag_id: string }[] | null;
+    };
+
+    // Ensure all fields from scene_raw are spread, then overwrite with processed arrays
+    const finalScene: SceneType = {
+      ...scene_raw, // Spread all direct fields from scene_raw (id, title, content, order, etc.)
+      id: scene_raw.id, // Explicitly include id if not covered by spread or to ensure type
+      chapter_id: scene_raw.chapter_id, // Explicitly include
+      title: scene_raw.title,
+      content: scene_raw.content,
+      word_count: scene_raw.word_count,
+      order: scene_raw.order,
+      notes: scene_raw.notes,
+      outline_description: scene_raw.outline_description,
+      pov_character_id: scene_raw.pov_character_id,
+      primary_category: scene_raw.primary_category,
+      created_at: scene_raw.created_at,
+      updated_at: scene_raw.updated_at,
+      other_character_ids: (sceneWithRawRelations.scene_characters || []).map(sc => sc.character_id),
+      tag_ids: (sceneWithRawRelations.scene_applied_tags || []).map(sat => sat.tag_id),
+    };
+    return finalScene;
+  });
+  // MODIFICATION END
+
+  return NextResponse.json(processedScenes);
 }
 
-// POST /api/projects/[projectId]/chapters/[chapterId]/scenes
+// POST handler remains the same
 export async function POST(request: Request, { params }: { params: ChapterSceneParams }) {
+  // ... (existing POST logic)
   const { projectId, chapterId } = await params;
   if (!projectId || !chapterId) {
     return NextResponse.json({ error: 'Project ID and Chapter ID are required' }, { status: 400 });
@@ -74,19 +110,16 @@ export async function POST(request: Request, { params }: { params: ChapterSceneP
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // First, verify project ownership
   const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
   if (ownershipVerification.error) {
     return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
   }
 
-  // Then, verify the chapter exists within the verified project
   const { data: chapter, error: chapterFetchError } = await supabase
     .from('chapters')
     .select('id, project_id')
     .eq('id', chapterId)
     .eq('project_id', projectId)
-    // RLS policy on chapters table ensures user owns the project associated with this chapter
     .single();
 
   if (chapterFetchError || !chapter) {
@@ -111,26 +144,24 @@ export async function POST(request: Request, { params }: { params: ChapterSceneP
   }
 
   const { title, content } = validationResult.data;
-  let order = validationResult.data.order; // order can be reassigned
+  let order = validationResult.data.order; 
 
   if (order === undefined) {
-    // If order is not provided, calculate the next order value for this chapter
     const { data: maxOrderScene, error: orderError } = await supabase
       .from('scenes')
       .select('order')
       .eq('chapter_id', chapterId)
       .order('order', { ascending: false })
       .limit(1)
-      .maybeSingle(); // Use maybeSingle to handle no scenes existing
+      .maybeSingle(); 
 
     if (orderError) {
       console.error(`Error fetching max order for scenes in chapter ${chapterId}:`, orderError);
-      // Fallback or error handling strategy. For now, default to 0 if error.
       order = 0;
     } else if (maxOrderScene) {
       order = maxOrderScene.order + 1;
     } else {
-      order = 0; // This is the first scene for the chapter
+      order = 0; 
     }
   }
 
@@ -138,12 +169,10 @@ export async function POST(request: Request, { params }: { params: ChapterSceneP
     .from('scenes')
     .insert({
       chapter_id: chapterId,
-      // project_id is implicitly linked via chapter_id
-      // user_id is implicitly linked via chapter_id -> project_id
       title,
       content,
       order,
-      primary_category: validationResult.data.primary_category, // ADD THIS LINE
+      primary_category: validationResult.data.primary_category,
     })
     .select()
     .single();
