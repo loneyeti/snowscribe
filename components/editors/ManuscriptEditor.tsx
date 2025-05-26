@@ -180,7 +180,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       onInput={handleInput}
       // Initial content is set via useEffect
       className={`
-            max-w-[65ch] w-[65ch] min-w-[65ch] flex-1 overflow-y-auto outline-none 
+            max-w-[70ch] w-[70ch] min-w-[70ch] flex-1 overflow-y-auto outline-none 
             p-4 md:p-6 lg:p-8
             bg-white dark:bg-gray-900
             text-gray-900 dark:text-gray-100

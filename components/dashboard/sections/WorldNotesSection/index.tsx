@@ -24,31 +24,34 @@ export function WorldNotesSection({
     worldNotes,
     selectedWorldNote,
     isLoadingWorldNotesData,
+    worldNotesFetchAttempted, // Consume the flag
     fetchProjectWorldNotes,
     handleWorldNoteSelect,
     handleSaveWorldNoteEditorData,
     handleWorldNoteDeleted,
     handleWorldNoteCreated,
     setSelectedWorldNote,
-  } = useWorldNotesData(project.id);
+  } = useWorldNotesData(project.id); // project.id as dependency for the hook instance
 
   const [isCreateWorldNoteModalOpen, setIsCreateWorldNoteModalOpen] =
     useState(false);
 
   useEffect(() => {
     if (isActive) {
-      if (worldNotes.length === 0 && !isLoadingWorldNotesData) {
+      // Condition updated to include worldNotesFetchAttempted
+      // Fetch only if the section is active, not currently loading, and fetch hasn't been attempted yet for this project.
+      if (!isLoadingWorldNotesData && !worldNotesFetchAttempted) {
         fetchProjectWorldNotes();
       }
     } else {
-      setSelectedWorldNote(null);
+      setSelectedWorldNote(null); // Clear selection when section becomes inactive
     }
   }, [
     isActive,
-    fetchProjectWorldNotes,
-    worldNotes.length,
     isLoadingWorldNotesData,
-    setSelectedWorldNote,
+    worldNotesFetchAttempted, // Add new flag to dependency array
+    fetchProjectWorldNotes, // This callback depends on projectId, stable if projectId is stable
+    setSelectedWorldNote, // Setter, stable
   ]);
 
   if (!isActive) return null;
@@ -74,7 +77,8 @@ export function WorldNotesSection({
         selectedNoteId={selectedWorldNote?.id}
         onSelectNote={handleWorldNoteSelect}
         onCreateNewNote={handleOpenCreateWorldNoteModal}
-        isLoading={isLoadingWorldNotesData && worldNotes.length === 0}
+        // Show loading only if a fetch hasn't been attempted yet AND it's currently loading
+        isLoading={isLoadingWorldNotesData && !worldNotesFetchAttempted}
       />
     </>
   );
@@ -83,16 +87,17 @@ export function WorldNotesSection({
     <>
       {selectedWorldNote ? (
         <WorldNoteEditor
-          key={selectedWorldNote.id}
+          key={selectedWorldNote.id} // Key ensures component re-mounts with new note data
           projectId={project.id}
           note={selectedWorldNote}
           onSave={handleSaveWorldNoteEditorData}
           onDelete={() => handleWorldNoteDeleted(selectedWorldNote.id)}
         />
-      ) : isLoadingWorldNotesData && !selectedWorldNote ? (
+      ) : isLoadingWorldNotesData && !worldNotesFetchAttempted ? (
+        // If loading for the first time (fetch not attempted), show loading in detail too
         <div className="p-8 flex items-center justify-center h-full">
           <Paragraph className="text-muted-foreground">
-            Loading note details...
+            Loading notes...
           </Paragraph>
         </div>
       ) : (

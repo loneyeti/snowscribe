@@ -1,5 +1,5 @@
 // hooks/dashboard/useWorldNotesData.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { WorldBuildingNote } from '@/lib/types';
 import type { WorldBuildingNoteFormValues } from '@/lib/schemas/worldBuildingNote.schema';
 import {
@@ -14,11 +14,26 @@ export function useWorldNotesData(projectId: string) {
   const [worldNotes, setWorldNotes] = useState<WorldBuildingNote[]>([]);
   const [isLoadingWorldNotesData, setIsLoadingWorldNotesData] = useState(false);
   const [selectedWorldNote, setSelectedWorldNote] = useState<WorldBuildingNote | null>(null);
+  const [worldNotesFetchAttempted, setWorldNotesFetchAttempted] = useState(false); // New state
+
+  // Reset fetchAttempted if projectId changes.
+  useEffect(() => {
+    // This effect runs when the hook is first called with a projectId,
+    // and any time the projectId changes.
+    setWorldNotesFetchAttempted(false);
+    setWorldNotes([]); // Clear existing notes when project changes
+    setSelectedWorldNote(null); // Clear selection
+    // Note: We don't fetch here. The component (WorldNotesSection) will decide when to fetch
+    // based on its `isActive` state and this `worldNotesFetchAttempted` flag.
+  }, [projectId]);
 
   const fetchProjectWorldNotes = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      setWorldNotesFetchAttempted(true); // Mark as attempted to prevent loops if projectId is temporarily missing
+      return;
+    }
     setIsLoadingWorldNotesData(true);
-    setSelectedWorldNote(null);
+    // setSelectedWorldNote(null); // Already handled by useEffect on projectId change and component logic
     try {
       const fetchedNotes = await getWorldBuildingNotes(projectId);
       setWorldNotes(fetchedNotes);
@@ -27,21 +42,28 @@ export function useWorldNotesData(projectId: string) {
       toast.error(error instanceof Error ? error.message : "Failed to load world notes.");
     } finally {
       setIsLoadingWorldNotesData(false);
+      setWorldNotesFetchAttempted(true); // Set attempted flag here
     }
-  }, [projectId]);
+  }, [projectId]); // fetchProjectWorldNotes depends only on projectId
 
   const handleWorldNoteSelect = useCallback(async (noteId: string) => {
     if (selectedWorldNote && selectedWorldNote.id === noteId) return;
 
     const existingNote = worldNotes.find((n) => n.id === noteId);
-    if (existingNote && existingNote.content !== undefined) {
+    // Assuming full data (like content) is fetched by getWorldBuildingNotes
+    if (existingNote) {
       setSelectedWorldNote(existingNote);
       return;
     }
+    // If not found in local list (shouldn't happen if list is comprehensive), fetch details
     setIsLoadingWorldNotesData(true);
     try {
       const noteDetails = await getWorldBuildingNote(projectId, noteId);
       setSelectedWorldNote(noteDetails);
+      // Optionally update the main list if the fetched detail is more complete
+      if (noteDetails) {
+        setWorldNotes(prev => prev.map(n => n.id === noteId ? noteDetails : n));
+      }
     } catch (error) {
       toast.error("Failed to load world note details.");
       console.error("useWorldNotesData: Error fetching world note details:", error);
@@ -53,6 +75,8 @@ export function useWorldNotesData(projectId: string) {
   const handleWorldNoteCreated = useCallback((newNote: WorldBuildingNote) => {
     setWorldNotes((prev) => [...prev, newNote].sort((a, b) => a.title.localeCompare(b.title)));
     setSelectedWorldNote(newNote);
+    // Creating a note means we have attempted interaction and likely have data.
+    setWorldNotesFetchAttempted(true);
   }, []);
 
   const handleSaveWorldNoteEditorData = useCallback(async (editorData: WorldBuildingNoteFormValues) => {
@@ -109,11 +133,12 @@ export function useWorldNotesData(projectId: string) {
     worldNotes,
     selectedWorldNote,
     isLoadingWorldNotesData,
+    worldNotesFetchAttempted, // Expose the flag
     fetchProjectWorldNotes,
     handleWorldNoteSelect,
     handleWorldNoteCreated,
     handleSaveWorldNoteEditorData,
     handleWorldNoteDeleted,
-    setSelectedWorldNote, // Expose for clearing selection
+    setSelectedWorldNote,
   };
 }
