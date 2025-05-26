@@ -24,6 +24,7 @@ export function CreateSceneModal({
   onSceneCreated,
 }: CreateSceneModalProps) {
   const [title, setTitle] = useState("");
+  const [primaryCategory, setPrimaryCategory] = useState<"" | string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +39,7 @@ export function CreateSceneModal({
       title: title, // Title is required by schema
       chapter_id: chapterId,
       project_id: projectId, // project_id is required by createSceneSchema
+      primary_category: primaryCategory || undefined,
     });
 
     if (!validationResult.success) {
@@ -71,6 +73,7 @@ export function CreateSceneModal({
       toast.success("Scene created successfully!");
       onSceneCreated(newScene);
       setTitle(""); // Reset form
+      setPrimaryCategory(""); // Reset primary category
       onClose();
     } catch (err) {
       const errorMessage =
@@ -108,6 +111,39 @@ export function CreateSceneModal({
               required // Title is required by schema
               className="w-full"
             />
+          </div>
+          <div>
+            <label
+              htmlFor="primaryCategory"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Primary Category <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="primaryCategory"
+              value={primaryCategory}
+              onChange={(e) => setPrimaryCategory(e.target.value)}
+              required
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
+              disabled={isLoading}
+            >
+              <option value="" disabled>
+                Select a primary category
+              </option>
+              {[
+                "Action",
+                "Dialogue",
+                "Reflection",
+                "Discovery",
+                "Relationship",
+                "Transition",
+                "Worldbuilding",
+              ].map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end space-x-3 pt-2">

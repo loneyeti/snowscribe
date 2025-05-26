@@ -4,30 +4,32 @@
 
 Snowscribe is built with a modern frontend-focused stack:
 
-| Technology                      | Purpose                                                            |
-| ------------------------------- | ------------------------------------------------------------------ |
-| **Next.js 15.3.2**              | React framework with server components                             |
-| **React 19**                    | JavaScript library for building user interfaces                    |
-| **TypeScript**                  | Static typing for JavaScript                                       |
-| **Tailwind CSS 4**              | Utility-first CSS framework                                        |
-| **Supabase**                    | Backend as a Service (auth, database, storage)                     |
-| **Fly.io**                      | Application hosting (Planned)                                      |
-| **Docker**                      | Containerization (Planned)                                         |
-| **Zod**                         | Schema declaration and validation                                  |
-| **snowgander (^0.0.36)**        | In-house package for vendor-agnostic AI API connectivity           |
-| **sonner**                      | Toast notifications                                                |
-| **React Hook Form**             | Form management and validation integration                         |
-| **Lucide Icons**                | Icon library                                                       |
-| **Radix UI Primitives**         | Base for accessible UI components (Dropdown, Tooltip, Separator, AlertDialog) |
-| **React Markdown / Remark GFM** | For rendering Markdown content (e.g., AI responses, note editors)  |
-| **React Syntax Highlighter**    | For syntax highlighting in Markdown code blocks                    |
-
+| Technology                       | Purpose                                                                       |
+| -------------------------------- | ----------------------------------------------------------------------------- |
+| **Next.js 15.3.2**               | React framework with server components                                        |
+| **React 19**                     | JavaScript library for building user interfaces                               |
+| **TypeScript**                   | Static typing for JavaScript                                                  |
+| **Tailwind CSS 4**               | Utility-first CSS framework                                                   |
+| **Supabase**                     | Backend as a Service (auth, database, storage)                                |
+| **PostgreSQL ENUM + Join Table** | Scene primary category as ENUM, global tags via join table                    |
+| **Fly.io**                       | Application hosting (Planned)                                                 |
+| **Docker**                       | Containerization (Planned)                                                    |
+| **Zod**                          | Schema declaration and validation                                             |
+| **snowgander (^0.0.36)**         | In-house package for vendor-agnostic AI API connectivity                      |
+| **sonner**                       | Toast notifications                                                           |
+| **React Hook Form**              | Form management and validation integration                                    |
+| **Lucide Icons**                 | Icon library                                                                  |
+| **Radix UI Primitives**          | Base for accessible UI components (Dropdown, Tooltip, Separator, AlertDialog) |
+| **React Markdown / Remark GFM**  | For rendering Markdown content (e.g., AI responses, note editors)             |
+| **React Syntax Highlighter**     | For syntax highlighting in Markdown code blocks                               |
 
 ## Shared Types Definition
 
 A central file `lib/types/index.ts` defines shared TypeScript interfaces for data structures used throughout the application, derived from Supabase table schemas and UI requirements. This ensures type consistency between the frontend and backend.
 
 The content of `lib/types/index.ts` includes interfaces such as `Project`, `Genre`, `Profile`, `Chapter`, `Scene`, `SceneTag`, `SceneAppliedTag`, `Character`, `SceneCharacter`, `WorldBuildingNote`, `AIInteraction`, `AIVendor`, `AIModel`, and `AIPrompt`.
+
+- The `Scene` and `SceneTag` types now reflect the two-tiered tag system: `primary_category` (ENUM) and an array of tag IDs (via join table).
 
 ## `lib/schemas` Directory Pattern
 
@@ -39,6 +41,7 @@ The `lib/schemas/` directory houses Zod schema definitions for the application's
   - **Type Inference**: Zod schemas allow for easy inference of TypeScript types.
   - **Centralized Validation Logic**: Consolidates validation rules.
   - **Form Validation**: Used with `React Hook Form` (via `@hookform/resolvers/zod`) for client-side form validation.
+  - **Scene Tag System**: Scene and tag schemas validate `primary_category` (ENUM) and arrays of tag IDs for join-table-based tagging.
 
 ## `lib/data` Directory Pattern
 
@@ -61,6 +64,7 @@ The `lib/data/` directory contains server-side functions responsible for data fe
 - Git
 - Docker (for local development and production builds - Planned)
 - Supabase CLI (for local development and migrations)
+  - Supabase migrations and seed scripts are used to define ENUMs (for scene primary category) and to seed global scene tags.
 
 ### Environment Variables (Example)
 
@@ -107,48 +111,47 @@ This section details the project's key dependencies and development tools, as de
 
 ### Core Dependencies (`dependencies`)
 
-| Package                         | Version    | Purpose                                                                    |
-| ------------------------------- | ---------- | -------------------------------------------------------------------------- |
-| `@hookform/resolvers`           | `^5.0.1`   | Zod resolver for React Hook Form.                                          |
-| `@radix-ui/react-alert-dialog`  | `^1.1.13`  | Unstyled, accessible alert dialog primitive.                               |
-| `@radix-ui/react-dropdown-menu` | `^2.1.14`  | Unstyled, accessible dropdown menu primitive.                              |
-| `@radix-ui/react-separator`     | `^1.1.6`   | Unstyled, accessible separator primitive.                                  |
-| `@radix-ui/react-slot`          | `^1.2.2`   | Utility to compose component props.                                        |
-| `@radix-ui/react-tooltip`       | `^1.2.6`   | Unstyled, accessible tooltip primitive.                                    |
-| `@supabase/ssr`                 | `^0.6.1`   | Supabase helpers for Server-Side Rendering in Next.js.                     |
-| `@supabase/supabase-js`         | `^2.49.4`  | Official Supabase JavaScript client library.                               |
-| `class-variance-authority`      | `^0.7.1`   | Library for creating type-safe, variant-driven UI components (CVA).        |
-| `clsx`                          | `^2.1.1`   | Utility for constructing `className` strings conditionally.                |
-| `lucide-react`                  | `^0.509.0` | Library of open-source icons.                                              |
-| `next`                          | `15.3.2`   | The React framework for production.                                        |
-| `react`                         | `^19.0.0`  | JavaScript library for building user interfaces.                           |
-| `react-dom`                     | `^19.0.0`  | Entry point to the DOM and server renderers for React.                     |
-| `react-hook-form`               | `^7.56.3`  | Performant, flexible and extensible forms with easy-to-use validation.     |
-| `react-markdown`                | `^10.1.0`  | React component to render Markdown.                                        |
-| `remark-gfm`                    | `^4.0.1`   | Remark plugin for GitHub Flavored Markdown.                                |
-| `snowgander`                    | `^0.0.36`  | In-house package for vendor-agnostic AI API connectivity.                  |
-| `sonner`                        | `^2.0.3`   | Opinionated toast component for React.                                     |
-| `tailwind-merge`                | `^2.6.0`   | Utility to merge Tailwind CSS classes without style conflicts.             |
-| `zod`                           | `^3.24.4`  | TypeScript-first schema declaration and validation library.                |
+| Package                         | Version    | Purpose                                                                |
+| ------------------------------- | ---------- | ---------------------------------------------------------------------- |
+| `@hookform/resolvers`           | `^5.0.1`   | Zod resolver for React Hook Form.                                      |
+| `@radix-ui/react-alert-dialog`  | `^1.1.13`  | Unstyled, accessible alert dialog primitive.                           |
+| `@radix-ui/react-dropdown-menu` | `^2.1.14`  | Unstyled, accessible dropdown menu primitive.                          |
+| `@radix-ui/react-separator`     | `^1.1.6`   | Unstyled, accessible separator primitive.                              |
+| `@radix-ui/react-slot`          | `^1.2.2`   | Utility to compose component props.                                    |
+| `@radix-ui/react-tooltip`       | `^1.2.6`   | Unstyled, accessible tooltip primitive.                                |
+| `@supabase/ssr`                 | `^0.6.1`   | Supabase helpers for Server-Side Rendering in Next.js.                 |
+| `@supabase/supabase-js`         | `^2.49.4`  | Official Supabase JavaScript client library.                           |
+| `class-variance-authority`      | `^0.7.1`   | Library for creating type-safe, variant-driven UI components (CVA).    |
+| `clsx`                          | `^2.1.1`   | Utility for constructing `className` strings conditionally.            |
+| `lucide-react`                  | `^0.509.0` | Library of open-source icons.                                          |
+| `next`                          | `15.3.2`   | The React framework for production.                                    |
+| `react`                         | `^19.0.0`  | JavaScript library for building user interfaces.                       |
+| `react-dom`                     | `^19.0.0`  | Entry point to the DOM and server renderers for React.                 |
+| `react-hook-form`               | `^7.56.3`  | Performant, flexible and extensible forms with easy-to-use validation. |
+| `react-markdown`                | `^10.1.0`  | React component to render Markdown.                                    |
+| `remark-gfm`                    | `^4.0.1`   | Remark plugin for GitHub Flavored Markdown.                            |
+| `snowgander`                    | `^0.0.36`  | In-house package for vendor-agnostic AI API connectivity.              |
+| `sonner`                        | `^2.0.3`   | Opinionated toast component for React.                                 |
+| `tailwind-merge`                | `^2.6.0`   | Utility to merge Tailwind CSS classes without style conflicts.         |
+| `zod`                           | `^3.24.4`  | TypeScript-first schema declaration and validation library.            |
 
 ### Development Dependencies (`devDependencies`)
 
-| Package                        | Version    | Purpose                                                         |
-| ------------------------------ | ---------- | --------------------------------------------------------------- |
-| `@eslint/eslintrc`             | `^3`       | ESLint configuration utilities.                                 |
-| `@tailwindcss/forms`           | `^0.5.10`  | Tailwind CSS plugin for basic form styling.                     |
-| `@tailwindcss/postcss`         | `^4`       | PostCSS plugin for Tailwind CSS.                                |
-| `@tailwindcss/typography`      | `^0.5.16`  | Tailwind CSS plugin for beautiful typographic defaults.         |
-| `@types/node`                  | `^20`      | TypeScript definitions for Node.js.                             |
-| `@types/react`                 | `^19`      | TypeScript definitions for React.                               |
-| `@types/react-dom`             | `^19`      | TypeScript definitions for React DOM.                           |
-| `@types/react-syntax-highlighter`| `^15.5.13` | TypeScript definitions for react-syntax-highlighter.            |
-| `eslint`                       | `^9`       | Pluggable linting utility for JavaScript and JSX.               |
-| `eslint-config-next`           | `15.3.2`   | ESLint configuration for Next.js projects.                      |
-| `react-syntax-highlighter`     | `^15.6.1`  | Syntax highlighting component for React, used with Markdown.    |
-| `tailwindcss`                  | `^4`       | A utility-first CSS framework for rapid UI development.         |
-| `typescript`                   | `^5`       | Superset of JavaScript that adds static types.                  |
-
+| Package                           | Version    | Purpose                                                      |
+| --------------------------------- | ---------- | ------------------------------------------------------------ |
+| `@eslint/eslintrc`                | `^3`       | ESLint configuration utilities.                              |
+| `@tailwindcss/forms`              | `^0.5.10`  | Tailwind CSS plugin for basic form styling.                  |
+| `@tailwindcss/postcss`            | `^4`       | PostCSS plugin for Tailwind CSS.                             |
+| `@tailwindcss/typography`         | `^0.5.16`  | Tailwind CSS plugin for beautiful typographic defaults.      |
+| `@types/node`                     | `^20`      | TypeScript definitions for Node.js.                          |
+| `@types/react`                    | `^19`      | TypeScript definitions for React.                            |
+| `@types/react-dom`                | `^19`      | TypeScript definitions for React DOM.                        |
+| `@types/react-syntax-highlighter` | `^15.5.13` | TypeScript definitions for react-syntax-highlighter.         |
+| `eslint`                          | `^9`       | Pluggable linting utility for JavaScript and JSX.            |
+| `eslint-config-next`              | `15.3.2`   | ESLint configuration for Next.js projects.                   |
+| `react-syntax-highlighter`        | `^15.6.1`  | Syntax highlighting component for React, used with Markdown. |
+| `tailwindcss`                     | `^4`       | A utility-first CSS framework for rapid UI development.      |
+| `typescript`                      | `^5`       | Superset of JavaScript that adds static types.               |
 
 ### Internal Packages
 
@@ -179,7 +182,11 @@ This section details the project's key dependencies and development tools, as de
 // Example: app/(dashboard)/project/[projectId]/page.tsx
 import { getProjectById } from "@/lib/data/projects";
 
-export default async function ProjectPage({ params }: { params: { projectId: string } }) {
+export default async function ProjectPage({
+  params,
+}: {
+  params: { projectId: string };
+}) {
   const project = await getProjectById(params.projectId);
   // ... use project data
 }

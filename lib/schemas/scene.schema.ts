@@ -9,13 +9,33 @@ export const sceneBaseSchema = z.object({
   pov_character_id: z.string().uuid().nullable().optional(),
   // other_character_ids: z.array(z.string().uuid()).optional(),
   tag_ids: z.array(z.string().uuid()).optional(),
+  primary_category: z.enum([
+    'Action',
+    'Dialogue',
+    'Reflection',
+    'Discovery',
+    'Relationship',
+    'Transition',
+    'Worldbuilding',
+  ]).nullable().optional(), // ADD THIS LINE
   // word_count is handled by a database trigger, so not included in client-side schema for creation/update
 });
 
 export const createSceneSchema = sceneBaseSchema.extend({
   chapter_id: z.string().uuid({ message: 'Valid Chapter ID is required.' }),
   project_id: z.string().uuid({ message: 'Valid Project ID is required.' }), // For associating with project and user
-});
+  primary_category: z.enum([
+    'Action',
+    'Dialogue',
+    'Reflection',
+    'Discovery',
+    'Relationship',
+    'Transition',
+    'Worldbuilding',
+  ]).refine(val => val !== undefined && val !== null, {
+    message: "Primary category is required."
+  }),
+}).omit({ tag_ids: true }); // tag_ids are usually handled by a separate endpoint after scene creation
 
 export const updateSceneSchema = sceneBaseSchema.partial();
 

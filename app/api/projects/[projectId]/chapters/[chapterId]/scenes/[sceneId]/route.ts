@@ -121,6 +121,11 @@ export async function PUT(request: Request, { params }: { params: SceneParams })
   }
 
   // If existingScene is found, proceed with the update
+  if (Object.keys(validationResult.data).length === 0) {
+    // No fields to update, return existing scene as is
+    return NextResponse.json(existingScene);
+  }
+
   const { data: updatedScene, error: updateError } = await supabase
     .from('scenes')
     .update(validationResult.data)

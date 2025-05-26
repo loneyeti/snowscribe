@@ -8,7 +8,21 @@ The application now includes full CRUD management for AI Prompts in the Site Set
 
 We also added drag and drop reordering for scenes.
 
+Fixed a couple of Scene outline saving bugs.
+
+**The scene tag system has been overhauled to a two-tiered model: each scene now has a primary category (ENUM) and can be assigned multiple global tags (managed via a join table). Ongoing work includes refining tag management UI, API separation, and thorough testing of the new system.**
+
 ## Recent Changes
+
+- **Two-Tiered Scene Tag System Overhaul (2025-05-25):**
+
+  - Added `primary_category` ENUM and column to the `scenes` table via migration.
+  - Seeded predefined global scene tags in `supabase/seed.sql`.
+  - Updated backend types (`PrimarySceneCategory`), Zod schemas, and data layer to support `primary_category` and global tags.
+  - Modified API routes for scene creation and update to handle `primary_category` and decoupled tag management from direct scene updates (tags now managed via join table).
+  - Enhanced UI components (`CreateSceneModal`, `ChapterSceneOutlineList`, etc.) to support primary category selection and display, and improved tag selection UX.
+  - Addressed issues with tag_ids not being a direct column and ensured correct handling in data and API layers.
+  - Ongoing: Finalizing dedicated tag management routes/components and comprehensive testing.
 
 - **AI-Assisted One-Page Synopsis Generation**:
   - Added a new system prompt for `synopsis_generator` to `supabase/seed.sql` to guide AI in generating one-page synopses.

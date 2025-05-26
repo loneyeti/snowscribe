@@ -143,6 +143,7 @@ export async function POST(request: Request, { params }: { params: ChapterSceneP
       title,
       content,
       order,
+      primary_category: validationResult.data.primary_category, // ADD THIS LINE
     })
     .select()
     .single();

@@ -44,6 +44,11 @@ _(Updated: 2025-05-25 (AI-Generated Update))_
     - `CreateSceneModal` callable from outline view.
     - **Outline Section - Synopsis View**: Implemented display and editing of project log line and one-page synopsis using `ProjectSynopsisEditor`. Added basic display of character names/nicknames in `CharacterCardQuickViewList` with loading state.
     - **AI-Assisted One-Page Synopsis Generation**: Implemented AI assistance for generating one-page synopses based on project context (title, genre, log line, scene descriptions).
+- **Scene Tag System (Two-Tiered, 2025-05-25)**:
+  - Scenes now have a `primary_category` (ENUM) and can be assigned multiple global tags (via join table).
+  - Backend types, Zod schemas, API routes, and data layer updated to support the new model.
+  - UI components allow selection and display of primary category and tags.
+  - Tag management is separated from direct scene updates for data integrity.
 - **AI Integration (Foundational)**:
   - `snowgander` integrated in `lib/data/chat.ts`.
   - `AISidePanel.tsx` and `AIToolButton.tsx` for triggering AI tools based on `tool_model` config.
@@ -83,6 +88,9 @@ _(Updated: 2025-05-25 (AI-Generated Update))_
   - [ ] Linking notes to specific manuscript scenes or characters.
 - [ ] Export Functionality:
   - [ ] Implement project export (e.g., as a manuscript format).
+- [ ] Scene Tag System:
+  - [ ] Finalize dedicated tag management UI and API routes.
+  - [ ] Comprehensive testing and UX refinement for the new two-tiered tag system.
 
 ### AI Features
 
@@ -108,7 +116,7 @@ _(Updated: 2025-05-25 (AI-Generated Update))_
 
 ## Current Status
 
-**Phase**: Foundational AI Integration & Outline UI Implemented -> **Focusing on Expanding Specific AI Tools (beyond log line), Completing Outline/Settings UI, and AI Prompts Management**
+**Phase**: Foundational AI Integration & Outline UI Implemented -> **Focusing on Expanding Specific AI Tools, Completing Outline/Settings UI, Scene Tag System Overhaul, and AI Prompts Management**
 
 The project has a robust backend API, a functional authentication system, and a well-structured frontend with key dashboard sections (Manuscript, Characters, World Notes, basic Outline, AI Model, Vendor & Prompt Settings) implemented. `snowgander` is integrated for AI calls, and the log line generation feature now operates in a background modality. The "Edit Project Details" modal has been successfully implemented, allowing users to update core project information.
 
@@ -117,8 +125,9 @@ The immediate focus areas are:
 1.  **Flesh out AI Tools**: Implement specific AI assistance features (beyond log line generation) using the established `AISidePanel` and `AIToolButton` pattern, leveraging `tool_model` and `ai_prompts`.
 2.  **Complete Outline UI**: Enhance the scene outline editing capabilities and consider chapter/scene reordering.
 3.  **Complete AI Settings UI**: Add management for AI Prompts.
-4.  **User Profile Management**: Basic profile page.
-5.  **Refine UX & Error Handling**: Improve user feedback across the application.
+4.  **Scene Tag System**: Finalize and test the new two-tiered tag system (primary category + global tags), including dedicated tag management UI/API and comprehensive UX testing.
+5.  **User Profile Management**: Basic profile page.
+6.  **Refine UX & Error Handling**: Improve user feedback across the application.
 
 ## Known Issues
 
@@ -132,7 +141,6 @@ The immediate focus areas are:
 - When no characters exist in a project, the app keeps querying characters over and over non-stop when on the outline page
 - The total project word count does not get updated in real time, only after a refresh
 - The optional character image is incorrectly set up as required.
-- The Other Characters feature in the Scene Outliner seems to not be saving with a 405 error.
 
 ## Evolution of Project Decisions
 
@@ -151,3 +159,4 @@ The immediate focus areas are:
 | 2025-05-24 (AI Update)     | Implemented project deletion from the homepage.                                                                                                                                                                                                    | To provide users with a direct and intuitive way to manage and remove their projects from the main application entry point.                         |
 | 2025-05-25 (AI Update)     | Implemented "Edit Project Details" modal.                                                                                                                                                                                                          | To allow users to modify core project details (title, genre, description, target word count) after project creation, enhancing project management.  |
 | 2025-05-25 (AI Update)     | Implemented AI-assisted one-page synopsis generation.                                                                                                                                                                                              | To provide AI assistance for generating comprehensive one-page synopses, leveraging existing project context.                                       |
+| 2025-05-25 (AI Update)     | Overhauled scene tag system to a two-tiered model: added `primary_category` ENUM to scenes and global tags via join table; updated backend, data layer, and UI; separated tag management from direct scene updates.                                | To enable more flexible, organized scene categorization and tagging, improve data integrity, and support advanced outlining and filtering.          |

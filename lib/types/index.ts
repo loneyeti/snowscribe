@@ -63,6 +63,7 @@ export interface Scene {
   pov_character_id?: string | null; // Added for outline feature, references characters(id)
   other_character_ids?: string[]; // Added for outline feature, array of character UUIDs
   tag_ids?: string[]; // Added for outline feature, array of scene_tag UUIDs
+  primary_category?: PrimarySceneCategory | null; // ADD THIS LINE
   created_at: string; // TIMESTAMPTZ
   updated_at: string; // TIMESTAMPTZ
 }
@@ -77,6 +78,28 @@ export interface SceneTag {
   color?: string | null; // e.g. hex code
   created_at: string; // TIMESTAMPTZ
 }
+
+// PrimarySceneCategory type and constant array
+export type PrimarySceneCategory =
+  | 'Action'
+  | 'Dialogue'
+  | 'Reflection'
+  | 'Discovery'
+  | 'Relationship'
+  | 'Transition'
+  | 'Worldbuilding';
+
+export const ALL_PRIMARY_SCENE_CATEGORIES: PrimarySceneCategory[] = [
+  'Action',
+  'Dialogue',
+  'Reflection',
+  'Discovery',
+  'Relationship',
+  'Transition',
+  'Worldbuilding',
+];
+
+// Remove PredefinedSceneTag type and ALL_PREDEFINED_SCENE_TAGS array if present
 
 // Based on supabase/migrations/20250509073117_create_scene_applied_tags_table.sql
 export interface SceneAppliedTag {

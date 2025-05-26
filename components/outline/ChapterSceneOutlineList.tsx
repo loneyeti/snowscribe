@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import type { Chapter, Scene, Character, SceneTag } from "@/lib/types";
+import type {
+  Chapter,
+  Scene,
+  Character,
+  SceneTag,
+  PrimarySceneCategory,
+} from "@/lib/types";
 import { ListContainer } from "@/components/ui/ListContainer";
 // import { ListItem } from "@/components/ui/ListItem"; // Assuming this will be used for scenes - Commented out
 import { ListSectionHeader } from "@/components/ui/ListSectionHeader"; // For chapter titles
@@ -24,7 +30,7 @@ import type { TextBlock, ChatResponse } from "snowgander"; // For AI response ty
 import { ManageSceneCharactersModal } from "@/components/modals/ManageSceneCharactersModal";
 import { ManageSceneTagsModal } from "@/components/modals/ManageSceneTagsModal";
 import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal"; // Added
-import { updateSceneCharacters } from "@/lib/data/scenes";
+import { updateSceneCharacters, updateSceneTags } from "@/lib/data/scenes";
 
 interface ChapterSceneOutlineListProps {
   chapters: Chapter[]; // Chapters should include their scenes, or scenes are fetched separately
@@ -328,6 +334,12 @@ export function ChapterSceneOutlineList({
                               <span className="italic">None</span>
                             )}
                           </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">
+                            Category:{" "}
+                            {scene.primary_category || (
+                              <span className="italic">Not set</span>
+                            )}
+                          </p>
                         </div>
                         <Button
                           variant="outline"
@@ -338,7 +350,8 @@ export function ChapterSceneOutlineList({
                               outline_description:
                                 scene.outline_description || "",
                               pov_character_id: scene.pov_character_id || null,
-                              // Initialize other fields as needed
+                              primary_category: scene.primary_category || null, // ADD THIS
+                              tag_ids: scene.tag_ids || [], // Ensure tag_ids are also initialized for the modal
                             });
                           }}
                           className="text-xs h-7 px-2" // More fine-grained control for "xs" feel
@@ -465,10 +478,13 @@ export function ChapterSceneOutlineList({
                               <Button
                                 size="sm"
                                 onClick={() => {
+                                  // Exclude tag_ids from editFormData before updating scene
+                                  const { tag_ids, ...sceneDataWithoutTags } =
+                                    editFormData;
                                   onSceneUpdate(
                                     chapter.id,
                                     scene.id,
-                                    editFormData
+                                    sceneDataWithoutTags
                                   );
                                   setEditingSceneId(null);
                                   setEditFormData({});
@@ -480,6 +496,44 @@ export function ChapterSceneOutlineList({
                             </div>
                           </div>
                         )}
+                        <div className="mb-3">
+                          <label
+                            htmlFor={`primary_category_${scene.id}`}
+                            className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
+                          >
+                            Primary Category
+                          </label>
+                          <select
+                            id={`primary_category_${scene.id}`}
+                            value={editFormData.primary_category || ""}
+                            onChange={(e) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                primary_category:
+                                  (e.target.value as PrimarySceneCategory) ||
+                                  null,
+                              }))
+                            }
+                            className="w-full p-2 border rounded text-xs bg-white dark:bg-slate-800 dark:border-slate-600 focus:ring-primary focus:border-primary"
+                            disabled={isGeneratingOutline === scene.id}
+                          >
+                            <option value="">Select Primary Category</option>
+                            {[
+                              "Action",
+                              "Dialogue",
+                              "Reflection",
+                              "Discovery",
+                              "Relationship",
+                              "Transition",
+                              "Worldbuilding",
+                            ].map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
+                          </select>
+                          {/* Optional: Display error for this field if using react-hook-form here */}
+                        </div>
                       </div>
                     ))
                 ) : (
@@ -517,8 +571,9 @@ export function ChapterSceneOutlineList({
                 // Update scene characters via dedicated API
                 updateSceneCharacters(projectId, sceneId, selectedCharacterIds)
                   .then(() => {
-                    // Optionally, trigger a refresh or update local state if needed
-                    // onSceneUpdate(managingCharsForScene.chapter_id, sceneId, {}); // No-op, just to trigger parent update if needed
+                    onSceneUpdate(managingCharsForScene.chapter_id, sceneId, {
+                      other_character_ids: selectedCharacterIds,
+                    });
                     toast.success("Other characters updated.");
                   })
                   .catch((error: unknown) => {
@@ -549,9 +604,20 @@ export function ChapterSceneOutlineList({
           onSave={(sceneId, selectedTagIds) => {
             if (managingTagsForScene) {
               console.log("Save tags for scene:", sceneId, selectedTagIds);
-              onSceneUpdate(managingTagsForScene.chapter_id, sceneId, {
-                tag_ids: selectedTagIds,
-              });
+              // Import updateSceneTags at top of file
+              updateSceneTags(projectId, sceneId, selectedTagIds)
+                .then(() => {
+                  // Do NOT call onSceneUpdate with tag_ids to avoid backend error
+                  toast.success("Scene tags updated.");
+                })
+                .catch((error: unknown) => {
+                  console.error("Failed to update scene tags:", error);
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not update scene tags."
+                  );
+                });
             }
           }}
           sceneTitle={managingTagsForScene?.title || "Untitled Scene"}

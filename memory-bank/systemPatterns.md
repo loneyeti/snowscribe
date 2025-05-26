@@ -38,6 +38,7 @@
 5.  **Supabase for Backend Services**: Using Supabase for authentication, PostgreSQL database, and potentially storage.
 6.  **AI Integration via `snowgander`**: Utilizing the `snowgander` package for vendor-agnostic AI API connectivity.
 7.  **API-Driven Data Layer**: Frontend components (both server and client) interact with internal Next.js API Route Handlers via functions in `lib/data/*`. These API routes then communicate with Supabase.
+8.  **Two-Tiered Scene Tag System (2025-05-25)**: Scenes have a `primary_category` (ENUM) column for main classification and are linked to multiple global tags via a join table (`scene_applied_tags`). Tag management is handled through dedicated API routes and UI, not as direct columns on the scene.
 
 ## Design Patterns
 
@@ -74,6 +75,7 @@
 - **Entity-Specific Zod Schemas (`lib/schemas`)**: Each core data entity has a Zod schema for input validation at API boundaries and type inference.
 - **Centralized Data Access Layer (`lib/data`)**: Server-side functions in `lib/data/*` abstract API calls, providing a consistent interface for data operations. These functions handle cookie forwarding for authenticated requests to internal APIs.
 - **Project Ownership Guard (`lib/supabase/guards.ts`)**: A utility function, `verifyProjectOwnership`, centralizes project access authorization logic.
+- **Scene Tag Management**: Scene tags are managed via a join table (`scene_applied_tags`) and dedicated API routes/components, not as a direct column on the `scenes` table. The `primary_category` is an ENUM field on scenes, while additional tags are assigned through the join table for flexible, multi-tag support.
 
 ### AI Configuration Data Model
 
@@ -153,7 +155,7 @@ graph TD
     InternalAPI -->|JSON Response| LibDataFunction
     LibDataFunction -->|Returns Data/Promise| ClientComponentLogic
     ClientComponentLogic -->|Updates UI State (useState, etc.)| Browser
-    
+
     ServerComponent[Server Component e.g., app/page.tsx] -->|Calls lib/data function| LibDataFunction
     %% Server components can also directly call Supabase client if not using API abstraction
     %% ServerComponent -->|Direct Supabase Query| SupabaseDB
@@ -177,11 +179,11 @@ graph TD
 2.  Debounced `handleSaveSceneContent` in `ProjectDashboardClient` is triggered.
 3.  `handleSaveSceneContent` calls `fetch` to the PUT endpoint: `/api/projects/[projectId]/chapters/[chapterId]/scenes/[sceneId]`.
 4.  The API route handler:
-    a.  Verifies user authentication.
-    b.  Uses `verifyProjectOwnership` guard to check project access.
-    c.  Validates request body with `updateSceneSchema` (Zod).
-    d.  Updates the scene in Supabase database.
-    e.  Returns the updated scene data.
+    a. Verifies user authentication.
+    b. Uses `verifyProjectOwnership` guard to check project access.
+    c. Validates request body with `updateSceneSchema` (Zod).
+    d. Updates the scene in Supabase database.
+    e. Returns the updated scene data.
 5.  `ProjectDashboardClient` updates its local state with the new scene data, re-rendering `ManuscriptEditor`.
 
 ### AI Tool Usage
@@ -189,9 +191,9 @@ graph TD
 1.  User clicks an `AIToolButton` within `AISidePanel`.
 2.  `AIToolButton` calls `chat` function from `lib/data/chat.ts`, passing model ID, prompt, system prompt.
 3.  `lib/data/chat.ts`:
-    a.  Fetches `AIModel` and `AIVendor` details.
-    b.  Creates `ModelConfig` for `snowgander`.
-    c.  Gets `AIVendorAdapter` from `AIVendorFactory`.
-    d.  Calls `adapter.sendChat()` with current chat context.
+    a. Fetches `AIModel` and `AIVendor` details.
+    b. Creates `ModelConfig` for `snowgander`.
+    c. Gets `AIVendorAdapter` from `AIVendorFactory`.
+    d. Calls `adapter.sendChat()` with current chat context.
 4.  `snowgander` handles the call to the external AI service.
 5.  Response is returned to `AIToolButton`, then to `AISidePanel`, which updates its state to display the response (e.g., using `MarkdownComponent`).
