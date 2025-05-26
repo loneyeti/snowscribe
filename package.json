@@ -27,7 +27,7 @@
     "react-hook-form": "^7.56.3",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "snowgander": "^0.0.36",
+    "snowgander": "^0.0.37",
     "sonner": "^2.0.3",
     "tailwind-merge": "^2.6.0",
     "zod": "^3.24.4"
@@ -41,6 +41,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
     "react-syntax-highlighter": "^15.6.1",

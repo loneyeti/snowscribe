@@ -20,6 +20,8 @@ export interface Project {
   thumbnailUrl?: string;
 }
 
+export * from './ai';
+
 // Based on supabase/migrations/20250510093215_create_genres_table.sql
 export interface Genre {
   id: number; // SERIAL
