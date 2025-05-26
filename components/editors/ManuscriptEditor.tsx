@@ -180,7 +180,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       onInput={handleInput}
       // Initial content is set via useEffect
       className={`
-            max-w-[65ch] flex-1 overflow-y-auto outline-none 
+            max-w-[65ch] w-[65ch] min-w-[65ch] flex-1 overflow-y-auto outline-none 
             p-4 md:p-6 lg:p-8
             bg-white dark:bg-gray-900
             text-gray-900 dark:text-gray-100
@@ -193,6 +193,8 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
             [&>p]:indent-8
             relative
             transition-colors duration-200
+            rounded-lg
+            box-shadow(0 1px 3px rgba(0,0,0,0.1))
           `}
       // data-placeholder attribute fully removed
       aria-label={placeholder || "Text input area"}
