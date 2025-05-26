@@ -22,6 +22,7 @@ import {
   updateCharacter,
   deleteCharacter as deleteCharacterData,
 } from "@/lib/data/characters";
+import { updateSceneCharacters, updateSceneTags } from "@/lib/data/scenes";
 import {
   getWorldBuildingNotes,
   getWorldBuildingNote,
@@ -58,9 +59,11 @@ import {
   FileText,
   ClipboardList,
   Sparkles,
-} from "lucide-react"; // Added FileText, ClipboardList
+  Info,
+} from "lucide-react"; // Added FileText, ClipboardList, Info
 import { AISidePanel } from "@/components/ai/AISidePanel";
 import { cn } from "@/lib/utils";
+import { SceneMetadataPanel } from "@/components/manuscript/SceneMetadataPanel";
 
 // Define view states for the manuscript section
 type ManuscriptView = "chapters" | "scenes";
@@ -109,7 +112,7 @@ ProjectDashboardClientProps) {
   const [draggedSceneId, setDraggedSceneId] = useState<string | null>(null);
   const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
 
-  // Drag and drop handlers
+  // Define drag and drop handlers to fix "Cannot find name" errors
   const handleDragStart = (
     event: React.DragEvent<HTMLDivElement>,
     sceneId: string
@@ -138,6 +141,164 @@ ProjectDashboardClientProps) {
     event.preventDefault();
     setDragOverSceneId(null);
   };
+
+  // New state for SceneMetadataPanel visibility
+  const [isSceneMetadataPanelOpen, setIsSceneMetadataPanelOpen] =
+    useState(false);
+
+  // Callback handler for scene metadata panel updates
+  const handleSceneDetailsPanelUpdate = useCallback(
+    async (
+      updatedData: Partial<
+        Pick<
+          Scene,
+          "outline_description" | "pov_character_id" | "primary_category"
+        >
+      >
+    ) => {
+      if (!selectedScene || !selectedChapter) {
+        toast.error("No scene or chapter selected.");
+        return;
+      }
+      try {
+        const payload: UpdateSceneValues = {};
+        if (updatedData.outline_description !== undefined) {
+          payload.outline_description = updatedData.outline_description;
+        }
+        if (updatedData.pov_character_id !== undefined) {
+          payload.pov_character_id = updatedData.pov_character_id;
+        }
+        if (updatedData.primary_category !== undefined) {
+          payload.primary_category = updatedData.primary_category;
+        }
+        if (Object.keys(payload).length === 0) {
+          toast.info("No changes to save.");
+          return;
+        }
+        const updatedSceneFromAPI = await updateScene(
+          project.id,
+          selectedChapter.id,
+          selectedScene.id,
+          payload
+        );
+        setSelectedScene((prev) =>
+          prev ? { ...prev, ...updatedSceneFromAPI } : null
+        );
+        setScenesForSelectedChapter((prevScenes) =>
+          prevScenes.map((s) =>
+            s.id === selectedScene.id ? { ...s, ...updatedSceneFromAPI } : s
+          )
+        );
+        toast.success("Scene details updated.");
+      } catch (error) {
+        console.error("Failed to update scene details from panel:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to update scene details."
+        );
+      }
+    },
+    [project.id, selectedChapter, selectedScene]
+  );
+
+  // Callback handler for scene metadata panel character link changes
+  const handleSceneDetailsPanelCharacterLinkChange = useCallback(
+    async (characterIds: string[]) => {
+      if (!selectedScene || !selectedChapter) {
+        toast.error("No scene or chapter selected.");
+        return;
+      }
+      try {
+        await updateSceneCharacters(project.id, selectedScene.id, characterIds);
+
+        // Fetch the updated scene from the backend to ensure fresh data
+        const updatedScenes = await getScenesByChapterId(
+          project.id,
+          selectedChapter.id
+        );
+        const updatedScene = updatedScenes.find(
+          (s) => s.id === selectedScene.id
+        );
+
+        if (updatedScene) {
+          setSelectedScene(updatedScene);
+          setScenesForSelectedChapter((prevScenes) =>
+            prevScenes.map((s) => (s.id === updatedScene.id ? updatedScene : s))
+          );
+        } else {
+          // Fallback: update only the character IDs if fetch fails
+          setSelectedScene((prev) =>
+            prev ? { ...prev, other_character_ids: characterIds } : null
+          );
+          setScenesForSelectedChapter((prevScenes) =>
+            prevScenes.map((s) =>
+              s.id === selectedScene.id
+                ? { ...s, other_character_ids: characterIds }
+                : s
+            )
+          );
+        }
+        toast.success("Scene characters updated.");
+      } catch (error) {
+        console.error("Failed to update scene characters from panel:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to update scene characters."
+        );
+      }
+    },
+    [project.id, selectedChapter, selectedScene]
+  );
+
+  // Callback handler for scene metadata panel tag link changes
+  const handleSceneDetailsPanelTagLinkChange = useCallback(
+    async (tagIds: string[]) => {
+      if (!selectedScene || !selectedChapter) {
+        toast.error("No scene or chapter selected.");
+        return;
+      }
+      try {
+        await updateSceneTags(project.id, selectedScene.id, tagIds);
+
+        // Fetch the updated scene from the backend to ensure fresh data
+        const updatedScenes = await getScenesByChapterId(
+          project.id,
+          selectedChapter.id
+        );
+        const updatedScene = updatedScenes.find(
+          (s) => s.id === selectedScene.id
+        );
+
+        if (updatedScene) {
+          setSelectedScene(updatedScene);
+          setScenesForSelectedChapter((prevScenes) =>
+            prevScenes.map((s) => (s.id === updatedScene.id ? updatedScene : s))
+          );
+        } else {
+          // Fallback: update only the tag IDs if fetch fails
+          setSelectedScene((prev) =>
+            prev ? { ...prev, tag_ids: tagIds } : null
+          );
+          setScenesForSelectedChapter((prevScenes) =>
+            prevScenes.map((s) =>
+              s.id === selectedScene.id ? { ...s, tag_ids: tagIds } : s
+            )
+          );
+        }
+        toast.success("Scene tags updated.");
+      } catch (error) {
+        console.error("Failed to update scene tags from panel:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to update scene tags."
+        );
+      }
+    },
+    [project.id, selectedChapter, selectedScene]
+  );
 
   const persistSceneOrder = async (reorderedScenes: Scene[]) => {
     if (!selectedChapter || reorderedScenes.length === 0) return;
@@ -410,6 +571,32 @@ ProjectDashboardClientProps) {
     activeSection,
     sceneTagsFetchAttempted, // Add to dependencies
     isLoadingAllSceneTags, // Add to dependencies
+    fetchAllSceneTags,
+  ]);
+
+  // --- FIX: Ensure characters and tags are loaded for SceneMetadataPanel in manuscript view ---
+  useEffect(() => {
+    // Only run when a scene is selected in manuscript view
+    if (project.id && activeSection === "manuscript" && selectedScene) {
+      // Fetch characters if not loaded
+      if (characters.length === 0 && !isLoadingCharactersData) {
+        fetchProjectCharacters();
+      }
+      // Fetch scene tags if not loaded
+      if (allSceneTags.length === 0 && !isLoadingAllSceneTags) {
+        fetchAllSceneTags();
+      }
+    }
+    // Only depend on selectedScene, not selectedChapter, to avoid unnecessary fetches
+  }, [
+    project.id,
+    activeSection,
+    selectedScene,
+    characters.length,
+    isLoadingCharactersData,
+    fetchProjectCharacters,
+    allSceneTags.length,
+    isLoadingAllSceneTags,
     fetchAllSceneTags,
   ]);
 
@@ -875,7 +1062,7 @@ ProjectDashboardClientProps) {
               selectedScene.title
             );
             return (
-              <div className="flex flex-col h-full items-center">
+              <div className="flex flex-col h-full items-center relative">
                 <div className="text-center p-2">
                   <div className="flex items-center">
                     <h1
@@ -893,6 +1080,21 @@ ProjectDashboardClientProps) {
                     >
                       <Sparkles className="h-5 w-5" />
                     </button>
+                    {/* Metadata Panel Trigger Button */}
+                    <IconButton
+                      icon={Info}
+                      aria-label={
+                        isSceneMetadataPanelOpen
+                          ? "Hide scene details"
+                          : "Show scene details"
+                      }
+                      onClick={() =>
+                        setIsSceneMetadataPanelOpen((prev) => !prev)
+                      }
+                      variant="ghost"
+                      size="sm"
+                      className="ml-2 text-muted-foreground hover:text-primary"
+                    />
                   </div>
                   <AISidePanel
                     isOpen={isAIPanelOpen}
@@ -1158,34 +1360,48 @@ ProjectDashboardClientProps) {
     }
 
     // Handler for scene updates from ChapterSceneOutlineList
+    // Enhanced handler: updates chapters, scenesForSelectedChapter, and selectedScene
     const handleSceneOutlineUpdate = async (
       chapterId: string,
       sceneId: string,
       updatedData: Partial<Scene>
     ) => {
       try {
-        // Only send fields allowed by UpdateSceneValues
-        const payload: UpdateSceneValues = {
-          ...(updatedData.outline_description !== undefined && {
-            outline_description: updatedData.outline_description,
-          }),
-          ...(updatedData.pov_character_id !== undefined && {
-            pov_character_id: updatedData.pov_character_id,
-          }),
-          // other_character_ids removed: handled via dedicated API
-          ...(updatedData.tag_ids !== undefined && {
-            tag_ids: updatedData.tag_ids,
-          }),
-          // Add any other updatable fields as needed
-        };
+        // If updatedData looks like a full Scene object (has id, tag_ids, etc.), use it directly
+        const isFullScene =
+          updatedData &&
+          typeof updatedData === "object" &&
+          "id" in updatedData &&
+          "tag_ids" in updatedData;
 
-        const updatedScene = await updateScene(
-          project.id,
-          chapterId,
-          sceneId,
-          payload
-        );
+        let updatedScene: Scene;
+        if (isFullScene) {
+          updatedScene = updatedData as Scene;
+        } else {
+          // Only send fields allowed by UpdateSceneValues
+          const payload: UpdateSceneValues = {
+            ...(updatedData.outline_description !== undefined && {
+              outline_description: updatedData.outline_description,
+            }),
+            ...(updatedData.pov_character_id !== undefined && {
+              pov_character_id: updatedData.pov_character_id,
+            }),
+            // other_character_ids removed: handled via dedicated API
+            ...(updatedData.tag_ids !== undefined && {
+              tag_ids: updatedData.tag_ids,
+            }),
+            // Add any other updatable fields as needed
+          };
 
+          updatedScene = await updateScene(
+            project.id,
+            chapterId,
+            sceneId,
+            payload
+          );
+        }
+
+        // Update chapters
         setChapters((prevChapters) =>
           prevChapters.map((ch) => {
             if (ch.id === chapterId) {
@@ -1213,6 +1429,26 @@ ProjectDashboardClientProps) {
             return ch;
           })
         );
+
+        // Update scenesForSelectedChapter if this is the selected chapter
+        setScenesForSelectedChapter((prevScenes) => {
+          if (
+            selectedChapter &&
+            selectedChapter.id === chapterId &&
+            prevScenes.some((s) => s.id === sceneId)
+          ) {
+            return prevScenes.map((s) =>
+              s.id === sceneId ? { ...s, ...updatedScene } : s
+            );
+          }
+          return prevScenes;
+        });
+
+        // Update selectedScene if this is the selected scene
+        setSelectedScene((prev) =>
+          prev && prev.id === sceneId ? { ...prev, ...updatedScene } : prev
+        );
+
         toast.success("Scene details saved.");
       } catch (error) {
         console.error("Failed to save scene details:", error);
@@ -1329,6 +1565,21 @@ ProjectDashboardClientProps) {
           isOpen={isCreateWorldNoteModalOpen}
           onClose={() => setIsCreateWorldNoteModalOpen(false)}
           onNoteCreated={handleWorldNoteCreated}
+        />
+      )}
+
+      {/* Render SceneMetadataPanel */}
+      {selectedScene && selectedChapter && (
+        <SceneMetadataPanel
+          isOpen={isSceneMetadataPanelOpen}
+          onClose={() => setIsSceneMetadataPanelOpen(false)}
+          scene={selectedScene}
+          projectId={project.id}
+          allProjectCharacters={characters}
+          allProjectSceneTags={allSceneTags}
+          onSceneUpdate={handleSceneDetailsPanelUpdate}
+          onCharacterLinkChange={handleSceneDetailsPanelCharacterLinkChange}
+          onTagLinkChange={handleSceneDetailsPanelTagLinkChange}
         />
       )}
     </>
