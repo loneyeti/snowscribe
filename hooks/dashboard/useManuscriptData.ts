@@ -1,7 +1,7 @@
 // hooks/dashboard/useManuscriptData.ts
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import type { Chapter, Scene } from '../../lib/types';
-import { getScenesByChapterId, updateScene } from '../../lib/data/scenes';
+import { getScenesByChapterId } from '../../lib/data/scenes';
 import { toast } from 'sonner';
 import { countWords } from '../../lib/utils';
 

@@ -1,6 +1,6 @@
 // components/dashboard/sections/OutlineSection/index.tsx
 import React, { useState, useEffect, useCallback } from "react";
-import type { Project, Chapter, Scene, UpdateSceneValues } from "@/lib/types";
+import type { Project, Scene } from "@/lib/types";
 import { useOutlineData } from "@/hooks/dashboard/useOutlineData";
 import { useManuscriptData } from "@/hooks/dashboard/useManuscriptData"; // For chapters & scenes
 import { useCharactersData } from "@/hooks/dashboard/useCharactersData"; // For characters list
@@ -15,7 +15,6 @@ import { ProjectSynopsisEditor } from "@/components/outline/ProjectSynopsisEdito
 import { CharacterCardQuickViewList } from "@/components/outline/CharacterCardQuickViewList";
 import { ChapterSceneOutlineList } from "@/components/outline/ChapterSceneOutlineList";
 import { Paragraph } from "@/components/typography/Paragraph";
-import { toast } from "sonner";
 
 type OutlineView = "synopsis" | "scenes";
 
@@ -43,6 +42,7 @@ export function OutlineSection({
     setChapters,
     setSelectedScene,
     setScenesForSelectedChapter,
+    selectedChapter,
   } = useManuscriptData(initialProject.id);
   // Use characters data hook for character list
   const {
@@ -55,6 +55,8 @@ export function OutlineSection({
     useProjectData();
 
   const [outlineView, setOutlineView] = useState<OutlineView>("synopsis");
+  const [charactersFetchAttempted, setCharactersFetchAttempted] =
+    useState(false);
 
   useEffect(() => {
     if (isActive) {
@@ -70,9 +72,10 @@ export function OutlineSection({
       if (
         (outlineView === "synopsis" || outlineView === "scenes") &&
         allCharactersForProject.length === 0 &&
-        !isLoadingAllChars
+        !isLoadingAllChars &&
+        !charactersFetchAttempted
       ) {
-        fetchAllChars();
+        fetchAllChars().finally(() => setCharactersFetchAttempted(true));
       }
       if (
         outlineView === "scenes" &&
@@ -98,7 +101,12 @@ export function OutlineSection({
     refreshAllSceneTags,
     allSceneTags.length,
     isLoadingAllSceneTags,
+    charactersFetchAttempted,
   ]);
+
+  useEffect(() => {
+    setCharactersFetchAttempted(false);
+  }, [initialProject.id]);
 
   // Handler passed to ChapterSceneOutlineList for when a scene's core fields are updated
   // This updates the master list of chapters in useManuscriptData
@@ -127,15 +135,14 @@ export function OutlineSection({
         setSelectedScene((prev) =>
           prev && prev.id === sceneId ? { ...prev, ...updatedScene } : prev
         );
-        setScenesForSelectedChapter((prevScenes) => {
-          // This check might need to be against selectedChapter.id in ManuscriptSection
-          if (prevScenes.some((s) => s.id === sceneId)) {
-            return prevScenes.map((s) =>
+        // Only update scenes for the selected chapter in OutlineSection's context
+        if (selectedChapter && selectedChapter.id === chapterId) {
+          setScenesForSelectedChapter((prevScenes) =>
+            prevScenes.map((s) =>
               s.id === sceneId ? { ...s, ...updatedScene } : s
-            );
-          }
-          return prevScenes;
-        });
+            )
+          );
+        }
       }
     },
     [
@@ -143,7 +150,7 @@ export function OutlineSection({
       setChapters,
       setSelectedScene,
       setScenesForSelectedChapter,
-      chapters,
+      selectedChapter,
     ]
   );
 
@@ -192,7 +199,7 @@ export function OutlineSection({
               title: currentProjectDetails.title,
               genre_id: currentProjectDetails.genre_id,
             }}
-            projectGenreName={currentProjectDetails.genres?.name}
+            projectGenreName={currentProjectDetails.genre}
             sceneOutlineDescriptions={allSceneOutlineDescriptions}
             onSynopsisUpdate={(data) => {
               const safeData = {

@@ -1,6 +1,6 @@
 // hooks/dashboard/useOutlineData.ts
 import { useState, useCallback, useEffect } from 'react';
-import type { Project, Chapter, Scene, UpdateSceneValues } from '@/lib/types';
+import type { Project, Scene, UpdateSceneValues } from '@/lib/types';
 import { toast } from 'sonner';
 import { updateProjectSchema, UpdateProjectValues } from '@/lib/schemas/project.schema'; // For synopsis save
 import { updateScene } from '@/lib/data/scenes'; // For scene outline updates

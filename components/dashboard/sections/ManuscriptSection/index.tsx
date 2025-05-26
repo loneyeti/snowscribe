@@ -1,6 +1,6 @@
 // components/dashboard/sections/ManuscriptSection/index.tsx
 import React, { useState, useEffect, useCallback } from "react";
-import type { Project, Scene, Chapter, Character, SceneTag } from "@/lib/types";
+import type { Project, Scene, Chapter } from "@/lib/types";
 import { useManuscriptData } from "@/hooks/dashboard/useManuscriptData";
 import { useSceneDragDrop } from "@/hooks/dashboard/useSceneDragDrop";
 import { useProjectData } from "@/contexts/ProjectDataContext";
@@ -14,19 +14,13 @@ import { ManuscriptEditor } from "@/components/editors/ManuscriptEditor";
 import { CreateChapterModal } from "@/components/manuscript/CreateChapterModal";
 import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal";
 import { Paragraph } from "@/components/typography/Paragraph";
-import {
-  PlusCircle,
-  ArrowLeft,
-  FileText,
-  ClipboardList,
-  Sparkles,
-  Info,
-} from "lucide-react";
+import { PlusCircle, ArrowLeft, Sparkles, Info } from "lucide-react";
 import { AISidePanel } from "@/components/ai/AISidePanel";
 import { SceneMetadataPanel } from "@/components/manuscript/SceneMetadataPanel";
 import { cn } from "@/lib/utils";
 import { cactusSerif } from "@/lib/fonts";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { UpdateSceneValues } from "@/lib/schemas/scene.schema";
 import {
   updateScene,
@@ -67,12 +61,9 @@ export function ManuscriptSection({
     setSelectedScene,
   } = useManuscriptData(project.id);
 
-  const {
-    allProjectCharacters,
-    allSceneTags,
-    isLoadingAllProjectCharacters,
-    isLoadingAllSceneTags,
-  } = useProjectData();
+  const router = useRouter();
+
+  const { allProjectCharacters, allSceneTags } = useProjectData();
 
   const [manuscriptView, setManuscriptView] =
     useState<ManuscriptView>("chapters");
@@ -456,7 +447,10 @@ export function ManuscriptSection({
             key={selectedScene.id}
             initialText={selectedScene.content || ""}
             saveText={async (text: string) => {
-              await handleSaveSceneContent(text);
+              const updatedScene = await handleSaveSceneContent(text);
+              if (updatedScene) {
+                router.refresh();
+              }
             }}
             font={cactusSerif}
             placeholder="Start writing your scene..."

@@ -192,6 +192,7 @@ export interface AIModel {
   updated_at: string; // TIMESTAMPTZ
 }
 
+export type { UpdateSceneValues } from '../schemas/scene.schema';
 // Based on supabase/migrations/20250511201802_create_ai_prompts_table.sql
 export interface AIPrompt {
   id: string; // UUID

@@ -53,8 +53,12 @@ export function CreateCharacterModal({
 
   const onSubmit = async (data: CharacterFormValues) => {
     setIsSubmitting(true);
+    const payload: CharacterFormValues = {
+      ...data,
+      image_url: data.image_url?.trim() === "" ? null : data.image_url,
+    };
     try {
-      const newCharacter = await createCharacter(projectId, data);
+      const newCharacter = await createCharacter(projectId, payload);
       toast.success(`Character "${newCharacter.name}" created successfully.`);
       onCharacterCreated(newCharacter);
       reset();
