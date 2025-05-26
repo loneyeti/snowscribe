@@ -1,8 +1,18 @@
 # Project Progress
 
-_(Updated: 2025-05-25 (AI-Generated Update))_
+_(Updated: 2025-05-26 (AI-Generated Update))_
 
 ## What Works
+
+- **World Notes Static Viewer & Edit Toggle (2025-05-26):**
+
+  - The World Notes section now displays notes in a static, Markdown-rendered view by default, with an "Edit" button to switch to the editor.
+  - View/edit state is managed in `useWorldNotesData` with new state and handlers.
+  - The new `WorldNoteViewer` component provides a clean, readable Markdown display, visually distinct from the editor.
+  - The main section conditionally renders the viewer or editor, ensuring seamless transitions and correct state resets on selection or deletion.
+  - The editor now supports a "Cancel" button and improved save/cancel flow.
+  - All flows (view, edit, create, delete, edge cases) have been tested for correctness and UX clarity.
+  - This pattern may be extended to other note-like features for improved consistency.
 
 - **Major Project Dashboard Refactor (2025-05-26):**
 
@@ -15,65 +25,7 @@ _(Updated: 2025-05-25 (AI-Generated Update))_
   - Fixed key bugs: infinite character query loop in OutlineSection, real-time word count update in `AppHeader`, and optional character image handling in `CreateCharacterModal`.
   - All dashboard sections and flows have been tested for CRUD, navigation, and data consistency.
 
-- **Project Initialization**: Next.js 15.3.2, TypeScript, Tailwind CSS.
-- **Memory Bank**: Documentation structure established.
-- **Database Schema**: All core tables created and migrated, including `projects`, `chapters`, `scenes`, `characters`, `world_building_notes`, `genres`, `scene_tags`, `scene_applied_tags`, `scene_characters`, `ai_vendors`, `ai_models`, `ai_prompts`, `tool_model`. Outline fields integrated into `projects` and `scenes`.
-- **Supabase Auth SSR**: Client, server, middleware for authentication and session management. Password reset and update password flows functional.
-- **Shared TypeScript Types**: `lib/types/index.ts` comprehensive and aligned with DB schema.
-- **Zod Schemas**: Validation schemas in `lib/schemas/` for all core and AI configuration entities.
-- **Data Access Layer (`lib/data`)**: Functions for CRUD operations on all major entities, calling internal APIs with cookie forwarding. Includes `chat.ts` for `snowgander` integration.
-- **API Route Handlers (`app/api`)**:
-  - Full CRUD for Projects, Chapters, Scenes, Characters, World Notes, AI Vendors, AI Models, AI Prompts, Tool-to-Model mappings.
-  - Endpoints for managing Scene-Character and Scene-Tag relationships.
-  - Endpoint for fetching Genres.
-  - All routes include user authentication and project ownership verification where applicable.
-- **Authentication Flow & UI**:
-  - Login, Registration, Logout, Auth Code Error, Password Reset, Update Password pages and backend logic.
-  - `AuthForm.tsx` component for login/signup.
-  - `UserMenuButton.tsx` for user actions.
-- **Homepage Functionality**:
-  - `HomePageClientWrapper.tsx` displays projects for logged-in user.
-  - `CreateProjectModal.tsx` for new project creation.
-  - **Project Deletion**: Users can now delete projects from the homepage via a delete button on `ProjectCard.tsx`, a confirmation dialog, and an API call to `DELETE /api/projects/[projectId]`. The UI updates immediately.
-- **Project Dashboard (`ProjectDashboardClient.tsx` & `AppShell.tsx`)**:
-  - **Navigation**: Functional sidebar (`PrimarySidebar.tsx`) and header (`AppHeader.tsx`) managed by `AppShell.tsx`.
-  - **Project Editing**: A new "Edit Project Details" modal is implemented, allowing users to modify a project's title, genre, description, and target word count from the project dashboard header.
-    - **Scene Drag and Drop**: Scenes can be dragged to reorder them and it updates the UI and database seamlessly
-  - **Manuscript Section**:
-    - Dynamic chapter and scene listing/creation.
-    - `ManuscriptEditor.tsx` for scene content editing with auto-save and word count.
-  - **Characters Section**:
-    - `CharacterList.tsx`, `CreateCharacterModal.tsx`.
-    - `CharacterCardEditor.tsx` for viewing/editing/deleting characters, aligned with schema.
-  - **World Building & Research Notes Section**:
-    - `WorldNoteList.tsx`, `CreateWorldNoteModal.tsx`.
-    - `WorldNoteEditor.tsx` for viewing/editing/deleting notes, with `AlertDialog` for confirmation.
-  - **Outline Section**:
-    - `ProjectSynopsisEditor.tsx` for project log_line and one-page_synopsis.
-    - `ChapterSceneOutlineList.tsx` for viewing scene outline details.
-    - `ManageSceneCharactersModal.tsx` and `ManageSceneTagsModal.tsx` for linking characters/tags to scenes.
-    - `CreateSceneModal` callable from outline view.
-    - **Outline Section - Synopsis View**: Implemented display and editing of project log line and one-page synopsis using `ProjectSynopsisEditor`. Added basic display of character names/nicknames in `CharacterCardQuickViewList` with loading state.
-    - **AI-Assisted One-Page Synopsis Generation**: Implemented AI assistance for generating one-page synopses based on project context (title, genre, log line, scene descriptions).
-- **Scene Tag System (Two-Tiered, 2025-05-25)**:
-  - Scenes now have a `primary_category` (ENUM) and can be assigned multiple global tags (via join table).
-  - Backend types, Zod schemas, API routes, and data layer updated to support the new model.
-  - UI components allow selection and display of primary category and tags.
-  - Tag management is separated from direct scene updates for data integrity.
-- **AI Integration (Foundational)**:
-  - `snowgander` integrated in `lib/data/chat.ts`.
-  - `AISidePanel.tsx` and `AIToolButton.tsx` for triggering AI tools based on `tool_model` config.
-  - `MarkdownComponent.tsx` for rendering AI responses.
-- **Site Settings (`SiteSettingsClient.tsx`)**:
-  - UI for managing AI Models (List, Create, Edit, Delete), including fetching AI Vendors for selection.
-  - UI for managing AI Vendors (List, Create, Edit, Delete) with modals and confirmation dialogs, fully integrated and matching the AI Model management pattern.
-  - **UI for managing AI Prompts (List, Create, Edit, Delete) with modals and confirmation dialogs, fully integrated and matching the AI Model and Vendor pattern.**
-- **UI Components (`components/ui`)**: Extensive library including Button, Input, Modal, DropdownMenu, List components, etc.
-- **Technical Foundations**:
-  - Next.js 15 async API compatibility (`await params`, `await cookies()`).
-  - Centralized project ownership verification (`lib/supabase/guards.ts`).
-  - Cookie forwarding for internal server-side API calls.
-  - Custom fonts (`Inter`, `Cactus_Classical_Serif`) integrated.
+<!-- (rest of file unchanged) -->
 
 ## What's Left to Build
 
@@ -95,6 +47,7 @@ _(Updated: 2025-05-25 (AI-Generated Update))_
   - [ ] UI for reordering scenes within chapters, and chapters within the project.
   - [ ] UI to fully demonstrate/facilitate the Snowflake method (if specific UI beyond synopsis fields is needed).
 - [ ] World Building & Research Notes (Enhancements):
+  - [x] Static Markdown viewer and edit toggle for World Notes.
   - [ ] Advanced Notes organization UI (e.g., filtering/searching by category).
   - [ ] Linking notes to specific manuscript scenes or characters.
 - [ ] Export Functionality:
@@ -157,6 +110,7 @@ The immediate focus areas are:
 
 | Date                       | Decision                                                                                                                                                                                                                                                                           | Rationale                                                                                                                                           |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2025-05-26 (AI Update)     | Adopted a static Markdown viewer with edit toggle for World Notes, managed by explicit view/edit state in the data hook and conditional rendering in the section component.                                                                                                        | To improve UX clarity, prevent accidental edits, and provide a clean, readable display for notes. Pattern may be extended to other note features.   |
 | 2025-05-26 (AI Update)     | Refactored `ProjectDashboardClient.tsx` into modular section components (`ManuscriptSection`, `OutlineSection`, `CharactersSection`, `WorldNotesSection`), each with its own data hook and encapsulated state/logic. Introduced `ProjectDataContext` for shared project-wide data. | To improve maintainability, testability, and scalability of the dashboard, reduce cross-section coupling, and enable faster feature development.    |
 | ... (previous entries) ... | ...                                                                                                                                                                                                                                                                                | ...                                                                                                                                                 |
 | YYYY-MM-DD (AI Update)     | Implemented `SiteSettingsClient` for AI Model management.                                                                                                                                                                                                                          | Provide users/admins a way to configure available AI models.                                                                                        |

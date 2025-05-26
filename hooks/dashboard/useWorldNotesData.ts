@@ -16,6 +16,9 @@ export function useWorldNotesData(projectId: string) {
   const [selectedWorldNote, setSelectedWorldNote] = useState<WorldBuildingNote | null>(null);
   const [worldNotesFetchAttempted, setWorldNotesFetchAttempted] = useState(false); // New state
 
+  // New state for edit mode
+  const [isEditingSelectedNote, setIsEditingSelectedNote] = useState(false);
+
   // Reset fetchAttempted if projectId changes.
   useEffect(() => {
     // This effect runs when the hook is first called with a projectId,
@@ -23,6 +26,7 @@ export function useWorldNotesData(projectId: string) {
     setWorldNotesFetchAttempted(false);
     setWorldNotes([]); // Clear existing notes when project changes
     setSelectedWorldNote(null); // Clear selection
+    setIsEditingSelectedNote(false); // Reset edit mode on project change
     // Note: We don't fetch here. The component (WorldNotesSection) will decide when to fetch
     // based on its `isActive` state and this `worldNotesFetchAttempted` flag.
   }, [projectId]);
@@ -47,12 +51,17 @@ export function useWorldNotesData(projectId: string) {
   }, [projectId]); // fetchProjectWorldNotes depends only on projectId
 
   const handleWorldNoteSelect = useCallback(async (noteId: string) => {
-    if (selectedWorldNote && selectedWorldNote.id === noteId) return;
+    if (selectedWorldNote && selectedWorldNote.id === noteId) {
+      // If re-selecting the same note, reset edit mode to false (view mode)
+      setIsEditingSelectedNote(false);
+      return;
+    }
 
     const existingNote = worldNotes.find((n) => n.id === noteId);
     // Assuming full data (like content) is fetched by getWorldBuildingNotes
     if (existingNote) {
       setSelectedWorldNote(existingNote);
+      setIsEditingSelectedNote(false); // Reset edit mode on new selection
       return;
     }
     // If not found in local list (shouldn't happen if list is comprehensive), fetch details
@@ -60,6 +69,7 @@ export function useWorldNotesData(projectId: string) {
     try {
       const noteDetails = await getWorldBuildingNote(projectId, noteId);
       setSelectedWorldNote(noteDetails);
+      setIsEditingSelectedNote(false); // Reset edit mode on new selection
       // Optionally update the main list if the fetched detail is more complete
       if (noteDetails) {
         setWorldNotes(prev => prev.map(n => n.id === noteId ? noteDetails : n));
@@ -75,6 +85,7 @@ export function useWorldNotesData(projectId: string) {
   const handleWorldNoteCreated = useCallback((newNote: WorldBuildingNote) => {
     setWorldNotes((prev) => [...prev, newNote].sort((a, b) => a.title.localeCompare(b.title)));
     setSelectedWorldNote(newNote);
+    setIsEditingSelectedNote(false); // Reset edit mode on new note creation
     // Creating a note means we have attempted interaction and likely have data.
     setWorldNotesFetchAttempted(true);
   }, []);
@@ -119,6 +130,7 @@ export function useWorldNotesData(projectId: string) {
       setWorldNotes((prev) => prev.filter((n) => n.id !== noteId));
       if (selectedWorldNote?.id === noteId) {
         setSelectedWorldNote(null);
+        setIsEditingSelectedNote(false); // Reset edit mode on deletion of selected note
       }
       toast.success(`Note "${noteNameToDelete}" deleted.`);
       return true;
@@ -128,6 +140,15 @@ export function useWorldNotesData(projectId: string) {
       return false;
     }
   }, [projectId, worldNotes, selectedWorldNote]);
+
+  // New handlers for toggling edit mode
+  const enableEditMode = useCallback(() => {
+    setIsEditingSelectedNote(true);
+  }, []);
+
+  const disableEditMode = useCallback(() => {
+    setIsEditingSelectedNote(false);
+  }, []);
 
   return {
     worldNotes,
@@ -140,5 +161,8 @@ export function useWorldNotesData(projectId: string) {
     handleSaveWorldNoteEditorData,
     handleWorldNoteDeleted,
     setSelectedWorldNote,
+    isEditingSelectedNote,
+    enableEditMode,
+    disableEditMode,
   };
 }

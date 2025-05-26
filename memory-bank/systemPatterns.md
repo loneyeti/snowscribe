@@ -46,6 +46,15 @@
 
 ## Design Patterns
 
+### View/Edit Toggle Pattern for Note-like Features (2025-05-26)
+
+- For features involving user-authored notes (e.g., World Notes), the UI defaults to a static, Markdown-rendered viewer with an explicit "Edit" button.
+- View/edit state is managed in the relevant data hook (e.g., `isEditingSelectedNote`, `enableEditMode`, `disableEditMode` in `useWorldNotesData`).
+- The main section component conditionally renders either the viewer or the editor based on this state, using distinct React keys to ensure proper remounting.
+- The editor includes a "Cancel" button and ensures edits are only applied when explicitly saved.
+- This pattern improves UX clarity, prevents accidental edits, and provides a clean, readable display for notes.
+- The approach is designed for extension to other note-like features (e.g., character bios, research notes) for consistency.
+
 ### Component Design Pattern
 
 - Using the **Variant Pattern** with `class-variance-authority` (CVA) for creating flexible, variant-driven UI components (e.g., `Button.tsx`).

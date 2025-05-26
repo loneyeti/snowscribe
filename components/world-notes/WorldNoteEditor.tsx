@@ -34,6 +34,7 @@ interface WorldNoteEditorProps {
   note: WorldBuildingNote;
   onSave: (updatedNote: WorldBuildingNote) => void;
   onDelete: (noteId: string) => void;
+  onCancelEdit: () => void; // Add this prop for cancel button
   isSaving?: boolean; // Optional prop to indicate saving state from parent
   isDeleting?: boolean; // Optional prop to indicate deleting state from parent
 }
@@ -45,6 +46,7 @@ export function WorldNoteEditor({
   note,
   onSave,
   onDelete,
+  onCancelEdit,
   isSaving: parentIsSaving = false, // Default to false if not provided
   isDeleting: parentIsDeleting = false, // Default to false if not provided
 }: WorldNoteEditorProps) {
@@ -92,6 +94,7 @@ export function WorldNoteEditor({
       toast.success(`Note "${updatedNote.title}" updated successfully.`);
       onSave(updatedNote);
       reset(updatedNote); // Reset form with new data to clear dirty state
+      onCancelEdit(); // Call to switch back to view mode after save
     } catch (error) {
       console.error("Failed to update world note:", error);
       toast.error(

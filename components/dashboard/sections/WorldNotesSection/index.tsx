@@ -4,7 +4,7 @@ import type { Project } from "@/lib/types";
 import { useWorldNotesData } from "@/hooks/dashboard/useWorldNotesData";
 import { WorldNoteList } from "@/components/world-notes/WorldNoteList";
 import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteModal";
-import { WorldNoteEditor } from "@/components/world-notes/WorldNoteEditor";
+import { WorldNoteEditor, WorldNoteViewer } from "@/components/world-notes";
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { ContextualHeader } from "@/components/ui/ContextualHeader";
 import { IconButton } from "@/components/ui/IconButton";
@@ -31,6 +31,9 @@ export function WorldNotesSection({
     handleWorldNoteDeleted,
     handleWorldNoteCreated,
     setSelectedWorldNote,
+    isEditingSelectedNote,
+    enableEditMode,
+    disableEditMode,
   } = useWorldNotesData(project.id); // project.id as dependency for the hook instance
 
   const [isCreateWorldNoteModalOpen, setIsCreateWorldNoteModalOpen] =
@@ -86,13 +89,25 @@ export function WorldNotesSection({
   const mainDetailColumn = (
     <>
       {selectedWorldNote ? (
-        <WorldNoteEditor
-          key={selectedWorldNote.id} // Key ensures component re-mounts with new note data
-          projectId={project.id}
-          note={selectedWorldNote}
-          onSave={handleSaveWorldNoteEditorData}
-          onDelete={() => handleWorldNoteDeleted(selectedWorldNote.id)}
-        />
+        isEditingSelectedNote ? (
+          <WorldNoteEditor
+            key={`${selectedWorldNote.id}-editor`} // Key ensures component re-mounts with new note data or mode change
+            projectId={project.id}
+            note={selectedWorldNote}
+            onSave={async (updatedNote) => {
+              await handleSaveWorldNoteEditorData(updatedNote);
+              disableEditMode(); // Switch back to view mode after save
+            }}
+            onDelete={() => handleWorldNoteDeleted(selectedWorldNote.id)}
+            onCancelEdit={disableEditMode} // New prop for cancel button
+          />
+        ) : (
+          <WorldNoteViewer
+            key={`${selectedWorldNote.id}-viewer`}
+            note={selectedWorldNote}
+            onEditClick={enableEditMode} // Switch to edit mode
+          />
+        )
       ) : isLoadingWorldNotesData && !worldNotesFetchAttempted ? (
         // If loading for the first time (fetch not attempted), show loading in detail too
         <div className="p-8 flex items-center justify-center h-full">

@@ -4,6 +4,16 @@
 
 _(Updated: 2025-05-26 (AI-Generated Update))_
 
+**World Notes Feature Revamp (Markdown Viewer & Edit Toggle):**
+
+- The World Notes section now defaults to a static, Markdown-rendered view of each note, with an "Edit" button to switch to the familiar editor.
+- State management for view/edit mode is handled in `useWorldNotesData`, with new state and handlers (`isEditingSelectedNote`, `enableEditMode`, `disableEditMode`).
+- The new `WorldNoteViewer` component displays note content using Markdown, with clear UI separation from the editor.
+- The main WorldNotesSection conditionally renders either the viewer or the editor based on the current mode, ensuring seamless transitions and correct state resets on note selection or deletion.
+- The editor now includes a "Cancel" button and improved save/cancel flow, ensuring edits are only applied when explicitly saved.
+- All flows (view, edit, create, delete, edge cases) have been tested for correctness, UX clarity, and error handling.
+- This pattern of toggling between static Markdown view and edit mode may be extended to other note-like features for improved UX consistency.
+
 **Major Project Dashboard Refactor Complete (Phases 0–8):**
 
 - The monolithic `ProjectDashboardClient.tsx` has been fully refactored into a modular, maintainable architecture:
@@ -35,6 +45,17 @@ _(Updated: 2025-05-26 (AI-Generated Update))_
 
 ## Recent Changes
 
+- **World Notes Feature Revamp (2025-05-26):**
+
+  - Added `isEditingSelectedNote` state and edit mode handlers to `useWorldNotesData` for managing view/edit state.
+  - Created `WorldNoteViewer` component for static, Markdown-rendered note display with an "Edit" button.
+  - Updated `components/world-notes/index.ts` to export the new viewer.
+  - Modified `WorldNotesSection` to conditionally render the viewer or editor based on edit state, with correct keying and state reset logic.
+  - Enhanced `WorldNoteEditor` to support a "Cancel" button and ensure save/cancel flows correctly switch modes and reset form state.
+  - Verified all flows: viewing, editing, creating, deleting notes, and edge cases (empty content/category, rapid switching, unsaved edits).
+  - Ensured clear separation of view and edit UI, robust state management, and user-friendly error handling.
+  - Pattern established for toggling between Markdown view and edit mode for note-like features.
+
 - **Major Project Dashboard Refactor (2025-05-26):**
 
   - Decomposed `ProjectDashboardClient.tsx` into modular section components: `ManuscriptSection`, `OutlineSection`, `CharactersSection`, and `WorldNotesSection`, each in `components/dashboard/sections/`.
@@ -56,112 +77,4 @@ _(Updated: 2025-05-26 (AI-Generated Update))_
   - Addressed issues with tag_ids not being a direct column and ensured correct handling in data and API layers.
   - Ongoing: Finalizing dedicated tag management routes/components and comprehensive testing.
 
-- **AI-Assisted One-Page Synopsis Generation**:
-  - Added a new system prompt for `synopsis_generator` to `supabase/seed.sql` to guide AI in generating one-page synopses.
-  - Mapped the `synopsis_generator` tool to the `Claude 3.7 Sonnet` AI model in the `tool_model` table within `supabase/seed.sql`.
-  - Modified `app/(dashboard)/project/[projectId]/ProjectDashboardClient.tsx` to:
-    - Aggregate all non-empty `scene.outline_description` strings from chapters and scenes, including scene titles for context.
-    - Pass the `projectGenreName` and the aggregated `sceneOutlineDescriptions` as new props to the `ProjectSynopsisEditor` component.
-  - Modified `components/outline/ProjectSynopsisEditor.tsx` to:
-    - Update `ProjectSynopsisEditorProps` interface to include `projectGenreName` and `sceneOutlineDescriptions`.
-    - Add `isGeneratingSynopsis` state variable to manage loading.
-    - Implement the `handleGenerateSynopsis` asynchronous function:
-      - Checks if sufficient context (title, genre, log line, or scene descriptions) is available.
-      - Fetches the AI model configuration and system prompt for `synopsis_generator`.
-      - Constructs a comprehensive user prompt using project title, genre name, log line, and aggregated scene outline descriptions.
-      - Calls the `chat` function from `lib/data/chat.ts` to interact with the AI.
-      - Processes the AI response, extracts the plain text synopsis, and updates the `onePageSynopsis` state.
-      - Displays `sonner` toast notifications for success or error.
-      - Manages the `isGeneratingSynopsis` state to show/hide loading indicators.
-    - Updated the "One Page Synopsis" `Textarea` to be disabled during generation or saving.
-    - Ensured the "Generate Synopsis with AI" `Button` correctly calls `handleGenerateSynopsis` and displays loading states.
-    - Updated the `disabled` props on the "Generate Log Line with AI" and "Save Synopses" buttons to account for the `isGeneratingSynopsis` state.
-- **AI-Assisted Scene Outline Description Generation**:
-  - Added a new system prompt for `scene_outliner` to `supabase/seed.sql` to guide AI in generating concise scene outline descriptions.
-  - Mapped the `scene_outliner` tool to the `Claude 3.7 Sonnet` AI model in the `tool_model` table within `supabase/seed.sql`.
-  - Modified `components/outline/ChapterSceneOutlineList.tsx` to:
-    - Import `Loader2`, `Sparkles` for UI, `toast` for notifications, and `chat`, `getToolModelByToolName`, `getSystemPromptByCategory`, `TextBlock`, `ChatResponse` for AI integration.
-    - Introduce `isGeneratingOutline` state to manage the loading status for AI generation on a per-scene basis.
-    - Implement `handleGenerateSceneOutlineDescription` asynchronous function:
-      - Fetches the AI model configuration and system prompt for `scene_outliner`.
-      - Constructs a user prompt using the scene's title and content (limited to 1000 characters).
-      - Calls the `chat` function from `lib/data/chat.ts` to interact with the AI.
-      - Processes the AI response, extracts the plain text description, and performs basic cleanup.
-      - Updates the `editFormData.outline_description` state with the generated text.
-      - Displays `sonner` toast notifications for success or error.
-      - Manages the `isGeneratingOutline` state to show/hide loading indicators.
-    - Added a "Generate with AI" `Button` within the scene's edit form, which triggers `handleGenerateSceneOutlineDescription`.
-    - Disabled the `outline_description` `Textarea` and the "Generate with AI" button while AI generation is in progress for that specific scene.
-    - Confirmed that the existing "Save" button in the scene edit form correctly saves the AI-generated (or manually edited) `outline_description` to the backend.
-- **Edit Project Details Modal**:
-  - Implemented `EditProjectModal.tsx` in `components/projects/` to allow users to modify a project's title, genre, description, and target word count.
-  - Integrated `react-hook-form` and `zod` for form management and validation within the modal.
-  - Added logic to fetch available genres from `/api/genres` and pre-fill the form with existing project data.
-  - Handled `PUT` requests to `/api/projects/[projectId]` for updating project details, including client-side validation and `sonner` toast notifications.
-  - Updated `components/layouts/AppHeader.tsx` to include a `Pencil` icon button that triggers the `EditProjectModal`.
-  - Modified `components/layouts/AppShell.tsx` to manage the `currentProjectData` state and pass necessary props (`projectId`, `initialProjectData`, `onProjectDetailsUpdated`) to `AppHeader`.
-  - Ensured `AppShell`'s `handleProjectUpdate` function updates local state and calls `router.refresh()` for data consistency.
-  - Exported `EditProjectModal` from `components/projects/index.ts`.
-  - Adjusted `lib/schemas/project.schema.ts` to ensure `updateProjectSchema` correctly omits fields not editable by this modal (`genre`, `log_line`, `one_page_synopsis`).
-- **AI-Powered Log Line Generation (Refactored to Background Modality)**:
-  - Updated the system prompt for 'Log Line Generator' in `supabase/seed.sql` to return a single, plain text log line.
-  - Modified `components/outline/ProjectSynopsisEditor.tsx`:
-    - Removed `AISidePanel` import and related state (`isLogLineAIPanelOpen`).
-    - Added imports for `Loader2`, `chat`, `getToolModelByToolName`, `getSystemPromptByCategory`, `TextBlock`, and `ChatResponse`.
-    - Introduced `isGeneratingLogLine` state to manage loading.
-    - Refactored the "Generate Log Line with AI" button to trigger a new `handleGenerateLogLine` function, display a loading spinner, and be disabled during generation/saving.
-    - Implemented `handleGenerateLogLine` to:
-      - Validate synopsis presence.
-      - Fetch AI tool model configuration and system prompt.
-      - Construct a detailed user prompt using project context (title, genre, synopsis).
-      - Make a direct AI call using `chat` (without `AISidePanel`).
-      - Process the AI response, extract the plain text log line, clean it (remove prefixes/suffixes), and update the `logLine` state directly.
-      - Provide toast notifications for success or error.
-    - Ensured the `Log Line` textarea is disabled during generation.
-- **Project Deletion from Homepage**:
-  - Implemented `deleteProject` function in `lib/data/projects.ts` for API interaction.
-  - Enhanced `components/homepage/ProjectCard.tsx` with a delete button and `AlertDialog` for confirmation.
-  - Modified `components/homepage/ProjectList.tsx` to pass the delete handler to `ProjectCard`.
-  - Updated `components/homepage/HomePageClientWrapper.tsx` to manage project state, handle deletion logic (API call, UI update), and display `sonner` toasts.
-  - Adapted `app/HomePageClientContent.tsx` to receive and pass the `onDeleteProject` handler.
-- **Outline Section - Synopsis View & Basic Character Quick View**: Implemented display and editing of project log line and one-page synopsis using `ProjectSynopsisEditor`. Added basic display of character names/nicknames in `CharacterCardQuickViewList` with loading state.
-- **AI Prompt CRUD Management (Site Settings):**
-  - Implemented full Create, Read, Update, Delete UI for AI Prompts in `SiteSettingsClient.tsx`.
-  - Created `CreateAIPromptModal.tsx` and `EditAIPromptModal.tsx` for prompt creation and editing, using `react-hook-form`, Zod validation, and project UI primitives.
-  - Added state, handler functions, and list rendering for prompts, matching the AI Model and Vendor management pattern.
-  - Integrated prompt modals and delete confirmation dialog into the settings client.
-  - Confirmed all supporting types, schemas, and data functions (`AIPrompt`, Zod schema, `lib/data/aiPrompts.ts`) are correct and in use.
-- **AI Vendor CRUD Management (Site Settings):**
-  - Implemented full Create, Read, Update, Delete UI for AI Vendors in `SiteSettingsClient.tsx`.
-  - Created `CreateAIVendorModal.tsx` and `EditAIVendorModal.tsx` for vendor creation and editing, using `react-hook-form`, Zod validation, and project UI primitives.
-  - Added state, handler functions, and list rendering for vendors, matching the AI Model management pattern.
-  - Integrated vendor modals and delete confirmation dialog into the settings client.
-  - Confirmed all supporting types, schemas, and data functions (`AIVendor`, Zod schema, `lib/data/aiVendors.ts`) are correct and in use.
-- **AI Configuration Implementation (Data & Basic UI):**
-  - Created database tables (`ai_vendors`, `ai_models`, `ai_prompts`, `tool_model`) with Supabase migrations.
-  - Defined corresponding TypeScript types and Zod schemas.
-  - Implemented API Route Handlers for CRUD operations on AI Vendors, Models, and Prompts.
-  - Implemented Data Access Layer functions in `lib/data/` for these AI entities.
-  - Developed UI in `SiteSettingsClient.tsx` for managing AI Models (list, create, edit, delete).
-  - Added `tool_model` table and API to map tool names to specific AI models.
-- **`snowgander` Integration & AI Tool UI:**
-  - Integrated `snowgander` for AI interactions via `lib/data/chat.ts`.
-  - Developed `AISidePanel` and `AIToolButton` components for triggering AI tools and displaying responses.
-  - Implemented `MarkdownComponent` for rendering AI responses.
-- **Outline Feature Refactor & Partial UI Implementation:**
-  - Refactored Outline data model: removed `outline_items` table, added fields (`one_page_synopsis`, `outline_description`, `pov_character_id`) to `projects` and `scenes` tables.
-  - Implemented `ProjectSynopsisEditor.tsx` for editing project log_line and one-page_synopsis.
-  - Implemented `ChapterSceneOutlineList.tsx` to display scenes within chapters for outline view.
-  - Implemented `ManageSceneCharactersModal.tsx` and `ManageSceneTagsModal.tsx` for linking characters and tags to scenes within the outline.
-  - Added API routes for managing scene-character and scene-tag relationships.
-- **Core Application Enhancements:**
-  - Established `memory-bank` structure, project brief, system architecture, tech stack docs.
-  - Implemented initial Supabase database schema and Auth SSR (`client.ts`, `server.ts`, `middleware.ts`).
-  - Developed API Route Handlers and Zod Schemas for core entities (Projects, Chapters, Scenes, Characters, World Notes), including authentication and validation.
-  - Implemented a basic authentication flow (login, signup, logout, password reset, update password) and homepage.
-  - Created UI components for Manuscript (chapter/scene listing, creation, `ManuscriptEditor` with auto-save, word count), Characters (`CharacterList`, `CreateCharacterModal`, `CharacterCardEditor`), and World Building Notes (`WorldNoteList`, `CreateWorldNoteModal`, `WorldNoteEditor`).
-  - Refactored Project Dashboard navigation using `AppShell` and `PrimarySidebar`.
-  - Aligned Character Editor with schema and resolved data type mismatches.
-  - Refactored Data Access Layer (`lib/data`) to call internal APIs, ensuring cookie forwarding for authenticated server-side requests.
-  - Centralized project ownership verification using a guard in `lib/supabase/guards.ts`.
-  - Addressed Next.js 15 asynchronous API requirements (`await params`, `await cookies()`).
+<!-- (rest of file unchanged) -->

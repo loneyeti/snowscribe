@@ -4,24 +4,24 @@
 
 Snowscribe is built with a modern frontend-focused stack:
 
-| Technology                       | Purpose                                                                       |
-| -------------------------------- | ----------------------------------------------------------------------------- |
-| **Next.js 15.3.2**               | React framework with server components                                        |
-| **React 19**                     | JavaScript library for building user interfaces                               |
-| **TypeScript**                   | Static typing for JavaScript                                                  |
-| **Tailwind CSS 4**               | Utility-first CSS framework                                                   |
-| **Supabase**                     | Backend as a Service (auth, database, storage)                                |
-| **PostgreSQL ENUM + Join Table** | Scene primary category as ENUM, global tags via join table                    |
-| **Fly.io**                       | Application hosting (Planned)                                                 |
-| **Docker**                       | Containerization (Planned)                                                    |
-| **Zod**                          | Schema declaration and validation                                             |
-| **snowgander (^0.0.36)**         | In-house package for vendor-agnostic AI API connectivity                      |
-| **sonner**                       | Toast notifications                                                           |
-| **React Hook Form**              | Form management and validation integration                                    |
-| **Lucide Icons**                 | Icon library                                                                  |
-| **Radix UI Primitives**          | Base for accessible UI components (Dropdown, Tooltip, Separator, AlertDialog) |
-| **React Markdown / Remark GFM**  | For rendering Markdown content (e.g., AI responses, note editors)             |
-| **React Syntax Highlighter**     | For syntax highlighting in Markdown code blocks                               |
+| Technology                       | Purpose                                                                                      |
+| -------------------------------- | -------------------------------------------------------------------------------------------- |
+| **Next.js 15.3.2**               | React framework with server components                                                       |
+| **React 19**                     | JavaScript library for building user interfaces                                              |
+| **TypeScript**                   | Static typing for JavaScript                                                                 |
+| **Tailwind CSS 4**               | Utility-first CSS framework                                                                  |
+| **Supabase**                     | Backend as a Service (auth, database, storage)                                               |
+| **PostgreSQL ENUM + Join Table** | Scene primary category as ENUM, global tags via join table                                   |
+| **Fly.io**                       | Application hosting (Planned)                                                                |
+| **Docker**                       | Containerization (Planned)                                                                   |
+| **Zod**                          | Schema declaration and validation                                                            |
+| **snowgander (^0.0.36)**         | In-house package for vendor-agnostic AI API connectivity                                     |
+| **sonner**                       | Toast notifications                                                                          |
+| **React Hook Form**              | Form management and validation integration                                                   |
+| **Lucide Icons**                 | Icon library                                                                                 |
+| **Radix UI Primitives**          | Base for accessible UI components (Dropdown, Tooltip, Separator, AlertDialog)                |
+| **React Markdown / Remark GFM**  | For rendering Markdown content (e.g., AI responses, note editors, World Notes static viewer) |
+| **React Syntax Highlighter**     | For syntax highlighting in Markdown code blocks                                              |
 
 ## Shared Types Definition
 
