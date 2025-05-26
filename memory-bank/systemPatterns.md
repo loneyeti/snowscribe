@@ -6,6 +6,8 @@
 │   ├── globals.css         # Global styles
 │   └── layout.tsx          # Root layout
 ├── components/             # React components
+│   ├── dashboard/          # Project dashboard section components (sections/ManuscriptSection, sections/OutlineSection, etc.)
+│   │   └── sections/       # Modular dashboard section components (ManuscriptSection, OutlineSection, CharactersSection, WorldNotesSection)
 │   ├── ui/                 # Reusable UI components
 │   ├── auth/               # Auth-specific components
 │   ├── editors/            # Manuscript, Character, Note editors
@@ -24,7 +26,8 @@
 │   ├── data/               # Data access layer (functions calling internal APIs)
 │   ├── types/              # TypeScript types and interfaces
 │   └── fonts.ts            # Font configurations
-├── hooks/                  # Custom React hooks (currently empty, placeholder)
+├── hooks/                  # Custom React hooks
+│   └── dashboard/          # Section-specific data hooks (useManuscriptData, useCharactersData, etc.)
 ├── middleware.ts           # Next.js middleware for auth session handling
 └── public/                 # Static assets
 ```
@@ -39,6 +42,7 @@
 6.  **AI Integration via `snowgander`**: Utilizing the `snowgander` package for vendor-agnostic AI API connectivity.
 7.  **API-Driven Data Layer**: Frontend components (both server and client) interact with internal Next.js API Route Handlers via functions in `lib/data/*`. These API routes then communicate with Supabase.
 8.  **Two-Tiered Scene Tag System (2025-05-25)**: Scenes have a `primary_category` (ENUM) column for main classification and are linked to multiple global tags via a join table (`scene_applied_tags`). Tag management is handled through dedicated API routes and UI, not as direct columns on the scene.
+9.  **Modular Dashboard Architecture (2025-05-26)**: The project dashboard is now fully modular. Each section (Manuscript, Outline, Characters, World Notes) is implemented as a self-contained component in `components/dashboard/sections/`, using its own custom data hook in `hooks/dashboard/`. Shared project-wide data (e.g., all characters, all scene tags) is managed by `ProjectDataContext`, providing context and hooks to all sections. All state, effects, and handlers have been removed from `ProjectDashboardClient.tsx`, which now simply renders the section components and provides context. This enables easier testing, maintenance, and future feature development.
 
 ## Design Patterns
 
@@ -102,30 +106,30 @@ graph TD
     AppShell --> PrimarySidebar[PrimarySidebar]
     AppShell --> AppHeader[AppHeader]
     AppShell --> ProjectDashboardClient[ProjectDashboardClient]
+    ProjectDashboardClient --> ManuscriptSection
+    ProjectDashboardClient --> OutlineSection
+    ProjectDashboardClient --> CharactersSection
+    ProjectDashboardClient --> WorldNotesSection
 
-    ProjectDashboardClient --> ManuscriptView
-    ManuscriptView --> CreateChapterModal
-    ManuscriptView --> CreateSceneModal
-    ManuscriptView --> ManuscriptEditor
+    ManuscriptSection --> CreateChapterModal
+    ManuscriptSection --> CreateSceneModal
+    ManuscriptSection --> ManuscriptEditor
+    ManuscriptSection --> SceneMetadataPanel
+    ManuscriptSection --> AISidePanel
 
-    ProjectDashboardClient --> OutlineView
-    OutlineView --> ProjectSynopsisEditor
-    OutlineView --> ChapterSceneOutlineList
+    OutlineSection --> ProjectSynopsisEditor
+    OutlineSection --> ChapterSceneOutlineList
     ChapterSceneOutlineList --> ManageSceneCharactersModal
     ChapterSceneOutlineList --> ManageSceneTagsModal
 
-    ProjectDashboardClient --> CharactersView
-    CharactersView --> CharacterList
-    CharactersView --> CreateCharacterModal
-    CharactersView --> CharacterCardEditor
+    CharactersSection --> CharacterList
+    CharactersSection --> CreateCharacterModal
+    CharactersSection --> CharacterCardEditor
 
-    ProjectDashboardClient --> WorldNotesView
-    WorldNotesView --> WorldNoteList
-    WorldNotesView --> CreateWorldNoteModal
-    WorldNotesView --> WorldNoteEditor
+    WorldNotesSection --> WorldNoteList
+    WorldNotesSection --> CreateWorldNoteModal
+    WorldNotesSection --> WorldNoteEditor
 
-    ProjectDashboardClient --> AISidePanelSection[AI Assistant Section (via AISidePanel)]
-    AISidePanelSection --> AISidePanel
     AISidePanel --> AIToolButton
     AISidePanel --> AIChatInterface
 

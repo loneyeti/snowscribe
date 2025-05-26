@@ -2,17 +2,49 @@
 
 ## Current Work Focus
 
-_(Updated: 2025-05-25 (AI-Generated Update))_
+_(Updated: 2025-05-26 (AI-Generated Update))_
 
-The application now includes full CRUD management for AI Prompts in the Site Settings page, in addition to AI Vendors and AI Models. Users can create, edit, and delete AI Prompts via modals, with all state, handlers, and UI integrated in `SiteSettingsClient.tsx`. This completes the core AI configuration management for prompts, vendors, and models, and sets the stage for robust `snowgander` integration. The Outlining feature, AI Model management, and core manuscript/character/world note features remain in active use and refinement. The Outline Section - Synopsis View and basic Character Quick View have been implemented. **Additionally, users can now delete projects directly from the homepage, enhancing project management capabilities. A new "Edit Project Details" modal has been implemented, allowing users to modify a project's title, genre, description, and target word count from the project dashboard header. Furthermore, AI-assisted scene outline description generation has been implemented, allowing users to generate concise summaries for their scenes directly within the outline view. The AI-assisted one-page synopsis generation feature has also been implemented, allowing users to generate a draft for their "One Page Synopsis" using an AI assistant within the "Outline > Synopsis" view.**
+**Major Project Dashboard Refactor Complete (Phases 0–8):**
 
-We also added drag and drop reordering for scenes.
+- The monolithic `ProjectDashboardClient.tsx` has been fully refactored into a modular, maintainable architecture:
 
-Fixed a couple of Scene outline saving bugs.
+  - Each dashboard section (Manuscript, Outline, Characters, World Notes) is now a self-contained component in `components/dashboard/sections/`, responsible for its own UI and state.
+  - Each section uses a dedicated custom data hook in `hooks/dashboard/` (e.g., `useManuscriptData`, `useCharactersData`, etc.) for all data fetching, state, and handlers.
+  - Shared project-wide data (e.g., all characters, all scene tags) is now managed by a new `ProjectDataContext` (`contexts/ProjectDataContext.tsx`), which provides context and hooks for section components.
+  - All state, effects, and handlers related to section data have been removed from `ProjectDashboardClient.tsx`, which now simply renders the section components and provides the context.
+  - All modals and detail panels are now managed within their respective section components, ensuring encapsulation and reducing cross-section coupling.
+  - The new structure enables easier testing, maintenance, and future feature development.
+
+- **Cleanup and Bugfixes (Phases 7 & 8):**
+
+  - TypeScript errors (e.g., missing exports for `UpdateSceneValues`) have been resolved.
+  - Unused variables and imports have been removed across all affected files.
+  - All `useEffect` and `useCallback` dependency arrays have been audited and corrected.
+  - Import paths have been verified and fixed.
+  - The infinite character query loop in OutlineSection has been fixed by tracking fetch attempts per project.
+  - The project word count in `AppHeader` now updates in real time after scene edits via `router.refresh()`.
+  - The optional character image field is now correctly handled as nullable/optional in `CreateCharacterModal`.
+  - All known dashboard-related bugs from the previous progress log have been addressed.
+
+- **Testing and Review:**
+  - All dashboard sections have been tested for CRUD, navigation, and data consistency.
+  - Drag-and-drop scene reordering, AI-assisted outline/synopsis generation, and all modal flows have been verified.
+  - The new architecture has been reviewed for prop consistency, hook usage, and modularity.
 
 **The scene tag system has been overhauled to a two-tiered model: each scene now has a primary category (ENUM) and can be assigned multiple global tags (managed via a join table). Ongoing work includes refining tag management UI, API separation, and thorough testing of the new system.**
 
 ## Recent Changes
+
+- **Major Project Dashboard Refactor (2025-05-26):**
+
+  - Decomposed `ProjectDashboardClient.tsx` into modular section components: `ManuscriptSection`, `OutlineSection`, `CharactersSection`, and `WorldNotesSection`, each in `components/dashboard/sections/`.
+  - Each section now manages its own state and data via a dedicated custom hook in `hooks/dashboard/` (e.g., `useManuscriptData`, `useCharactersData`, etc.).
+  - Introduced `ProjectDataContext` (`contexts/ProjectDataContext.tsx`) to provide shared project-wide data (e.g., all characters, all scene tags) to all sections.
+  - Removed all monolithic state, effects, and handlers from `ProjectDashboardClient.tsx`, which now simply renders the section components and provides context.
+  - All modals and detail panels are now managed within their respective section components.
+  - Performed comprehensive cleanup: removed unused variables/imports, fixed all TypeScript errors, audited all `useEffect`/`useCallback` dependencies, and verified all import paths.
+  - Fixed key bugs: infinite character query loop in OutlineSection, real-time word count update in `AppHeader`, and optional character image handling in `CreateCharacterModal`.
+  - All dashboard sections and flows have been tested for CRUD, navigation, and data consistency.
 
 - **Two-Tiered Scene Tag System Overhaul (2025-05-25):**
 

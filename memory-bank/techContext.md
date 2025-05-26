@@ -27,6 +27,8 @@ Snowscribe is built with a modern frontend-focused stack:
 
 A central file `lib/types/index.ts` defines shared TypeScript interfaces for data structures used throughout the application, derived from Supabase table schemas and UI requirements. This ensures type consistency between the frontend and backend.
 
+- The dashboard is now fully modular: each section (Manuscript, Outline, Characters, World Notes) is implemented as a self-contained component in `components/dashboard/sections/`, using its own custom data hook in `hooks/dashboard/`. Shared project-wide data (e.g., all characters, all scene tags) is managed by `ProjectDataContext`, providing context and hooks to all sections. All state, effects, and handlers have been removed from `ProjectDashboardClient.tsx`, which now simply renders the section components and provides context.
+
 The content of `lib/types/index.ts` includes interfaces such as `Project`, `Genre`, `Profile`, `Chapter`, `Scene`, `SceneTag`, `SceneAppliedTag`, `Character`, `SceneCharacter`, `WorldBuildingNote`, `AIInteraction`, `AIVendor`, `AIModel`, and `AIPrompt`.
 
 - The `Scene` and `SceneTag` types now reflect the two-tiered tag system: `primary_category` (ENUM) and an array of tag IDs (via join table).
