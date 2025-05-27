@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  // useMemo, // No longer needed
-} from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import type { NextFont } from "next/dist/compiled/@next/font";
 
 // --- Configuration ---
@@ -32,7 +26,7 @@ interface ManuscriptEditorProps {
 const plainTextToHtml = (text: string): string => {
   // Return <p> with zero-width space for empty initial text
   // Helps browser apply styles/focus correctly from the start
-  if (!text) return "<p>&#8203;</p>"; // Removed "Another Test"
+  if (!text) return "<p>&#8203;</p>";
   return (
     text
       .split("\n")
@@ -76,7 +70,7 @@ const htmlToPlainText = (html: string): string => {
   plainText = plainText.replace(/\n{3,}/g, "\n\n");
 
   // Treat content that is just the initial zero-width space as empty
-  if (html.trim() === "<p>​</p>" || html.trim() === "") return ""; // Note: The space between <p> and </p> here is the actual zero-width space character
+  if (html.trim() === "<p>​</p>" || html.trim() === "") return "";
 
   return plainText;
 };
@@ -91,36 +85,26 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
 }) => {
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // const isInitializingRef = useRef(true); // Removed
   const savedSaveText = useRef(saveText);
 
   useEffect(() => {
     savedSaveText.current = saveText;
   }, [saveText]);
 
-  // State to track the *current* plain text, primarily for debouncer and placeholder logic
-  const [currentPlainText, setCurrentPlainText] = useState(initialText); // RESTORED
-
   const textSizeClass = textSizeMap[textSize] || textSizeMap.base;
 
   // Effect to initialize content and handle external changes to initialText
-  // RESTORED
   useEffect(() => {
     if (contentEditableRef.current) {
       const currentHtml = contentEditableRef.current.innerHTML;
-      // Convert current DOM state back to plain text to compare
       const currentDomAsPlainText = htmlToPlainText(currentHtml);
 
-      // Only update DOM if initialText prop is truly different from current content
-      // OR if the component is mounting for the first time with this initialText
       if (initialText !== currentDomAsPlainText) {
-        // console.log("Setting initial HTML via useEffect for:", initialText);
         const newHtml = plainTextToHtml(initialText);
         contentEditableRef.current.innerHTML = newHtml;
-        setCurrentPlainText(initialText); // Sync internal plain text state // RESTORED
       }
     }
-  }, [initialText]); // Rerun only when initialText prop changes
+  }, [initialText]);
 
   // Debounced save function
   const debouncedSave = useCallback((text: string) => {
@@ -142,17 +126,13 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   }, []);
 
   // Handle input events on the contentEditable div
-  // RESTORED
   const handleInput = useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
-      // if (isInitializingRef.current) return; // Removed initialization check
-
       const target = event.currentTarget;
       const currentHtml = target.innerHTML;
       const newPlainText = htmlToPlainText(currentHtml);
 
-      setCurrentPlainText(newPlainText); // Update state for debouncer/placeholder // RESTORED
-      debouncedSave(newPlainText); // Trigger debounced save
+      debouncedSave(newPlainText);
 
       // Scroll to cursor
       const selection = window.getSelection();
@@ -166,11 +146,8 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         });
       }
     },
-    [debouncedSave, setCurrentPlainText] // Added setCurrentPlainText to dependency array
+    [debouncedSave]
   );
-
-  // const showPlaceholder = !currentPlainText && !!placeholder; // Placeholder logic fully removed
-  // REMOVED unused placeCursorAtEnd function
 
   return (
     <div
@@ -178,7 +155,6 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       contentEditable={true}
       suppressContentEditableWarning={true}
       onInput={handleInput}
-      // Initial content is set via useEffect
       className={`
             max-w-[70ch] w-[70ch] min-w-[70ch] flex-1 overflow-y-auto outline-none 
             p-4 md:p-6 lg:p-8
@@ -189,14 +165,12 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
             leading-loose
             whitespace-pre-wrap
             break-words
-            // Indent is now unconditional
             [&>p]:indent-8
             relative
             transition-colors duration-200
             rounded-lg
             box-shadow(0 1px 3px rgba(0,0,0,0.1))
           `}
-      // data-placeholder attribute fully removed
       aria-label={placeholder || "Text input area"}
       spellCheck="true"
     >

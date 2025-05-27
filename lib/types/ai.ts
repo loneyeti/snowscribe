@@ -1,23 +1,34 @@
-import { PrimarySceneCategory } from './index'; // Assuming PrimarySceneCategory is in index.ts
+// lib/types/ai.ts
 
+// Add this interface
+export interface AIMessage {
+  id: string;
+  text: string;
+  sender: 'user' | 'ai' | 'system'; // Adjust roles as needed for your chat logic
+  timestamp: Date;
+  type?: 'text' | 'error' | 'info' | 'loader'; // Optional: for UI styling or message categorization
+  rawSnowganderResponse?: import('snowgander').ChatResponse; // Optional: useful for debugging or advanced display
+}
+
+// Existing exports (example placeholders, adjust as per actual content)
 export interface ParsedCharacter {
   name: string;
-  description?: string; // Brief, 1-2 sentences
+  description?: string;
 }
 
 export interface ParsedScene {
   title: string;
-  order: number; // 0-indexed within the chapter
-  description: string; // 1-3 sentences summarizing the scene
-  povCharacterName?: string; // Name of the POV character for this scene
-  otherCharacterNames?: string[]; // List of names of other characters present
-  tagNames?: string[]; // List of descriptive tag names (e.g., "Action", "Mystery Introduction")
-  primaryCategory?: PrimarySceneCategory; // Must be one of the valid ENUM values
+  order: number;
+  description?: string;
+  povCharacterName?: string;
+  otherCharacterNames?: string[];
+  tagNames?: string[];
+  primaryCategory: 'Action' | 'Dialogue' | 'Reflection' | 'Discovery' | 'Relationship' | 'Transition' | 'Worldbuilding';
 }
 
 export interface ParsedChapter {
   title: string;
-  order: number; // 0-indexed overall chapter order
+  order: number;
   scenes: ParsedScene[];
 }
 

@@ -12,7 +12,7 @@ export interface UseAIChatReturn {
   snowganderHistory: SnowganderChatResponse[];
   isLoading: boolean;
   error: string | null;
-  sendUserMessage: (userText: string, toolName: string, contextData?: any) => Promise<void>;
+  sendUserMessage: (userText: string, toolName: string, contextData?: unknown) => Promise<void>;
   setUiMessages: React.Dispatch<React.SetStateAction<AIMessage[]>>;
   setSnowganderHistory: React.Dispatch<React.SetStateAction<SnowganderChatResponse[]>>;
   clearChat: () => void;

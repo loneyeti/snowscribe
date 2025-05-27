@@ -275,6 +275,15 @@ export function OutlineSection({
           onClick={() => setOutlineView("scenes")}
           isSelected={outlineView === "scenes"}
         />
+        <ListItem
+          icon={Sparkles}
+          onClick={() => setIsOutlineCreatorModalOpen(true)}
+          title={
+            !currentProjectDetails.one_page_synopsis
+              ? "Add a one-page synopsis first"
+              : "Generate Full Outline with AI"
+          }
+        />
       </ListContainer>
     </>
   );
