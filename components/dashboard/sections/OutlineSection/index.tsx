@@ -15,6 +15,13 @@ import { ProjectSynopsisEditor } from "@/components/outline/ProjectSynopsisEdito
 import { CharacterCardQuickViewList } from "@/components/outline/CharacterCardQuickViewList";
 import { ChapterSceneOutlineList } from "@/components/outline/ChapterSceneOutlineList";
 import { Paragraph } from "@/components/typography/Paragraph";
+import { toast } from "sonner";
+import {
+  generateAndParseOutline,
+  createEntitiesFromOutline,
+} from "@/lib/ai/outlineCreator";
+import { OutlineCreatorModal } from "@/components/outline/OutlineCreatorModal";
+import { Loader2, Sparkles } from "lucide-react";
 
 type OutlineView = "synopsis" | "scenes";
 
@@ -57,6 +64,11 @@ export function OutlineSection({
   const [outlineView, setOutlineView] = useState<OutlineView>("synopsis");
   const [charactersFetchAttempted, setCharactersFetchAttempted] =
     useState(false);
+
+  // New state for Outline Creator modal and loading
+  const [isOutlineCreatorModalOpen, setIsOutlineCreatorModalOpen] =
+    useState(false);
+  const [isGeneratingFullOutline, setIsGeneratingFullOutline] = useState(false);
 
   useEffect(() => {
     if (isActive) {
