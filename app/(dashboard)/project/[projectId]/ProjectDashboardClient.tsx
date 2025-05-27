@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import type { Project, Genre } from "@/lib/types";
+import type { Project } from "@/lib/types";
 
 // Import Section Components
 import { ManuscriptSection } from "@/components/dashboard/sections/ManuscriptSection";
@@ -12,9 +12,10 @@ import { OutlineSection } from "@/components/dashboard/sections/OutlineSection";
 
 // Import Context Provider
 import { ProjectDataProvider } from "@/contexts/ProjectDataContext";
+import { AISection } from "@/components/dashboard/sections/AISection";
 
 interface ProjectDashboardClientProps {
-  project: Project & { genres: Genre | null };
+  project: Project & { genres: import("@/lib/types").SceneTag | null };
   activeSection?: string;
 }
 
@@ -47,12 +48,8 @@ export function ProjectDashboardClient({
         isActive={activeSection === "world-notes"}
       />
 
-      {activeSection === "ai" && (
-        <div className="p-4">
-          AI Assistant View (Placeholder - To be refactored or implemented as a
-          section)
-        </div>
-      )}
+      {/* Render AISection when activeSection is "ai" */}
+      <AISection project={project} isActive={activeSection === "ai"} />
     </ProjectDataProvider>
   );
 }
