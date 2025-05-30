@@ -35,7 +35,7 @@ import { getWorldBuildingNotes } from "@/lib/data/worldBuildingNotes";
 import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteModal";
 
 interface AISectionProps {
-  project: Project & { genres: SceneTag | null };
+  project: Project & { genres: import("@/lib/types").Genre | null };
   isActive: boolean;
 }
 

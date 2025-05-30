@@ -13,7 +13,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 async function getAuthCookieHeader(): Promise<string> {
   const { cookies } = await import("next/headers");
   const cookieStore = await cookies();
-  return cookieStore.getAll().map((c: { name: string; value: string }) => `${c.name}=${c.value}`).join("; ");
+  return cookieStore.getAll().map((cookie: { name: string; value: string }) => `${cookie.name}=${cookie.value}`).join('; ');
 }
 
 /**
@@ -78,7 +78,10 @@ async function getOrCreateTag(projectId: string, tagName: string, existingTags: 
   // Create new project-specific tag
   const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/scene-tags`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Cookie": cookieHeader },
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookieHeader && { 'Cookie': cookieHeader }),
+    },
     body: JSON.stringify({ name: tagName.trim(), project_id: projectId }), // API needs to handle this
   });
   if (!response.ok) {
@@ -125,7 +128,10 @@ export async function createEntitiesFromOutline(
     try {
       const chapterResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}/chapters`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Cookie": cookieHeader },
+        headers: {
+          "Content-Type": "application/json",
+          ...(cookieHeader && { 'Cookie': cookieHeader }),
+        },
         body: JSON.stringify({ title: pChapter.title, order: pChapter.order, project_id: projectId }),
       });
       if (!chapterResponse.ok) throw new Error(`Failed to create chapter "${pChapter.title}"`);
@@ -157,7 +163,10 @@ export async function createEntitiesFromOutline(
 
           const sceneResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}/chapters/${newChapter.id}/scenes`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Cookie": cookieHeader },
+            headers: {
+              "Content-Type": "application/json",
+              ...(cookieHeader && { 'Cookie': cookieHeader }),
+            },
             body: JSON.stringify(scenePayload),
           });
           if (!sceneResponse.ok) throw new Error(`Failed to create scene "${pScene.title}"`);

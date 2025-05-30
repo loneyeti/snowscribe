@@ -62,7 +62,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { promptId } = params;
+  const { promptId } = await params;
   if (!promptId) {
     return NextResponse.json({ error: "Prompt ID is required" }, { status: 400 });
   }
@@ -103,7 +103,7 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { promptId } = params;
+  const { promptId } = await params;
   if (!promptId) {
     return NextResponse.json({ error: "Prompt ID is required" }, { status: 400 });
   }
@@ -215,7 +215,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { promptId } = params;
+  const { promptId } = await params;
   if (!promptId) {
     return NextResponse.json({ error: "Prompt ID is required" }, { status: 400 });
   }

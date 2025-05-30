@@ -84,6 +84,10 @@ export async function sendMessage(
           formattedContext = (await import('@/lib/ai/contextFormatters')).formatSceneForAI((contextData as { scene: Scene }).scene);
           break;
         // Add cases for 'plot_hole_checker', 'scene_character_suggester', 'character_backstory_generator', 'outline_json_generator' etc.
+        case 'outline_json_generator':
+          // For outline generation, we don't need formatted context - the synopsis is passed as userPrompt
+          formattedContext = "";
+          break;
         // Example for a non-context tool:
         case 'writing_coach': 
           // No specific project context needed for a general writing coach

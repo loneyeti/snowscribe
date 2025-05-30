@@ -34,6 +34,22 @@
 
 ## Key Technical Decisions
 
+### Outline Creator Implementation (2025-05-29)
+
+- **AI Integration**: Uses `AISMessageHandler` to interact with AI models via the `outline_json_generator` tool
+- **JSON Schema Validation**: Strict TypeScript interfaces define the expected output structure
+- **Two-Phase Process**:
+  1. `generateAndParseOutline` - Calls AI and validates JSON response
+  2. `createEntitiesFromOutline` - Creates database entities from parsed data
+- **Entity Creation**:
+  - Creates characters, chapters, scenes with proper relationships
+  - Handles scene tags and character associations
+  - Maintains order and structure from the AI-generated outline
+- **Error Handling**: Robust validation and error recovery at each step
+- **UI Integration**: Modal-based workflow in OutlineSection with progress feedback
+
+## Key Technical Decisions
+
 1.  **Server Components by Default**: Using React Server Components for improved performance, SEO, and reduced client-side JavaScript.
 2.  **Client Components When Necessary**: Adding `"use client"` directive only for components that require interactivity, hooks, or browser APIs.
 3.  **Strong Type System**: Strict TypeScript typing for all components, functions, and data structures, largely inferred from Zod schemas and Supabase types.

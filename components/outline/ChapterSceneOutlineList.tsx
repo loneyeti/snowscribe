@@ -51,8 +51,10 @@ export function ChapterSceneOutlineList({
   projectId,
   onSceneUpdate,
 }: ChapterSceneOutlineListProps) {
-  console.log("ChapterSceneOutlineList:");
-  console.log(`Chapters: ${JSON.stringify(chapters)} `);
+  console.log("ChapterSceneOutlineList - Props Received:");
+  console.log("Chapters:", chapters);
+  console.log("Characters (allProjectCharacters):", characters);
+  console.log("SceneTags:", sceneTags);
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(
     new Set()
   );
@@ -351,7 +353,6 @@ export function ChapterSceneOutlineList({
                                 scene.outline_description || "",
                               pov_character_id: scene.pov_character_id || null,
                               primary_category: scene.primary_category || null, // ADD THIS
-                              tag_ids: scene.tag_ids || [], // Ensure tag_ids are also initialized for the modal
                             });
                           }}
                           className="text-xs h-7 px-2" // More fine-grained control for "xs" feel

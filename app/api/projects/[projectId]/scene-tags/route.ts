@@ -8,6 +8,44 @@ const createSceneTagSchema = z.object({
   project_id: z.string().uuid("Valid Project ID is required."),
 });
 
+export async function GET(
+  request: Request,
+  { params }: { params: { projectId: string } }
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { projectId } = await params;
+  if (!projectId) {
+    return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
+  }
+
+  const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
+  if (ownershipVerification.error) {
+    return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });
+  }
+
+  const { data: tags, error: dbError } = await supabase
+    .from("scene_tags")
+    .select('*')
+    .or(`project_id.eq.${projectId},project_id.is.null`)
+    .order('name', { ascending: true });
+
+  if (dbError) {
+    console.error("Error fetching scene tags:", dbError);
+    return NextResponse.json({ error: "Failed to fetch scene tags", details: dbError.message }, { status: 500 });
+  }
+
+  return NextResponse.json(tags || []);
+}
+
 export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
@@ -22,7 +60,7 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { projectId } = params;
+  const { projectId } = await params;
   const ownershipVerification = await verifyProjectOwnership(supabase, projectId, user.id);
   if (ownershipVerification.error) {
     return NextResponse.json({ error: ownershipVerification.error.message }, { status: ownershipVerification.status });

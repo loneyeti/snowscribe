@@ -1,10 +1,9 @@
 "use server";
 
-import { AIVendorFactory, ModelConfig, AIVendorAdapter, Chat, ChatResponse, TextBlock } from "snowgander";
+import { AIVendorFactory, ModelConfig, AIVendorAdapter, Chat, ChatResponse } from "snowgander";
 import type { AIModel } from "@/lib/types";
 import { getAIModelById } from "./aiModels";
 import { getAIVendorById } from "./aiVendors";
-import { getCookieHeader } from "./dataUtils";
 
 // Example: Load keys from environment variables
 if (process.env.OPENAI_API_KEY) {
@@ -122,12 +121,12 @@ export async function chat(modelId: string, messages: ChatResponse[], prompt: st
       throw new Error("Adapter not found");
     }
     // --- Prepare the Chat Object (Manage this state in your app) ---
-let currentChat: Chat = {
+const currentChat: Chat = {
     model: (await modelConfig).apiName, // The model being used
     responseHistory: messages,
     prompt: prompt, // The user's latest input
     systemPrompt: systemPrompt, // Sets the AI's persona
-    maxTokens: null, // Limit response length for this turn
+    maxTokens: 16000, // Limit response length for this turn
     visionUrl: null, // Set to an image URL for vision models
     budgetTokens: null, // Set > 0 to enable 'thinking' mode if supported
     imageURL: null, // Set to an image URL for image models

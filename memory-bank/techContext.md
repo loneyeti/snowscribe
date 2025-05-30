@@ -87,6 +87,18 @@ OPENROUTER_API_KEY=your-openrouter-api-key
 # etc.
 ```
 
+## Outline Creator Technical Details
+
+The Outline Creator feature provides automated novel outline generation with:
+
+- **AI JSON Generation**: Uses `outline_json_generator` tool via `AISMessageHandler`
+- **Structured Types**: Defined in `lib/types/ai.ts` with ParsedOutlineData interface
+- **Two-Phase Process**:
+  1. AI interaction and JSON parsing via `generateAndParseOutline`
+  2. Database entity creation via `createEntitiesFromOutline`
+- **Entity Relationships**: Handles character-scene connections, chapter ordering
+- **Error Handling**: Robust validation of AI output before database operations
+
 ## Technical Constraints
 
 ### Supabase Auth SSR

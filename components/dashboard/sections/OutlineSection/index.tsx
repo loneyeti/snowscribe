@@ -1,5 +1,5 @@
 // components/dashboard/sections/OutlineSection/index.tsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import type { Project, Scene } from "@/lib/types";
 import { useOutlineData } from "@/hooks/dashboard/useOutlineData";
 import { useManuscriptData } from "@/hooks/dashboard/useManuscriptData"; // For chapters & scenes
@@ -10,7 +10,7 @@ import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { ListContainer } from "@/components/ui/ListContainer";
 import { ListItem } from "@/components/ui/ListItem";
 import { ContextualHeader } from "@/components/ui/ContextualHeader";
-import { FileText, ClipboardList } from "lucide-react";
+import { FileText, ClipboardList, Sparkles } from "lucide-react";
 import { ProjectSynopsisEditor } from "@/components/outline/ProjectSynopsisEditor";
 import { CharacterCardQuickViewList } from "@/components/outline/CharacterCardQuickViewList";
 import { ChapterSceneOutlineList } from "@/components/outline/ChapterSceneOutlineList";
@@ -21,7 +21,9 @@ import {
   createEntitiesFromOutline,
 } from "@/lib/ai/outlineCreator";
 import { OutlineCreatorModal } from "@/components/outline/OutlineCreatorModal";
-import { Loader2, Sparkles } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@/components/ui/Button";
+import { Loader2 } from "lucide-react";
 
 type OutlineView = "synopsis" | "scenes";
 
@@ -34,6 +36,8 @@ export function OutlineSection({
   project: initialProject,
   isActive,
 }: OutlineSectionProps) {
+  const [outlineView, setOutlineView] = React.useState<OutlineView>("synopsis");
+
   const {
     currentProjectDetails,
     setCurrentProjectDetails,
@@ -51,29 +55,17 @@ export function OutlineSection({
     setScenesForSelectedChapter,
     selectedChapter,
   } = useManuscriptData(initialProject.id);
+
   // Use characters data hook for character list
   const {
     characters: allCharactersForProject,
     fetchProjectCharacters: fetchAllChars,
     isLoadingCharactersData: isLoadingAllChars,
   } = useCharactersData(initialProject.id);
-  // Use project data context for all scene tags
-  const { allSceneTags, isLoadingAllSceneTags, refreshAllSceneTags } =
-    useProjectData();
 
-  const [outlineView, setOutlineView] = useState<OutlineView>("synopsis");
-  const [charactersFetchAttempted, setCharactersFetchAttempted] =
-    useState(false);
-
-  // New state for Outline Creator modal and loading
-  const [isOutlineCreatorModalOpen, setIsOutlineCreatorModalOpen] =
-    useState(false);
-  const [isGeneratingFullOutline, setIsGeneratingFullOutline] = useState(false);
-
-  useEffect(() => {
+  React.useEffect(() => {
     if (isActive) {
-      setCurrentProjectDetails(initialProject); // Ensure local project details are fresh
-      // Fetch necessary data based on the current outline view
+      // Fetch data when section becomes active
       if (
         outlineView === "scenes" &&
         chapters.length === 0 &&
@@ -81,44 +73,151 @@ export function OutlineSection({
       ) {
         fetchProjectChapters();
       }
+
+      // Fetch characters when synopsis view is active and no characters are loaded
       if (
-        (outlineView === "synopsis" || outlineView === "scenes") &&
+        outlineView === "synopsis" &&
         allCharactersForProject.length === 0 &&
-        !isLoadingAllChars &&
-        !charactersFetchAttempted
+        !isLoadingAllChars
       ) {
-        fetchAllChars().finally(() => setCharactersFetchAttempted(true));
-      }
-      if (
-        outlineView === "scenes" &&
-        allSceneTags.length === 0 &&
-        !isLoadingAllSceneTags
-      ) {
-        refreshAllSceneTags(); // From context
+        fetchAllChars();
       }
     } else {
-      setOutlineView("synopsis"); // Reset view when section becomes inactive
+      // Reset view when section becomes inactive
+      setOutlineView("synopsis");
     }
   }, [
     isActive,
     outlineView,
-    initialProject,
-    setCurrentProjectDetails,
-    fetchProjectChapters,
     chapters.length,
     isLoadingChapters,
-    fetchAllChars,
+    fetchProjectChapters,
     allCharactersForProject.length,
     isLoadingAllChars,
-    refreshAllSceneTags,
-    allSceneTags.length,
-    isLoadingAllSceneTags,
-    charactersFetchAttempted,
+    fetchAllChars,
   ]);
+  // Use project data context for all scene tags
+  const { allSceneTags, isLoadingAllSceneTags, refreshAllSceneTags } =
+    useProjectData();
 
-  useEffect(() => {
-    setCharactersFetchAttempted(false);
-  }, [initialProject.id]);
+  console.log("[OutlineSection] Current outlineView:", outlineView);
+  console.log("[OutlineSection] Chapters length:", chapters.length);
+  console.log("[OutlineSection] IsLoadingChapters:", isLoadingChapters);
+  console.log(
+    "[OutlineSection] allCharactersForProject length:",
+    allCharactersForProject.length
+  );
+  console.log("[OutlineSection] isLoadingAllChars:", isLoadingAllChars);
+
+  // New state for Outline Creator modal and loading
+  const [isOutlineCreatorModalOpen, setIsOutlineCreatorModalOpen] =
+    useState(false);
+  const [isGeneratingFullOutline, setIsGeneratingFullOutline] = useState(false);
+
+  // Handler for generating full outline with AI
+  const handleGenerateFullOutline = async () => {
+    if (!currentProjectDetails?.one_page_synopsis?.trim()) {
+      toast.error(
+        "A 'One Page Synopsis' is required to generate an outline. Please add one in the Synopsis tab."
+      );
+      setIsOutlineCreatorModalOpen(false);
+      return;
+    }
+
+    setIsGeneratingFullOutline(true);
+    setIsOutlineCreatorModalOpen(false);
+    const toastId = toast.loading(
+      "Generating full outline with AI... This may take a few minutes."
+    );
+
+    try {
+      const parsedData = await generateAndParseOutline(initialProject.id);
+
+      if (parsedData) {
+        toast.info(
+          "AI has generated the outline structure. Now creating database entries...",
+          { id: toastId }
+        );
+
+        if (allSceneTags.length === 0 && !isLoadingAllSceneTags) {
+          await refreshAllSceneTags();
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+
+        await createEntitiesFromOutline(
+          initialProject.id,
+          parsedData,
+          allSceneTags
+        );
+
+        toast.success("Full outline created successfully!", { id: toastId });
+
+        fetchProjectChapters();
+        fetchAllChars();
+      } else {
+        toast.error(
+          "Failed to generate or parse outline data from AI. No changes made.",
+          {
+            id: toastId,
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Error during full outline generation process:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred during outline generation.",
+        { id: toastId }
+      );
+    } finally {
+      setIsGeneratingFullOutline(false);
+    }
+  };
+
+  // Render the OutlineCreatorModal component
+  const renderOutlineCreatorModal = () => (
+    <OutlineCreatorModal
+      isOpen={isOutlineCreatorModalOpen}
+      onClose={() => setIsOutlineCreatorModalOpen(false)}
+      onConfirm={handleGenerateFullOutline}
+      isLoading={isGeneratingFullOutline}
+      hasExistingContent={
+        chapters.length > 0 || allCharactersForProject.length > 0
+      }
+    />
+  );
+
+  const middleColumnContent = (
+    <>
+      <ContextualHeader
+        title="Outline Sections"
+        navControls={
+          <IconButton
+            icon={Sparkles}
+            aria-label="Generate Full Outline with AI"
+            onClick={() => setIsOutlineCreatorModalOpen(true)}
+            disabled={isGeneratingFullOutline}
+            title="AI Outline Creator"
+          />
+        }
+      />
+      <ListContainer>
+        <ListItem
+          title="Synopsis"
+          icon={FileText}
+          onClick={() => setOutlineView("synopsis")}
+          isSelected={outlineView === "synopsis"}
+        />
+        <ListItem
+          title="Scenes"
+          icon={ClipboardList}
+          onClick={() => setOutlineView("scenes")}
+          isSelected={outlineView === "scenes"}
+        />
+      </ListContainer>
+    </>
+  );
 
   // Handler passed to ChapterSceneOutlineList for when a scene's core fields are updated
   // This updates the master list of chapters in useManuscriptData
@@ -143,11 +242,9 @@ export function OutlineSection({
             return ch;
           })
         );
-        // If this scene is also the globally selected scene in Manuscript, update it there too
         setSelectedScene((prev) =>
           prev && prev.id === sceneId ? { ...prev, ...updatedScene } : prev
         );
-        // Only update scenes for the selected chapter in OutlineSection's context
         if (selectedChapter && selectedChapter.id === chapterId) {
           setScenesForSelectedChapter((prevScenes) =>
             prevScenes.map((s) =>
@@ -166,43 +263,10 @@ export function OutlineSection({
     ]
   );
 
-  if (!isActive) return null;
-
-  const renderOutlineSynopsisView = () => {
-    let allSceneOutlineDescriptions = "";
-    if (chapters && chapters.length > 0) {
-      const descriptionsArray: string[] = [];
-      chapters.forEach((chapter) => {
-        if (Array.isArray(chapter.scenes)) {
-          chapter.scenes.forEach((scene) => {
-            if (
-              scene.outline_description &&
-              scene.outline_description.trim() !== ""
-            ) {
-              const sceneTitlePrefix = scene.title
-                ? `Scene (${scene.title}): `
-                : "Scene: ";
-              descriptionsArray.push(
-                sceneTitlePrefix + scene.outline_description
-              );
-            }
-          });
-        }
-      });
-      if (descriptionsArray.length > 0) {
-        allSceneOutlineDescriptions =
-          "Existing Scene Outline Descriptions:\n" +
-          descriptionsArray.join("\n\n");
-      }
-    }
-
-    return (
-      <div className="p-4 space-y-6">
-        <div>
-          <h2 className="text-xl font-semibold mb-1">Project Synopses</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Edit your project&apos;s high-level summaries.
-          </p>
+  const mainDetailColumnContent = (
+    <>
+      {outlineView === "synopsis" ? (
+        <div className="bg-yellow-100 border-2 border-yellow-500 p-1">
           <ProjectSynopsisEditor
             project={{
               id: currentProjectDetails.id,
@@ -212,7 +276,35 @@ export function OutlineSection({
               genre_id: currentProjectDetails.genre_id,
             }}
             projectGenreName={currentProjectDetails.genre}
-            sceneOutlineDescriptions={allSceneOutlineDescriptions}
+            sceneOutlineDescriptions={(() => {
+              let allSceneOutlineDescriptions = "";
+              if (chapters && chapters.length > 0) {
+                const descriptionsArray: string[] = [];
+                chapters.forEach((chapter) => {
+                  if (Array.isArray(chapter.scenes)) {
+                    chapter.scenes.forEach((scene) => {
+                      if (
+                        scene.outline_description &&
+                        scene.outline_description.trim() !== ""
+                      ) {
+                        const sceneTitlePrefix = scene.title
+                          ? `Scene (${scene.title}): `
+                          : "Scene: ";
+                        descriptionsArray.push(
+                          sceneTitlePrefix + scene.outline_description
+                        );
+                      }
+                    });
+                  }
+                });
+                if (descriptionsArray.length > 0) {
+                  allSceneOutlineDescriptions =
+                    "Existing Scene Outline Descriptions:\n" +
+                    descriptionsArray.join("\n\n");
+                }
+              }
+              return allSceneOutlineDescriptions;
+            })()}
             onSynopsisUpdate={(data) => {
               const safeData = {
                 log_line: data.log_line ?? "",
@@ -223,82 +315,79 @@ export function OutlineSection({
               });
             }}
           />
+          <div className="p-4">
+            <div className="mb-6">
+              <Button
+                onClick={() => setIsOutlineCreatorModalOpen(true)}
+                disabled={
+                  isGeneratingFullOutline ||
+                  !currentProjectDetails?.one_page_synopsis?.trim()
+                }
+                className="w-full"
+                size="lg"
+              >
+                {isGeneratingFullOutline ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Outline...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Full Outline with AI
+                  </>
+                )}
+              </Button>
+              {!currentProjectDetails?.one_page_synopsis?.trim() && (
+                <Paragraph className="text-sm text-muted-foreground mt-2 text-center">
+                  Add a one-page synopsis above to enable AI outline generation
+                </Paragraph>
+              )}
+            </div>
+            <h3 className="text-lg font-semibold mt-6 mb-2">
+              Character Quick View
+            </h3>
+            {isLoadingAllChars && allCharactersForProject.length === 0 ? (
+              <Paragraph className="text-sm text-muted-foreground italic">
+                Loading characters...
+              </Paragraph>
+            ) : (
+              <CharacterCardQuickViewList
+                characters={allCharactersForProject}
+              />
+            )}
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold mt-6 mb-2">
-            Character Quick View
-          </h3>
-          {isLoadingAllChars && allCharactersForProject.length === 0 ? (
-            <Paragraph className="text-sm text-muted-foreground italic">
-              Loading characters...
+      ) : outlineView === "scenes" ? (
+        <div className="bg-blue-100 border-2 border-blue-500 p-1 h-full">
+          {isLoadingChapters && chapters.length === 0 ? (
+            <Paragraph className="p-4 text-sm text-muted-foreground">
+              Loading outline data...
             </Paragraph>
           ) : (
-            <CharacterCardQuickViewList characters={allCharactersForProject} />
+            <ChapterSceneOutlineList
+              chapters={chapters}
+              characters={allCharactersForProject}
+              sceneTags={allSceneTags}
+              projectId={initialProject.id}
+              onSceneUpdate={handleSceneUpdateFromOutlineList}
+            />
           )}
         </div>
-      </div>
-    );
-  };
-
-  const renderOutlineScenesView = () => {
-    if (isLoadingChapters && chapters.length === 0) {
-      return (
-        <Paragraph className="p-4 text-sm text-muted-foreground">
-          Loading outline data...
-        </Paragraph>
-      );
-    }
-    return (
-      <ChapterSceneOutlineList
-        chapters={chapters}
-        characters={allCharactersForProject}
-        sceneTags={allSceneTags}
-        projectId={initialProject.id}
-        onSceneUpdate={handleSceneUpdateFromOutlineList}
-      />
-    );
-  };
-
-  const middleColumnContent = (
-    <>
-      <ContextualHeader title="Outline Sections" />
-      <ListContainer>
-        <ListItem
-          title="Synopsis"
-          icon={FileText}
-          onClick={() => setOutlineView("synopsis")}
-          isSelected={outlineView === "synopsis"}
-        />
-        <ListItem
-          title="Scenes"
-          icon={ClipboardList}
-          onClick={() => setOutlineView("scenes")}
-          isSelected={outlineView === "scenes"}
-        />
-        <ListItem
-          icon={Sparkles}
-          onClick={() => setIsOutlineCreatorModalOpen(true)}
-          title={
-            !currentProjectDetails.one_page_synopsis
-              ? "Add a one-page synopsis first"
-              : "Generate Full Outline with AI"
-          }
-        />
-      </ListContainer>
+      ) : null}
     </>
   );
 
-  const mainDetailColumnContent = (
-    <>
-      {outlineView === "synopsis" && renderOutlineSynopsisView()}
-      {outlineView === "scenes" && renderOutlineScenesView()}
-    </>
-  );
+  if (!isActive) return null;
 
+  // Include the modal in the component's return
   return (
-    <SecondaryViewLayout
-      middleColumn={middleColumnContent}
-      mainDetailColumn={mainDetailColumnContent}
-    />
+    <>
+      <SecondaryViewLayout
+        middleColumn={middleColumnContent}
+        mainDetailColumn={mainDetailColumnContent}
+      />
+      {renderOutlineCreatorModal()}
+    </>
   );
 }

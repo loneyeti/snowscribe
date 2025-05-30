@@ -21,7 +21,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: ReorderParams }
 ) {
-  const { projectId, chapterId } = params;
+  const { projectId, chapterId } = await params;
 
   const supabase = await createClient();
 

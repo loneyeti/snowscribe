@@ -23,7 +23,7 @@ export interface ParsedScene {
   povCharacterName?: string;
   otherCharacterNames?: string[];
   tagNames?: string[];
-  primaryCategory: 'Action' | 'Dialogue' | 'Reflection' | 'Discovery' | 'Relationship' | 'Transition' | 'Worldbuilding';
+  primaryCategory?: 'Action' | 'Dialogue' | 'Reflection' | 'Discovery' | 'Relationship' | 'Transition' | 'Worldbuilding';
 }
 
 export interface ParsedChapter {

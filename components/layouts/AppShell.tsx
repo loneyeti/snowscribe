@@ -13,7 +13,7 @@ interface AppShellInjectedProps {
 
 interface AppShellProps {
   children: React.ReactNode;
-  project: Project & { genres: Genre | null };
+  project: Project & { genres: Genre | null; wordCount?: number };
 }
 
 export function AppShell({ children, project }: AppShellProps) {

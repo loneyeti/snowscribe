@@ -15,7 +15,10 @@ import { ProjectDataProvider } from "@/contexts/ProjectDataContext";
 import { AISection } from "@/components/dashboard/sections/AISection";
 
 interface ProjectDashboardClientProps {
-  project: Project & { genres: import("@/lib/types").SceneTag | null };
+  project: Project & {
+    genres: import("@/lib/types").Genre | null;
+    wordCount?: number;
+  };
   activeSection?: string;
 }
 

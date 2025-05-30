@@ -1,5 +1,6 @@
 import type { Scene } from "@/lib/types";
 import type { UpdateSceneValues } from "@/lib/schemas/scene.schema";
+import { getCookieHeader } from "./dataUtils";
 
 // This function is designed to be called from Client Components,
 // so it will use `fetch` directly.
@@ -15,11 +16,17 @@ export async function getScenesByChapterId(
     return [];
   }
 
+  const cookieHeader = await getCookieHeader();
+
   try {
     const response = await fetch(
       `${appUrl}/api/projects/${projectId}/chapters/${chapterId}/scenes`,
       {
         cache: "no-store",
+        headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { 'Cookie': cookieHeader }), // Conditionally add Cookie header
+      },
       }
     );
 
@@ -49,12 +56,16 @@ export async function updateScene(
   if (!appUrl) {
     throw new Error("NEXT_PUBLIC_APP_URL is not set. API calls will fail.");
   }
+  const cookieHeader = await getCookieHeader();
 
   const response = await fetch(
     `${appUrl}/api/projects/${projectId}/chapters/${chapterId}/scenes/${sceneId}`,
     {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { 'Cookie': cookieHeader }), // Conditionally add Cookie header
+      },
       body: JSON.stringify(data),
     }
   );
@@ -83,11 +94,16 @@ export async function updateSceneCharacters(
     throw new Error("NEXT_PUBLIC_APP_URL is not set. API calls will fail.");
   }
 
+  const cookieHeader = await getCookieHeader();
+
   const response = await fetch(
     `${appUrl}/api/projects/${projectId}/scenes/${sceneId}/characters`,
     {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { 'Cookie': cookieHeader }), // Conditionally add Cookie header
+      },
       body: JSON.stringify({ characterIds }),
     }
   );
@@ -114,11 +130,16 @@ export async function updateSceneTags(
     throw new Error("NEXT_PUBLIC_APP_URL is not set. API calls will fail.");
   }
 
+  const cookieHeader = await getCookieHeader();
+
   const response = await fetch(
     `${appUrl}/api/projects/${projectId}/scenes/${sceneId}/tags`,
     {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { 'Cookie': cookieHeader }), // Conditionally add Cookie header
+      },
       body: JSON.stringify({ tagIds }),
     }
   );

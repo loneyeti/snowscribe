@@ -99,7 +99,9 @@ export function CharactersSection({
                 ? selectedCharacter.image_url
                 : undefined,
           }}
-          onSave={handleSaveCharacterEditorData}
+          onSave={async (data) => {
+            await handleSaveCharacterEditorData(data);
+          }}
           onDelete={async () => {
             await handleCharacterDeleted(selectedCharacter.id);
           }}
