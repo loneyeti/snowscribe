@@ -5,6 +5,7 @@ import type {
   Project,
   Chapter,
   Character as ProjectCharacter,
+  Scene,
   SceneTag,
   WorldBuildingNote,
   AIMessage,
@@ -67,6 +68,9 @@ export function AISection({ project, isActive }: AISectionProps) {
   >(null);
   const [selectedCharacterForChat, setSelectedCharacterForChat] =
     useState<ProjectCharacter | null>(null);
+  const [allScenesForSelectedChar, setAllScenesForSelectedChar] = useState<
+    Scene[] | null
+  >(null);
   const [worldNotes, setWorldNotes] = useState<WorldBuildingNote[] | null>(
     null
   );
@@ -108,79 +112,113 @@ export function AISection({ project, isActive }: AISectionProps) {
     }
   }, [isActive, clearChat]);
 
+  // Fetch manuscript chapters when needed
+  useEffect(() => {
+    if (!isActive || !selectedTool) return;
+
+    const shouldFetchManuscript =
+      (selectedTool === AI_TOOL_NAMES.MANUSCRIPT_CHAT ||
+        (selectedTool === AI_TOOL_NAMES.PLOT_HOLE_CHECKER &&
+          plotHoleContextType === "manuscript")) &&
+      !manuscriptChapters;
+
+    if (shouldFetchManuscript) {
+      setIsContextLoading(true);
+      getChaptersByProjectId(project.id)
+        .then(setManuscriptChapters)
+        .catch(console.error)
+        .finally(() => setIsContextLoading(false));
+    }
+  }, [isActive, selectedTool, plotHoleContextType, project.id]);
+
+  // Fetch outline data when needed
+  useEffect(() => {
+    if (!isActive || !selectedTool) return;
+
+    const shouldFetchOutline =
+      (selectedTool === AI_TOOL_NAMES.OUTLINE_CHAT ||
+        (selectedTool === AI_TOOL_NAMES.PLOT_HOLE_CHECKER &&
+          plotHoleContextType === "outline")) &&
+      !outlineData;
+
+    if (shouldFetchOutline) {
+      setIsContextLoading(true);
+      Promise.all([
+        getChaptersByProjectId(project.id),
+        getCharacters(project.id),
+      ])
+        .then(([chapters, charactersList]) => {
+          setOutlineData({
+            chapters,
+            characters: charactersList,
+            sceneTags: allSceneTags,
+          });
+        })
+        .catch(console.error)
+        .finally(() => setIsContextLoading(false));
+    }
+  }, [isActive, selectedTool, plotHoleContextType, project.id, allSceneTags]);
+
+  // Fetch characters for chat
   useEffect(() => {
     if (
       !isActive ||
-      !selectedTool ||
-      (selectedTool === AI_TOOL_NAMES.PLOT_HOLE_CHECKER && !plotHoleContextType)
-    ) {
+      selectedTool !== AI_TOOL_NAMES.CHARACTER_CHAT ||
+      charactersForChat
+    )
       return;
-    }
 
-    const fetchContextData = async () => {
-      setIsContextLoading(true);
-      toast.info("Loading context data...");
-      try {
-        if (
-          selectedTool === AI_TOOL_NAMES.MANUSCRIPT_CHAT ||
-          (selectedTool === AI_TOOL_NAMES.PLOT_HOLE_CHECKER &&
-            plotHoleContextType === "manuscript")
-        ) {
-          if (!manuscriptChapters || plotHoleContextType === "manuscript") {
-            const chapters = await getChaptersByProjectId(project.id);
-            setManuscriptChapters(chapters);
-          }
-        } else if (
-          selectedTool === AI_TOOL_NAMES.OUTLINE_CHAT ||
-          (selectedTool === AI_TOOL_NAMES.PLOT_HOLE_CHECKER &&
-            plotHoleContextType === "outline")
-        ) {
-          if (!outlineData || plotHoleContextType === "outline") {
-            const chapters = await getChaptersByProjectId(project.id);
-            const charactersList = await getCharacters(project.id);
-            setOutlineData({
-              chapters,
-              characters: charactersList,
-              sceneTags: allSceneTags,
-            });
-          }
-        } else if (selectedTool === AI_TOOL_NAMES.CHARACTER_CHAT) {
-          if (!charactersForChat) {
-            const chars = await getCharacters(project.id);
-            setCharactersForChat(chars);
-          }
-        } else if (selectedTool === AI_TOOL_NAMES.WORLD_BUILDING_CHAT) {
-          if (!worldNotes) {
-            const notes = await getWorldBuildingNotes(project.id);
-            setWorldNotes(notes);
-          }
-        }
-        toast.success("Context data loaded.");
-      } catch (err) {
-        console.error("Failed to fetch context data:", err);
-        toast.error(
-          err instanceof Error
-            ? err.message
-            : "Failed to load context for AI tool."
-        );
-      } finally {
-        setIsContextLoading(false);
-      }
-    };
+    setIsContextLoading(true);
+    getCharacters(project.id)
+      .then(setCharactersForChat)
+      .catch(console.error)
+      .finally(() => setIsContextLoading(false));
+  }, [isActive, selectedTool, project.id, charactersForChat]);
 
-    fetchContextData();
-  }, [
-    selectedTool,
-    plotHoleContextType,
-    isActive,
-    project.id,
-    activeToolDefinition?.name,
-    allSceneTags,
-    manuscriptChapters,
-    outlineData,
-    charactersForChat,
-    worldNotes,
-  ]);
+  // Fetch character scenes
+  useEffect(() => {
+    if (
+      !isActive ||
+      selectedTool !== AI_TOOL_NAMES.CHARACTER_CHAT ||
+      !selectedCharacterForChat
+    )
+      return;
+
+    setIsContextLoading(true);
+    getChaptersByProjectId(project.id)
+      .then((allChapters) => {
+        const scenesCharacterIsIn: Scene[] = [];
+        allChapters.forEach((chapter) => {
+          chapter.scenes?.forEach((scene) => {
+            const isPov =
+              scene.pov_character_id === selectedCharacterForChat.id;
+            const isOther = scene.other_character_ids?.includes(
+              selectedCharacterForChat.id
+            );
+            if (isPov || isOther) scenesCharacterIsIn.push(scene);
+          });
+        });
+        setAllScenesForSelectedChar(scenesCharacterIsIn);
+      })
+      .catch(console.error)
+      .finally(() => setIsContextLoading(false));
+  }, [isActive, selectedTool, project.id, selectedCharacterForChat]);
+
+  // Fetch world notes
+  useEffect(() => {
+    if (
+      !isActive ||
+      selectedTool !== AI_TOOL_NAMES.WORLD_BUILDING_CHAT ||
+      worldNotes
+    )
+      return;
+
+    setIsContextLoading(true);
+    getWorldBuildingNotes(project.id)
+      .then(setWorldNotes)
+      .catch(console.error)
+      .finally(() => setIsContextLoading(false));
+  }, [isActive, selectedTool, project.id, worldNotes]);
 
   const handleSendMessageWrapper = async (userText: string) => {
     if (!selectedTool || !activeToolDefinition) {
@@ -208,13 +246,21 @@ export function AISection({ project, isActive }: AISectionProps) {
         break;
       case AI_TOOL_NAMES.CHARACTER_CHAT:
         if (!selectedCharacterForChat) {
-          toast.error("Please select a character.");
+          toast.error("Please select a character to chat with.");
+          return;
+        }
+        // Check if the scene context is still loading or hasn't been fetched
+        if (isContextLoading || allScenesForSelectedChar === null) {
+          toast.info(
+            `Scene context for ${selectedCharacterForChat.name} is loading. Please wait.`
+          );
           return;
         }
         contextForAI = {
           character: selectedCharacterForChat,
-          relatedScenes: [],
+          relatedScenes: allScenesForSelectedChar,
         };
+        toolNameToUseInAIService = AI_TOOL_NAMES.CHARACTER_CHAT;
         break;
       case AI_TOOL_NAMES.WORLD_BUILDING_CHAT:
         if (!worldNotes) {
@@ -271,6 +317,13 @@ export function AISection({ project, isActive }: AISectionProps) {
       toast.info("Context data is still loading. Please wait and try again.");
       return;
     }
+
+    // Prevent multiple simultaneous requests
+    if (isChatLoading) {
+      toast.info("Analysis is already in progress. Please wait.");
+      return;
+    }
+
     const plotHolePrompt = `Analyze the provided ${plotHoleContextType} for potential plot holes, inconsistencies, or unresolved questions. Provide a list of your findings.`;
     clearChat();
     await handleSendMessageWrapper(plotHolePrompt);
@@ -278,6 +331,7 @@ export function AISection({ project, isActive }: AISectionProps) {
 
   const handleCharacterSelectForChat = (character: ProjectCharacter) => {
     setSelectedCharacterForChat(character);
+    setAllScenesForSelectedChar(null); // Reset scene context when selecting a new character
     clearChat();
     setUiMessages([
       {
@@ -416,15 +470,25 @@ export function AISection({ project, isActive }: AISectionProps) {
                 {!selectedCharacterForChat && !charactersForChat && (
                   <Paragraph>Loading characters...</Paragraph>
                 )}
-                {selectedCharacterForChat && (
-                  <MultiTurnChatInterface
-                    uiMessages={uiMessages}
-                    isLoading={isChatLoading}
-                    error={chatError}
-                    onSendMessage={handleSendMessageWrapper}
-                    className="flex-grow"
-                  />
-                )}
+                {selectedCharacterForChat &&
+                  (isContextLoading || allScenesForSelectedChar === null) && (
+                    <Paragraph className="text-center p-4">
+                      Loading all scene context for{" "}
+                      {selectedCharacterForChat.name}...
+                    </Paragraph>
+                  )}
+
+                {selectedCharacterForChat &&
+                  !isContextLoading &&
+                  allScenesForSelectedChar !== null && (
+                    <MultiTurnChatInterface
+                      uiMessages={uiMessages}
+                      isLoading={isChatLoading}
+                      error={chatError}
+                      onSendMessage={handleSendMessageWrapper}
+                      className="flex-grow"
+                    />
+                  )}
               </div>
             )}
 
@@ -493,6 +557,11 @@ export function AISection({ project, isActive }: AISectionProps) {
                 >
                   {isChatLoading ? "Analyzing..." : "Check for Plot Holes"}
                 </Button>
+                {isChatLoading && (
+                  <Paragraph className="text-sm text-muted-foreground ml-2">
+                    This may take a moment...
+                  </Paragraph>
+                )}
               </div>
               {plotHoleContextType &&
                 !isContextLoading &&

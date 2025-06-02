@@ -91,27 +91,38 @@ export function formatOutlineForAI(outlineData: { chapters: Chapter[]; character
  * @returns A string representation of the character's profile and involvement.
  * @todo Consider token limits.
  */
-export function formatCharacterForAI(character: Character, relatedScenes: Scene[]): string {
+export function formatCharacterForAI(character: Character, allScenesCharacterIsIn: Scene[]): string {
   if (!character) {
-    return "No character data available.";
+    return "CHARACTER PROFILE UNAVAILABLE FOR IMPERSONATION.";
   }
-  let formattedCharacter = `## Character Profile: ${character.name}\n\n`;
-  formattedCharacter += `Name: ${character.name}\n`;
-  if (character.nickname) formattedCharacter += `Nickname: ${character.nickname}\n`;
-  if (character.description) formattedCharacter += `Description: ${character.description}\n`;
-  // The 'appearance' field might be part of 'description' or 'notes' based on schema.
-  // Assuming character.notes is a string. If it's JSONB, this needs specific handling.
-  if (character.notes) formattedCharacter += `Notes:\n${character.notes}\n`; 
-  
-  formattedCharacter += "\n### Appears in Scenes:\n";
-  if (relatedScenes && relatedScenes.length > 0) {
-    relatedScenes.forEach(scene => {
-      formattedCharacter += `- **${scene.title || 'Untitled Scene'}**: ${scene.outline_description || 'Interacts in this scene.'}\n`;
+  let formattedContext = `## IMPERSONATE THIS CHARACTER:\n\n### Character Profile: ${character.name}\n`;
+  if (character.nickname) formattedContext += `Nickname: ${character.nickname}\n`;
+  if (character.description) formattedContext += `Description: ${character.description}\n`;
+  // The 'notes' field is TEXT, so we can directly include it.
+  if (character.notes) formattedContext += `Detailed Notes/Backstory/Motivations:\n${character.notes}\n`;
+
+  formattedContext += "\n### SCENE CONTEXTS (Excerpts from scenes this character appears in):\n";
+  if (allScenesCharacterIsIn && allScenesCharacterIsIn.length > 0) {
+    allScenesCharacterIsIn.forEach((scene, index) => {
+      formattedContext += `\n--- Scene Excerpt ${index + 1} ---\n`;
+      formattedContext += `Title: ${scene.title || 'Untitled Scene'}\n`;
+      if (scene.outline_description) formattedContext += `Outline/Summary: ${scene.outline_description}\n`;
+      
+      const isPov = scene.pov_character_id === character.id;
+      const povInfo = isPov ? ` (This scene is from ${character.name}'s Point of View.)` : "";
+      formattedContext += `Role in Scene: ${isPov ? 'POV Character' : 'Present Character'}${povInfo}\n`;
+
+      // Provide a snippet of scene content for context
+      const sceneContentSnippet = scene.content 
+        ? (scene.content.length > 750 ? scene.content.substring(0, 750) + "..." : scene.content) 
+        : "No detailed content provided for this scene excerpt.";
+      formattedContext += `Content Snippet:\n"""\n${sceneContentSnippet}\n"""\n`;
     });
   } else {
-    formattedCharacter += "Not currently linked to any scenes for detailed context.\n";
+    formattedContext += "This character has not yet appeared in any scenes with detailed content provided in this context.\n";
   }
-  return formattedCharacter.trim();
+  formattedContext += "\nIMPORTANT: You are to respond *as* this character, using all the provided information to inform your personality, knowledge, and replies. Do not break character.\n";
+  return formattedContext.trim();
 }
 
 /**

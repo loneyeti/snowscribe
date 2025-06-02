@@ -88,6 +88,12 @@ export async function sendMessage(
           // For outline generation, we don't need formatted context - the synopsis is passed as userPrompt
           formattedContext = "";
           break;
+        case 'plot_hole_checker_outline':
+          formattedContext = (await import('@/lib/ai/contextFormatters')).formatOutlineForAI(contextData as { chapters: Chapter[]; characters: Character[]; sceneTags: SceneTag[] });
+          break;
+        case 'plot_hole_checker_manuscript':
+          formattedContext = (await import('@/lib/ai/contextFormatters')).formatManuscriptForAI((contextData as { chapters: Chapter[] }).chapters);
+          break;
         // Example for a non-context tool:
         case 'writing_coach': 
           // No specific project context needed for a general writing coach

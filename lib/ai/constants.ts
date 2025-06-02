@@ -11,6 +11,10 @@ export const AI_TOOL_NAMES = {
   // Specific tool names for AISMessageHandler if prompts/logic differ significantly
   PLOT_HOLE_CHECKER_MANUSCRIPT: 'plot_hole_checker_manuscript',
   PLOT_HOLE_CHECKER_OUTLINE: 'plot_hole_checker_outline',
+  // New tools for scene metadata analysis
+  SCENE_CHARACTER_ANALYZER: 'scene_character_analyzer',
+  SCENE_TAG_SUGGESTER: 'scene_tag_suggester',
+  SCENE_CATEGORY_SUGGESTER: 'scene_category_suggester',
 } as const;
 
 export type AIToolName = typeof AI_TOOL_NAMES[keyof typeof AI_TOOL_NAMES];

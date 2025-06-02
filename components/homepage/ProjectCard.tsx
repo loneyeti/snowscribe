@@ -67,42 +67,43 @@ const ProjectCard = React.forwardRef<HTMLDivElement, ProjectCardProps>(
           </div>
         )}
 
-        <Link href={`/project/${id}`} passHref legacyBehavior>
-          <a className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-lg">
-            {thumbnailUrl && (
-              <div className="relative">
-                <img
-                  src={thumbnailUrl}
-                  alt={`${title} thumbnail`}
-                  className="rounded-t-xl object-cover h-48 w-full"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-t-xl" />
-              </div>
-            )}
-            <div className="p-6">
-              <Heading level={3} className="mb-2 pr-8">
-                {title}
-              </Heading>
-              {genre && (
-                <Paragraph variant="muted" className="mb-1 text-sm">
-                  {genre}
-                </Paragraph>
-              )}
-              {wordCount !== undefined && (
-                <Paragraph variant="small" className="mb-1">
-                  {wordCount.toLocaleString()} words
-                </Paragraph>
-              )}
-              {lastUpdated && (
-                <Paragraph
-                  variant="small"
-                  className="text-xs text-muted-foreground"
-                >
-                  Last updated: {lastUpdated}
-                </Paragraph>
-              )}
+        <Link
+          href={`/project/${id}`}
+          className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-lg"
+        >
+          {thumbnailUrl && (
+            <div className="relative">
+              <img
+                src={thumbnailUrl}
+                alt={`${title} thumbnail`}
+                className="rounded-t-xl object-cover h-48 w-full"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-t-xl" />
             </div>
-          </a>
+          )}
+          <div className="p-6">
+            <Heading level={3} className="mb-2 pr-8">
+              {title}
+            </Heading>
+            {genre && (
+              <Paragraph variant="muted" className="mb-1 text-sm">
+                {genre}
+              </Paragraph>
+            )}
+            {wordCount !== undefined && (
+              <Paragraph variant="small" className="mb-1">
+                {wordCount.toLocaleString()} words
+              </Paragraph>
+            )}
+            {lastUpdated && (
+              <Paragraph
+                variant="small"
+                className="text-xs text-muted-foreground"
+              >
+                Last updated: {lastUpdated}
+              </Paragraph>
+            )}
+          </div>
         </Link>
 
         {/* Confirmation Dialog */}

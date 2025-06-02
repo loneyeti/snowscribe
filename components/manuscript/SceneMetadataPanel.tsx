@@ -16,7 +16,10 @@ import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Separator } from "@/components/ui/Separator";
 import { ManageSceneCharactersModal } from "@/components/modals/ManageSceneCharactersModal";
 import { ManageSceneTagsModal } from "@/components/modals/ManageSceneTagsModal";
-import { X, Edit3, Save } from "lucide-react";
+import { X, Edit3, Save, Sparkles, Loader2 } from "lucide-react";
+import { sendMessage } from "@/lib/ai/AISMessageHandler";
+import { AI_TOOL_NAMES } from "@/lib/ai/constants";
+import { toast } from "sonner";
 
 export interface SceneMetadataPanelProps {
   isOpen: boolean;
@@ -70,6 +73,25 @@ export function SceneMetadataPanel({
   const [isManageCharsModalOpen, setIsManageCharsModalOpen] = useState(false);
   const [isManageTagsModalOpen, setIsManageTagsModalOpen] = useState(false);
 
+  const [isAnalyzingCharacters, setIsAnalyzingCharacters] = useState(false);
+  const [isSuggestingTags, setIsSuggestingTags] = useState(false);
+  const [isSuggestingCategory, setIsSuggestingCategory] = useState(false);
+
+  const PREDEFINED_GLOBAL_TAG_NAMES = [
+    "Opening Hook",
+    "Inciting Incident",
+    "Plot Twist",
+    "Climactic",
+    "Resolution",
+    "Character Introduction",
+    "Flashback",
+    "Foreshadowing",
+    "Comic Relief",
+    "Romantic",
+    "Suspense Building",
+    "Info Dump",
+  ];
+
   useEffect(() => {
     setCurrentDescription(scene.outline_description || "");
     setCurrentCategory(scene.primary_category);
@@ -89,6 +111,251 @@ export function SceneMetadataPanel({
   const handleSavePov = async () => {
     await onSceneUpdate({ pov_character_id: currentPovCharId });
     setIsEditingPov(false);
+  };
+
+  const handleSuggestCharacters = async () => {
+    if (!scene.content?.trim()) {
+      toast.info("Scene content is empty. Cannot analyze characters.");
+      return;
+    }
+    setIsAnalyzingCharacters(true);
+    const toastId = toast.loading("AI is analyzing characters in the scene...");
+
+    try {
+      const userPrompt = `Analyze the following scene content to identify the POV character and other characters present:\n\n${scene.content}`;
+
+      const aiResponse = await sendMessage(
+        projectId,
+        AI_TOOL_NAMES.SCENE_CHARACTER_ANALYZER,
+        userPrompt,
+        { sceneContent: scene.content }
+      );
+
+      if (
+        aiResponse.content &&
+        aiResponse.content.length > 0 &&
+        aiResponse.content[0].type === "text"
+      ) {
+        const responseText = (
+          aiResponse.content[0] as import("snowgander").TextBlock
+        ).text;
+        const parsedResponse = JSON.parse(responseText) as {
+          povCharacterName: string | null;
+          otherCharacterNames: string[];
+        };
+
+        let newPovCharacterId: string | null = null;
+        if (parsedResponse.povCharacterName) {
+          const foundPov = allProjectCharacters.find(
+            (c) =>
+              c.name.toLowerCase() ===
+              parsedResponse.povCharacterName!.toLowerCase()
+          );
+          if (foundPov) {
+            newPovCharacterId = foundPov.id;
+          } else {
+            toast.info(
+              `AI suggested POV character "${parsedResponse.povCharacterName}" not found in project characters.`
+            );
+          }
+        }
+
+        const newOtherCharacterIds: string[] = [];
+        if (
+          parsedResponse.otherCharacterNames &&
+          parsedResponse.otherCharacterNames.length > 0
+        ) {
+          parsedResponse.otherCharacterNames.forEach((name) => {
+            const foundChar = allProjectCharacters.find(
+              (c) => c.name.toLowerCase() === name.toLowerCase()
+            );
+            if (foundChar && foundChar.id !== newPovCharacterId) {
+              newOtherCharacterIds.push(foundChar.id);
+            } else if (!foundChar) {
+              toast.info(
+                `AI suggested other character "${name}" not found in project characters.`
+              );
+            }
+          });
+        }
+
+        if (newPovCharacterId !== scene.pov_character_id) {
+          await onSceneUpdate({ pov_character_id: newPovCharacterId });
+        }
+
+        const currentOtherIds = scene.other_character_ids || [];
+        const sortedNewOtherIds = [...newOtherCharacterIds].sort();
+        const sortedCurrentOtherIds = [...currentOtherIds].sort();
+        if (
+          JSON.stringify(sortedNewOtherIds) !==
+          JSON.stringify(sortedCurrentOtherIds)
+        ) {
+          await onCharacterLinkChange(newOtherCharacterIds);
+        }
+
+        toast.success("Characters suggested by AI and updated.", {
+          id: toastId,
+        });
+      } else {
+        const errorBlock = aiResponse.content?.find(
+          (block) => block.type === "error"
+        ) as import("snowgander").ErrorBlock | undefined;
+        throw new Error(
+          errorBlock?.publicMessage || "AI did not return valid character data."
+        );
+      }
+    } catch (error) {
+      console.error("Failed to suggest characters:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not suggest characters.",
+        { id: toastId }
+      );
+    } finally {
+      setIsAnalyzingCharacters(false);
+    }
+  };
+
+  const handleSuggestTags = async () => {
+    if (!scene.content?.trim()) {
+      toast.info("Scene content is empty. Cannot suggest tags.");
+      return;
+    }
+    setIsSuggestingTags(true);
+    const toastId = toast.loading("AI is suggesting tags for the scene...");
+
+    try {
+      const userPrompt = `Analyze the following scene content and suggest relevant tags from the predefined list:\n\n${scene.content}`;
+
+      const aiResponse = await sendMessage(
+        projectId,
+        AI_TOOL_NAMES.SCENE_TAG_SUGGESTER,
+        userPrompt,
+        { sceneContent: scene.content }
+      );
+
+      if (
+        aiResponse.content &&
+        aiResponse.content.length > 0 &&
+        aiResponse.content[0].type === "text"
+      ) {
+        const responseText = (
+          aiResponse.content[0] as import("snowgander").TextBlock
+        ).text;
+        const parsedResponse = JSON.parse(responseText) as {
+          suggestedTagNames: string[];
+        };
+
+        const validSuggestedTagNames = (
+          parsedResponse.suggestedTagNames || []
+        ).filter((name) =>
+          PREDEFINED_GLOBAL_TAG_NAMES.some(
+            (predefined) => predefined.toLowerCase() === name.toLowerCase()
+          )
+        );
+
+        const newTagIds = validSuggestedTagNames
+          .map((name) => {
+            const foundTag = allProjectSceneTags.find(
+              (t) =>
+                t.name.toLowerCase() === name.toLowerCase() &&
+                t.project_id === null
+            );
+            return foundTag?.id;
+          })
+          .filter((id): id is string => !!id);
+
+        await onTagLinkChange(newTagIds);
+
+        toast.success("Scene tags suggested by AI and updated.", {
+          id: toastId,
+        });
+      } else {
+        const errorBlock = aiResponse.content?.find(
+          (block) => block.type === "error"
+        ) as import("snowgander").ErrorBlock | undefined;
+        throw new Error(
+          errorBlock?.publicMessage || "AI did not return valid tag data."
+        );
+      }
+    } catch (error) {
+      console.error("Failed to suggest tags:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Could not suggest tags.",
+        { id: toastId }
+      );
+    } finally {
+      setIsSuggestingTags(false);
+    }
+  };
+
+  const handleSuggestCategory = async () => {
+    if (!scene.content?.trim()) {
+      toast.info("Scene content is empty. Cannot suggest category.");
+      return;
+    }
+    setIsSuggestingCategory(true);
+    const toastId = toast.loading("AI is suggesting a primary category...");
+
+    try {
+      const userPrompt = `Analyze the following scene content and suggest the most fitting primary category:\n\n${scene.content}`;
+
+      const aiResponse = await sendMessage(
+        projectId,
+        AI_TOOL_NAMES.SCENE_CATEGORY_SUGGESTER,
+        userPrompt,
+        { sceneContent: scene.content }
+      );
+
+      if (
+        aiResponse.content &&
+        aiResponse.content.length > 0 &&
+        aiResponse.content[0].type === "text"
+      ) {
+        const responseText = (
+          aiResponse.content[0] as import("snowgander").TextBlock
+        ).text;
+        const parsedResponse = JSON.parse(responseText) as {
+          suggestedCategory: string;
+        };
+
+        const suggestedCategory = parsedResponse.suggestedCategory;
+        if (
+          ALL_PRIMARY_SCENE_CATEGORIES.includes(
+            suggestedCategory as PrimarySceneCategory
+          )
+        ) {
+          await onSceneUpdate({
+            primary_category: suggestedCategory as PrimarySceneCategory,
+          });
+          setCurrentCategory(suggestedCategory as PrimarySceneCategory);
+          toast.success(
+            `Primary category suggested by AI and set to "${suggestedCategory}".`,
+            { id: toastId }
+          );
+        } else {
+          throw new Error(
+            `AI suggested an invalid category: "${suggestedCategory}".`
+          );
+        }
+      } else {
+        const errorBlock = aiResponse.content?.find(
+          (block) => block.type === "error"
+        ) as import("snowgander").ErrorBlock | undefined;
+        throw new Error(
+          errorBlock?.publicMessage || "AI did not return valid category data."
+        );
+      }
+    } catch (error) {
+      console.error("Failed to suggest category:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Could not suggest category.",
+        { id: toastId }
+      );
+    } finally {
+      setIsSuggestingCategory(false);
+    }
   };
 
   useEffect(() => {
@@ -261,11 +528,36 @@ export function SceneMetadataPanel({
                 </div>
               </>
             ) : (
-              <Paragraph className="text-sm text-foreground bg-muted/30 p-2 rounded-md min-h-[36px] flex items-center">
-                {currentCategory || (
-                  <span className="italic text-muted-foreground">Not set.</span>
-                )}
-              </Paragraph>
+              <>
+                <Paragraph className="text-sm text-foreground bg-muted/30 p-2 rounded-md min-h-[36px] flex items-center">
+                  {currentCategory || (
+                    <span className="italic text-muted-foreground">
+                      Not set.
+                    </span>
+                  )}
+                </Paragraph>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs w-full h-8 mt-1"
+                  onClick={handleSuggestCategory}
+                  disabled={isSuggestingCategory || !scene.content?.trim()}
+                  title={
+                    !scene.content?.trim()
+                      ? "Scene content is empty. Add content to enable AI suggestions."
+                      : "Suggest primary category based on scene content"
+                  }
+                >
+                  {isSuggestingCategory ? (
+                    <Loader2 size={14} className="mr-1.5 animate-spin" />
+                  ) : (
+                    <Sparkles size={14} className="mr-1.5" />
+                  )}
+                  {isSuggestingCategory
+                    ? "Suggesting Category..."
+                    : "AI Suggest Category"}
+                </Button>
+              </>
             )}
           </section>
           <Separator />
@@ -301,14 +593,35 @@ export function SceneMetadataPanel({
                 </Paragraph>
               )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs w-full h-8"
-              onClick={() => setIsManageTagsModalOpen(true)}
-            >
-              Manage Tags
-            </Button>
+            <div className="flex flex-col gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs w-full h-8"
+                onClick={() => setIsManageTagsModalOpen(true)}
+              >
+                Manage Tags
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs w-full h-8"
+                onClick={handleSuggestTags}
+                disabled={isSuggestingTags || !scene.content?.trim()}
+                title={
+                  !scene.content?.trim()
+                    ? "Scene content is empty. Add content to enable AI suggestions."
+                    : "Suggest tags based on scene content"
+                }
+              >
+                {isSuggestingTags ? (
+                  <Loader2 size={14} className="mr-1.5 animate-spin" />
+                ) : (
+                  <Sparkles size={14} className="mr-1.5" />
+                )}
+                {isSuggestingTags ? "Suggesting Tags..." : "AI Suggest Tags"}
+              </Button>
+            </div>
           </section>
           <Separator />
 
@@ -396,6 +709,27 @@ export function SceneMetadataPanel({
               onClick={() => setIsManageCharsModalOpen(true)}
             >
               Manage Characters
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs w-full h-8 mt-1"
+              onClick={handleSuggestCharacters}
+              disabled={isAnalyzingCharacters || !scene.content?.trim()}
+              title={
+                !scene.content?.trim()
+                  ? "Scene content is empty. Add content to enable AI suggestions."
+                  : "Suggest characters based on scene content"
+              }
+            >
+              {isAnalyzingCharacters ? (
+                <Loader2 size={14} className="mr-1.5 animate-spin" />
+              ) : (
+                <Sparkles size={14} className="mr-1.5" />
+              )}
+              {isAnalyzingCharacters
+                ? "Analyzing Characters..."
+                : "AI Suggest Characters"}
             </Button>
           </section>
         </ScrollArea>

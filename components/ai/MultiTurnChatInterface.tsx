@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
+import MarkdownComponent from "./MarkdownComponent";
 
 export interface CustomAction {
   label: string;
@@ -65,7 +66,9 @@ export function MultiTurnChatInterface({
                 : "bg-gray-100 self-start"
             )}
           >
-            <p>{msg.text}</p>
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <MarkdownComponent markdown={msg.text} />
+            </div>
           </div>
         ))}
         {error && <div className="text-red-600">{error}</div>}
