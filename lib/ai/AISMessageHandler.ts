@@ -33,7 +33,7 @@ export async function sendMessage(
     // 1. Fetch Tool-Specific Configuration
     const toolModelEntry = await getToolModelByToolName(toolName);
     if (!toolModelEntry || !toolModelEntry.model_id) {
-      const errorMsg = `Tool model configuration for '${toolName}' not found or model_id missing.`;
+      const errorMsg = `Tool model configuration for '${toolName}' not found or model_id missing: ${JSON.stringify(toolModelEntry)}`;
       console.error(`[AISMessageHandler] ${errorMsg}`);
       return {
         role: 'assistant',

@@ -18,11 +18,21 @@ import {
   AlertDialogAction,
 } from "@/components/ui/AlertDialog";
 import { toast } from "sonner";
-import { Cpu, Database, FileText, Pencil, Trash2 } from "lucide-react";
+import {
+  Cpu,
+  Database,
+  FileText,
+  Pencil,
+  Settings2,
+  Trash2,
+} from "lucide-react";
 import { type AIModel, type AIVendor, type AIPrompt } from "@/lib/types";
+import { type ToolModelWithAIModel } from "@/lib/schemas/toolModel.schema";
 import { getAIModels, deleteAIModel } from "@/lib/data/aiModels";
 import { getAIVendors, deleteAIVendor } from "@/lib/data/aiVendors";
 import { getAIPrompts, deleteAIPrompt } from "@/lib/data/aiPrompts";
+import { getToolModelsWithAIModel } from "@/lib/data/toolModels";
+import { EditToolModelModal } from "@/components/settings/EditToolModelModal";
 import { CreateAIModelModal } from "@/components/settings/CreateAIModelModal";
 import { EditAIModelModal } from "@/components/settings/EditAIModelModal";
 import { CreateAIVendorModal } from "@/components/settings/CreateAIVendorModal";
@@ -31,7 +41,12 @@ import { CreateAIPromptModal } from "@/components/settings/CreateAIPromptModal";
 import { EditAIPromptModal } from "@/components/settings/EditAIPromptModal";
 
 type SettingsCategory = "AI" | null;
-type AISubCategory = "AI Models" | "AI Vendors" | "AI Prompts" | null;
+type AISubCategory =
+  | "AI Models"
+  | "AI Vendors"
+  | "AI Prompts"
+  | "Tool Models"
+  | null;
 
 export function SiteSettingsClient() {
   const [selectedCategory, setSelectedCategory] =
@@ -74,6 +89,14 @@ export function SiteSettingsClient() {
     null
   );
 
+  // Tool Models
+  const [toolModels, setToolModels] = useState<ToolModelWithAIModel[]>([]);
+  const [isLoadingToolModels, setIsLoadingToolModels] = useState(false);
+  const [selectedToolModelForEdit, setSelectedToolModelForEdit] =
+    useState<ToolModelWithAIModel | null>(null);
+  const [isEditToolModelModalOpen, setIsEditToolModelModalOpen] =
+    useState(false);
+
   // Fetch functions
   const fetchAIModels = useCallback(async () => {
     setIsLoadingAIModels(true);
@@ -108,18 +131,42 @@ export function SiteSettingsClient() {
     }
   }, []);
 
+  const fetchToolModels = useCallback(async () => {
+    setIsLoadingToolModels(true);
+    try {
+      setToolModels(await getToolModelsWithAIModel());
+    } catch {
+      toast.error("Failed to load Tool Models.");
+    } finally {
+      setIsLoadingToolModels(false);
+    }
+  }, []);
+
   // Load on category/subcategory change
   useEffect(() => {
-    if (selectedCategory === "AI") fetchAIVendors();
-    if (selectedSubCategory === "AI Models") fetchAIModels();
-    else if (selectedSubCategory === "AI Vendors") fetchAIVendors();
-    else if (selectedSubCategory === "AI Prompts") fetchAIPrompts();
+    // Fetch vendors if AI category is selected - common dependency
+    if (selectedCategory === "AI") {
+      fetchAIVendors();
+    }
+
+    // Fetch data based on sub-category
+    if (selectedSubCategory === "AI Models") {
+      fetchAIModels();
+    } else if (selectedSubCategory === "AI Vendors") {
+      // fetchAIVendors(); // This is likely already handled by selectedCategory === "AI"
+    } else if (selectedSubCategory === "AI Prompts") {
+      fetchAIPrompts();
+    } else if (selectedSubCategory === "Tool Models") {
+      fetchToolModels();
+      fetchAIModels(); // Ensure AI Models are fetched for the EditToolModelModal dropdown
+    }
   }, [
     selectedCategory,
     selectedSubCategory,
     fetchAIModels,
     fetchAIVendors,
     fetchAIPrompts,
+    fetchToolModels,
   ]);
 
   // Model Handlers
@@ -188,6 +235,19 @@ export function SiteSettingsClient() {
       setIsDeleteVendorDialogOpen(false);
       setDeletingAIVendorId(null);
     }
+  };
+
+  // Tool Model Handlers
+  const handleEditToolModel = (tm: ToolModelWithAIModel) => {
+    setSelectedToolModelForEdit(tm);
+    setIsEditToolModelModalOpen(true);
+  };
+
+  const handleToolModelUpdated = (updatedTm: ToolModelWithAIModel) => {
+    setToolModels((prev) =>
+      prev.map((tm) => (tm.id === updatedTm.id ? updatedTm : tm))
+    );
+    // No need to close modal here, EditToolModelModal handles its own closure
   };
 
   // Prompt Handlers
@@ -294,6 +354,35 @@ export function SiteSettingsClient() {
       }
     />
   );
+  const renderToolModelItem = (tm: ToolModelWithAIModel) => (
+    <ListItem
+      key={tm.id}
+      title={tm.name}
+      secondaryText={
+        tm.ai_models
+          ? `Uses AI Model: ${tm.ai_models.name} (${
+              tm.ai_models.ai_vendors?.name || "Unknown Vendor"
+            })`
+          : "AI Model not set or found"
+      }
+      actions={
+        <div className="flex space-x-1">
+          <IconButton
+            icon={Pencil}
+            size="sm"
+            variant="ghost"
+            aria-label="Edit Tool Model"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditToolModel(tm);
+            }}
+          />
+        </div>
+      }
+      onClick={() => handleEditToolModel(tm)}
+    />
+  );
+
   const renderAIPromptItem = (p: AIPrompt) => {
     let scope = "User Global";
     if (p.project_id) scope = "Project-specific";
@@ -365,6 +454,13 @@ export function SiteSettingsClient() {
               isSelected={selectedSubCategory === "AI Prompts"}
               secondaryText="Define prompts"
             />
+            <ListItem
+              title="Tool Models"
+              icon={Settings2}
+              onClick={() => setSelectedSubCategory("Tool Models")}
+              isSelected={selectedSubCategory === "Tool Models"}
+              secondaryText="Configure tool models"
+            />
           </div>
         )}
       </ListContainer>
@@ -401,6 +497,16 @@ export function SiteSettingsClient() {
           onAddItem={() => setIsCreatePromptModalOpen(true)}
           renderItem={renderAIPromptItem}
           emptyStateMessage="No prompts"
+        />
+      )}
+      {selectedSubCategory === "Tool Models" && (
+        <SettingsItemList
+          title="Tool Models"
+          items={toolModels}
+          isLoading={isLoadingToolModels}
+          onAddItem={() => {}} // Empty function since we don't want to allow adding tool models
+          renderItem={renderToolModelItem}
+          emptyStateMessage="No tool models found. These are typically configured in the system."
         />
       )}
       {!selectedSubCategory && (
@@ -491,6 +597,20 @@ export function SiteSettingsClient() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Tool Model Modal */}
+      {selectedToolModelForEdit && (
+        <EditToolModelModal
+          isOpen={isEditToolModelModalOpen}
+          onClose={() => {
+            setIsEditToolModelModalOpen(false);
+            setSelectedToolModelForEdit(null);
+          }}
+          onToolModelUpdated={handleToolModelUpdated}
+          toolModel={selectedToolModelForEdit}
+          aiModels={aiModels}
+        />
+      )}
 
       {/* Prompt Modals & Dialog */}
       <CreateAIPromptModal

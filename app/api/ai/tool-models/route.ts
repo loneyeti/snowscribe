@@ -12,42 +12,43 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Extract name query parameter
   const { searchParams } = new URL(request.url);
-  const toolName = searchParams.get("name"); // Changed from model_id to name for tool lookup
+  const name = searchParams.get("name");
 
-  let queryBuilder = supabase.from("tool_model").select(`
-    *,
-    ai_models (id, name, vendor_id, ai_vendors (id, name))
+  let query = supabase.from("tool_model").select(`
+    id,
+    name,
+    model_id,
+    created_at,
+    updated_at,
+    ai_models (
+      id,
+      name,
+      api_name,
+      vendor_id,
+      ai_vendors ( name ) 
+    )
   `);
 
-  if (toolName) { // If toolName is provided, filter by it
-    queryBuilder = queryBuilder.eq("name", toolName); 
-  } else {
-    // If no specific toolName, list all tool_models
-    queryBuilder = queryBuilder.order("name", { ascending: true });
+  // Add name filter if provided
+  if (name) {
+    query = query.eq("name", name);
   }
 
-  const { data: toolModelsData, error } = toolName
-    ? await queryBuilder.single() // Apply .single() only if toolName is present
-    : await queryBuilder; // Otherwise, await the query builder directly
+  query = query.order("name", { ascending: true });
+
+  const { data: toolModels, error } = await query;
 
   if (error) {
     console.error("Error fetching tool models:", error);
-    if (toolName && error.code === 'PGRST116') { // PostgREST code for "No rows found"
-        return NextResponse.json({ error: `Tool model with name '${toolName}' not found` }, { status: 404 });
-    }
     return NextResponse.json(
       { error: "Failed to fetch tool models" },
       { status: 500 }
     );
   }
-  
-  // If querying by specific toolName and no data found (should be caught by PGRST116, but safeguard)
-  if (toolName && !toolModelsData) {
-    return NextResponse.json({ error: `Tool model with name '${toolName}' not found` }, { status: 404 });
-  }
 
-  return NextResponse.json(toolModelsData); // Will be a single object if toolName was used, else an array
+  return NextResponse.json(toolModels);
 }
 
 export async function POST(request: NextRequest) {
