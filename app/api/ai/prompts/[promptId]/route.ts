@@ -4,19 +4,18 @@ import { aiPromptSchema } from "@/lib/schemas/aiPrompt.schema";
 // verifyProjectOwnership is not used in this file with the current logic for prompts.
 
 async function getPromptWithOwnershipCheck(
-  supabase: Awaited<ReturnType<typeof createClient>>, // Corrected type
+  supabase: Awaited<ReturnType<typeof createClient>>,
   promptId: string,
   userId: string
 ) {
-  const { data: prompt, error } = await supabase // supabase is now correctly typed
+  const { data: prompt, error } = await supabase
     .from("ai_prompts")
     .select(`
       *,
-      projects (id, title, user_id),
-      users (id)
+      projects (id, title, user_id)
     `)
     .eq("id", promptId)
-    .maybeSingle(); // Use maybeSingle to handle not found gracefully
+    .maybeSingle();
 
   if (error) {
     console.error("Error fetching AI prompt for ownership check:", error);
@@ -27,22 +26,17 @@ async function getPromptWithOwnershipCheck(
     return { error: { message: "AI prompt not found" }, status: 404, prompt: null };
   }
 
-  // Check ownership
+  // Only check ownership if prompt is project-specific or user-specific
   if (prompt.project_id) {
-    // Project-specific prompt
-    if (prompt.projects?.user_id !== userId) {
+    if (!prompt.projects || prompt.projects.user_id !== userId) {
       return { error: { message: "Forbidden: You do not own the project this prompt belongs to." }, status: 403, prompt: null };
     }
   } else if (prompt.user_id) {
-    // User-specific global prompt
     if (prompt.user_id !== userId) {
       return { error: { message: "Forbidden: You do not own this prompt." }, status: 403, prompt: null };
     }
-  } else {
-    // Truly global prompt (user_id is null, project_id is null)
-    // These are generally readable by all authenticated users but not updatable/deletable by them.
-    // For GET, this is fine. For PUT/DELETE, we'll add specific checks.
   }
+  // Global prompts (no project_id or user_id) are accessible to all authenticated users
 
   return { prompt, error: null, status: 200 };
 }
@@ -117,10 +111,7 @@ export async function PUT(
      return NextResponse.json({ error: "AI prompt not found or access denied for update." }, { status: 404 });
   }
 
-  // Prevent users from updating truly global prompts
-  if (!existingPrompt.project_id && !existingPrompt.user_id) {
-    return NextResponse.json({ error: "Forbidden: Truly global prompts cannot be updated by users." }, { status: 403 });
-  }
+  // Global prompts (no project_id or user_id) can be updated by any authenticated user
 
   const json = await request.json();
   const result = aiPromptSchema.safeParse(json);
@@ -160,8 +151,11 @@ export async function PUT(
     // This is a user-specific global prompt, user_id should not change, project_id remains null
     updateData.user_id = existingPrompt.user_id;
     updateData.project_id = null;
+  } else {
+    // This is a truly global prompt, both project_id and user_id should remain null
+    updateData.project_id = null;
+    updateData.user_id = null;
   }
-  // No case for truly global prompts as they are blocked above.
 
   const { data: updatedPrompt, error: updateError } = await supabase
     .from("ai_prompts")
@@ -169,33 +163,30 @@ export async function PUT(
     .eq("id", promptId)
     .select(`
       *,
-      projects (id, title),
-      users (id)
+      projects (id, title)
     `)
-    .single();
+    .maybeSingle();
 
   if (updateError) {
     console.error("Error updating AI prompt:", updateError);
-    if (updateError.code === "PGRST116") { // Should be caught by initial check, but as a safeguard
-      return NextResponse.json({ error: "AI prompt not found" }, { status: 404 });
-    }
     if (updateError.code === "23505") { // Unique constraint violation
       return NextResponse.json(
         { error: "AI prompt with this name already exists for the given scope." },
         { status: 409 }
       );
     }
-     if (updateError.code === "23503" && updateData.project_id) { // FK violation on project_id if it was somehow changed
-        return NextResponse.json({ error: "Invalid project_id. Project does not exist." }, { status: 400 });
+    if (updateError.code === "23503" && updateData.project_id) { // FK violation on project_id if it was somehow changed
+      return NextResponse.json({ error: "Invalid project_id. Project does not exist." }, { status: 400 });
     }
     return NextResponse.json(
-      { error: "Failed to update AI prompt" },
+      { error: "Failed to update AI prompt", details: updateError.message },
       { status: 500 }
     );
   }
   
   if (!updatedPrompt) {
-    return NextResponse.json({ error: "AI prompt not found after update attempt" }, { status: 404 });
+    // This could happen if the prompt was deleted between the check and update
+    return NextResponse.json({ error: "AI prompt not found or no changes were made" }, { status: 404 });
   }
 
   return NextResponse.json(updatedPrompt);
@@ -229,10 +220,7 @@ export async function DELETE(
      return NextResponse.json({ error: "AI prompt not found or access denied for delete." }, { status: 404 });
   }
 
-  // Prevent users from deleting truly global prompts
-  if (!existingPrompt.project_id && !existingPrompt.user_id) {
-    return NextResponse.json({ error: "Forbidden: Truly global prompts cannot be deleted by users." }, { status: 403 });
-  }
+  // Global prompts (no project_id or user_id) can be deleted by any authenticated user
 
   const { error: deleteError } = await supabase
     .from("ai_prompts")

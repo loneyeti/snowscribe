@@ -8,6 +8,7 @@ import type {
   SceneTag,
   PrimarySceneCategory,
 } from "@/lib/types";
+import { ALL_PRIMARY_SCENE_CATEGORIES } from "@/lib/types";
 import { ListContainer } from "@/components/ui/ListContainer";
 // import { ListItem } from "@/components/ui/ListItem"; // Assuming this will be used for scenes - Commented out
 import { ListSectionHeader } from "@/components/ui/ListSectionHeader"; // For chapter titles
@@ -119,10 +120,7 @@ export function ChapterSceneOutlineList({
         userPrompt += `Scene Title: ${sceneTitle}\n`;
       }
       if (sceneContent) {
-        userPrompt += `Scene Content (excerpt):\n${sceneContent.substring(
-          0,
-          1000
-        )}\n\n`; // Limit content length for prompt
+        userPrompt += `Scene Content (excerpt):\n${sceneContent}\n\n`; // Limit content length for prompt
       }
       userPrompt += `Return only the outline description itself, as plain text, without any additional formatting or conversational text.`;
 
@@ -464,6 +462,36 @@ export function ChapterSceneOutlineList({
                                 Manage Tags
                               </Button>
                             </div>
+                            <div className="mb-3">
+                              <label
+                                htmlFor={`primary_category_${scene.id}`}
+                                className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
+                              >
+                                Primary Category
+                              </label>
+                              <select
+                                id={`primary_category_${scene.id}`}
+                                value={editFormData.primary_category || ""}
+                                onChange={(e) =>
+                                  setEditFormData((prev) => ({
+                                    ...prev,
+                                    primary_category:
+                                      (e.target
+                                        .value as PrimarySceneCategory) || null,
+                                  }))
+                                }
+                                className="w-full p-2 border rounded text-xs bg-white dark:bg-slate-800 dark:border-slate-600 focus:ring-primary focus:border-primary"
+                              >
+                                <option value="">
+                                  Select Primary Category
+                                </option>
+                                {ALL_PRIMARY_SCENE_CATEGORIES.map((cat) => (
+                                  <option key={cat} value={cat}>
+                                    {cat}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                             <div className="flex justify-end space-x-2 mt-2">
                               <Button
                                 variant="ghost"
@@ -480,6 +508,7 @@ export function ChapterSceneOutlineList({
                                 size="sm"
                                 onClick={() => {
                                   // Exclude tag_ids from editFormData before updating scene
+                                  // Destructure out tag_ids since we handle tags separately via Manage Tags modal
                                   const { tag_ids, ...sceneDataWithoutTags } =
                                     editFormData;
                                   onSceneUpdate(
@@ -497,44 +526,6 @@ export function ChapterSceneOutlineList({
                             </div>
                           </div>
                         )}
-                        <div className="mb-3">
-                          <label
-                            htmlFor={`primary_category_${scene.id}`}
-                            className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
-                          >
-                            Primary Category
-                          </label>
-                          <select
-                            id={`primary_category_${scene.id}`}
-                            value={editFormData.primary_category || ""}
-                            onChange={(e) =>
-                              setEditFormData((prev) => ({
-                                ...prev,
-                                primary_category:
-                                  (e.target.value as PrimarySceneCategory) ||
-                                  null,
-                              }))
-                            }
-                            className="w-full p-2 border rounded text-xs bg-white dark:bg-slate-800 dark:border-slate-600 focus:ring-primary focus:border-primary"
-                            disabled={isGeneratingOutline === scene.id}
-                          >
-                            <option value="">Select Primary Category</option>
-                            {[
-                              "Action",
-                              "Dialogue",
-                              "Reflection",
-                              "Discovery",
-                              "Relationship",
-                              "Transition",
-                              "Worldbuilding",
-                            ].map((cat) => (
-                              <option key={cat} value={cat}>
-                                {cat}
-                              </option>
-                            ))}
-                          </select>
-                          {/* Optional: Display error for this field if using react-hook-form here */}
-                        </div>
                       </div>
                     ))
                 ) : (
