@@ -266,7 +266,7 @@ export function OutlineSection({
   const mainDetailColumnContent = (
     <>
       {outlineView === "synopsis" ? (
-        <div className="bg-yellow-100 border-2 border-yellow-500 p-1">
+        <div className="p-1">
           <ProjectSynopsisEditor
             project={{
               id: currentProjectDetails.id,
@@ -359,7 +359,7 @@ export function OutlineSection({
           </div>
         </div>
       ) : outlineView === "scenes" ? (
-        <div className="bg-blue-100 border-2 border-blue-500 p-1 h-full">
+        <div className="p-1 h-full">
           {isLoadingChapters && chapters.length === 0 ? (
             <Paragraph className="p-4 text-sm text-muted-foreground">
               Loading outline data...
