@@ -35,6 +35,9 @@ export interface Profile {
   username?: string | null;
   full_name?: string | null;
   avatar_url?: string | null;
+  is_site_admin?: boolean; // Added for admin flag
+  current_period_credit_usage?: number; // Added for credit tracking
+  total_credit_usage?: number; // Added for credit tracking
   created_at: string; // TIMESTAMPTZ
   updated_at: string; // TIMESTAMPTZ
 }

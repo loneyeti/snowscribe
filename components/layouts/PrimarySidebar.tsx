@@ -6,7 +6,6 @@ import {
   Users,
   Globe,
   Sparkles,
-  Settings,
   ListChecks, // For Outline
   FileDown, // For Export
 } from "lucide-react";

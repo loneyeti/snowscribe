@@ -47,6 +47,7 @@ export function extractJsonFromString(str: string): string | null {
       return bracesJsonMatch[0].trim();
     } catch (e) {
       // It looked like JSON, but wasn't. Continue to next check.
+      console.error(`Not valid JSON: ${e}`)
     }
   }
 

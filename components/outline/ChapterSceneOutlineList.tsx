@@ -10,7 +10,6 @@ import type {
 } from "@/lib/types";
 import { ALL_PRIMARY_SCENE_CATEGORIES } from "@/lib/types";
 import { ListContainer } from "@/components/ui/ListContainer";
-import { ListSectionHeader } from "@/components/ui/ListSectionHeader";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import {
