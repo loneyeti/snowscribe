@@ -13,6 +13,7 @@ import { OutlineSection } from "@/components/dashboard/sections/OutlineSection";
 // Import Context Provider
 import { ProjectDataProvider } from "@/contexts/ProjectDataContext";
 import { AISection } from "@/components/dashboard/sections/AISection";
+import { ExportSection } from "@/components/dashboard/sections/ExportSection";
 
 interface ProjectDashboardClientProps {
   project: Project & {
@@ -53,6 +54,7 @@ export function ProjectDashboardClient({
 
       {/* Render AISection when activeSection is "ai" */}
       <AISection project={project} isActive={activeSection === "ai"} />
+      <ExportSection project={project} isActive={activeSection === "export"} />
     </ProjectDataProvider>
   );
 }
