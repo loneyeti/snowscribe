@@ -9,25 +9,15 @@ import {
   TextRun,
   AlignmentType,
   Header,
-  PageNumber, // Ensure PageNumber is imported
+  PageNumber,
   convertInchesToTwip,
   NumberFormat,
 } from 'docx';
 
-// NEW: Sanitizer function to remove invalid characters from text
-// NEW (Improved): Sanitizer function that only removes invalid XML characters
+// Sanitizer function to remove invalid characters from text
 function sanitizeText(text: string): string {
   if (!text) return '';
-
-  // This regex targets invalid XML characters:
-  // U+0000 to U+0008 (null and other C0 controls)
-  // U+000B to U+000C (vertical tab, form feed)
-  // U+000E to U+001F (other C0 controls)
-  // U+007F (delete)
-  // It specifically allows U+0009 (tab), U+000A (newline), and U+000D (carriage return).
-  // This preserves all valid characters, including em-dashes, smart quotes, and accented letters.
   const invalidXMLCharsRegex = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
-  
   return text.replace(invalidXMLCharsRegex, '');
 }
 
@@ -51,7 +41,6 @@ export async function POST(
     const { projectId } = params;
     const project = await getProjectById(projectId);
     const chapters = await getChaptersByProjectId(projectId);
-    // const profile = await getUserProfile(user.id); // Not used in doc, can be removed if not needed elsewhere
 
     if (!project || !chapters) {
       return new NextResponse(
@@ -63,8 +52,8 @@ export async function POST(
       );
     }
 
-    const authorName = user.email || 'Author'; // Assuming user.email is the full name for this logic
-    const authorLastName = authorName.split(' ')[0] || 'Author'; // Use first part of email or name
+    const authorName = user.email || 'Author';
+    const authorLastName = authorName.split(' ')[0] || 'Author';
     const projectKeyword = project.title.split(' ')[0] || 'Manuscript';
 
     const doc = new Document({
@@ -78,7 +67,6 @@ export async function POST(
             quickFormat: true,
             run: {
               size: 24, // 12pt
-              // FIX: The font property in a style must be an object
               font: {
                 ascii: 'Times New Roman',
                 eastAsia: 'Times New Roman',
@@ -93,10 +81,23 @@ export async function POST(
               },
             },
           },
+          {
+            id: 'SceneBreak',
+            name: 'Scene Break',
+            basedOn: 'Normal',
+            next: 'Normal',
+            paragraph: {
+              alignment: AlignmentType.CENTER,
+              spacing: {
+                before: 240,
+                after: 240
+              },
+            },
+          },
         ],
       },
       sections: [
-        // Title Page Section
+        // FIX: The complete title page section is restored here.
         {
           properties: {
             page: {
@@ -111,7 +112,6 @@ export async function POST(
           children: [
             new Paragraph({
               alignment: AlignmentType.LEFT,
-              // FIX: Sanitize all text inputs
               children: [new TextRun(sanitizeText(authorName))],
             }),
             new Paragraph({
@@ -149,7 +149,7 @@ export async function POST(
             }),
           ],
         },
-        // Main Manuscript Section
+        // Main Manuscript Section (with the correct scene break logic)
         {
           properties: {
             page: {
@@ -170,7 +170,6 @@ export async function POST(
               children: [
                 new Paragraph({
                   alignment: AlignmentType.RIGHT,
-                  // FIX: Correctly implement the page number field
                   children: [
                     new TextRun(
                       `${sanitizeText(authorLastName)} / ${sanitizeText(projectKeyword)} / `
@@ -205,36 +204,37 @@ export async function POST(
                   })
                 );
 
-                if (chapter.scenes && chapter.scenes.length > 0) {
-                  chapter.scenes
-                    .sort((a, b) => a.order - b.order)
-                    .forEach((scene) => {
-                      // FIX: Sanitize scene content before splitting
-                      const lines = sanitizeText(scene.content || '').split('\n');
-                      lines.forEach((line) => {
-                        if (line.trim() === '') {
-                          return;
-                        }
+                const sortedScenes = chapter.scenes
+                  ? chapter.scenes.sort((a, b) => a.order - b.order)
+                  : [];
 
-                        if (line.trim() === '#') {
-                          allContent.push(
-                            new Paragraph({
-                              alignment: AlignmentType.CENTER,
-                              spacing: { after: 480, before: 480 },
-                              children: [new TextRun('#')],
-                            })
-                          );
-                        } else {
-                          allContent.push(
-                            new Paragraph({
-                              style: 'Normal', // Explicitly use the defined style
-                              indent: { firstLine: convertInchesToTwip(0.5) },
-                              children: [new TextRun(line)], // line is already sanitized
-                            })
-                          );
-                        }
-                      });
+                if (sortedScenes.length > 0) {
+                  sortedScenes.forEach((scene, sceneIndex) => {
+                    const sanitizedContent = sanitizeText(scene.content || '');
+                    const lines = sanitizedContent.split('\n');
+
+                    lines.forEach((line) => {
+                      if (line.trim() === '') {
+                        return;
+                      }
+                      allContent.push(
+                        new Paragraph({
+                          style: 'Normal',
+                          indent: { firstLine: convertInchesToTwip(0.5) },
+                          children: [new TextRun(line)],
+                        })
+                      );
                     });
+
+                    if (sceneIndex < sortedScenes.length - 1) {
+                      allContent.push(
+                        new Paragraph({
+                          style: 'SceneBreak',
+                          children: [new TextRun('#')],
+                        })
+                      );
+                    }
+                  });
                 }
               });
 
@@ -253,7 +253,6 @@ export async function POST(
     });
 
     const buffer = await Packer.toBuffer(doc);
-
     const safeTitle = (project.title || 'Untitled')
       .replace(/[^a-zA-Z0-9-_ ]/g, '')
       .replace(/\s+/g, '_');
