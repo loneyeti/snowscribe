@@ -83,12 +83,6 @@ export function PrimarySidebar({
             onClick={() => onSectionChange(config.id)}
           />
         ))}
-        <PrimarySidebarNavItem
-          icon={<Settings size={24} aria-hidden="true" />}
-          label="Settings"
-          isActive={activeSection === "settings"}
-          onClick={() => onSectionChange("settings")}
-        />
       </div>
     </aside>
   );

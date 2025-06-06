@@ -26,7 +26,6 @@ export function AppHeader({
   projectGenre,
   currentWords,
   targetWords,
-  projectId,
   initialProjectData,
   onProjectDetailsUpdated,
 }: AppHeaderProps) {
@@ -62,8 +61,6 @@ export function AppHeader({
       {/* Right side: Word Count Progress Indicator and User Menu */}
       <div className="flex items-center space-x-4">
         <div className="w-48">
-          {" "}
-          {/* Adjusted width for WordCountProgressIndicator */}
           <WordCountProgressIndicator
             currentWords={currentWords}
             targetWords={targetWords}

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { extractJsonFromString } from "@/lib/utils";
+
 import type {
   Scene,
   Character,
@@ -136,66 +138,89 @@ export function SceneMetadataPanel({
         aiResponse.content.length > 0 &&
         aiResponse.content[0].type === "text"
       ) {
-        const responseText = (
+        const rawResponseText = (
           aiResponse.content[0] as import("snowgander").TextBlock
         ).text;
-        const parsedResponse = JSON.parse(responseText) as {
-          povCharacterName: string | null;
-          otherCharacterNames: string[];
-        };
 
-        let newPovCharacterId: string | null = null;
-        if (parsedResponse.povCharacterName) {
-          const foundPov = allProjectCharacters.find(
-            (c) =>
-              c.name.toLowerCase() ===
-              parsedResponse.povCharacterName!.toLowerCase()
+        const cleanedJsonText = extractJsonFromString(rawResponseText);
+
+        if (!cleanedJsonText) {
+          toast.error(
+            "AI returned an empty or un-cleanable response for character suggestions.",
+            { id: toastId }
           );
-          if (foundPov) {
-            newPovCharacterId = foundPov.id;
-          } else {
-            toast.info(
-              `AI suggested POV character "${parsedResponse.povCharacterName}" not found in project characters.`
-            );
-          }
+          return;
         }
 
-        const newOtherCharacterIds: string[] = [];
-        if (
-          parsedResponse.otherCharacterNames &&
-          parsedResponse.otherCharacterNames.length > 0
-        ) {
-          parsedResponse.otherCharacterNames.forEach((name) => {
-            const foundChar = allProjectCharacters.find(
-              (c) => c.name.toLowerCase() === name.toLowerCase()
+        try {
+          const parsedResponse = JSON.parse(cleanedJsonText) as {
+            povCharacterName: string | null;
+            otherCharacterNames: string[];
+          };
+
+          let newPovCharacterId: string | null = null;
+          if (parsedResponse.povCharacterName) {
+            const foundPov = allProjectCharacters.find(
+              (c) =>
+                c.name.toLowerCase() ===
+                parsedResponse.povCharacterName!.toLowerCase()
             );
-            if (foundChar && foundChar.id !== newPovCharacterId) {
-              newOtherCharacterIds.push(foundChar.id);
-            } else if (!foundChar) {
+            if (foundPov) {
+              newPovCharacterId = foundPov.id;
+            } else {
               toast.info(
-                `AI suggested other character "${name}" not found in project characters.`
+                `AI suggested POV character "${parsedResponse.povCharacterName}" not found in project characters.`
               );
             }
+          }
+
+          const newOtherCharacterIds: string[] = [];
+          if (
+            parsedResponse.otherCharacterNames &&
+            parsedResponse.otherCharacterNames.length > 0
+          ) {
+            parsedResponse.otherCharacterNames.forEach((name) => {
+              const foundChar = allProjectCharacters.find(
+                (c) => c.name.toLowerCase() === name.toLowerCase()
+              );
+              if (foundChar && foundChar.id !== newPovCharacterId) {
+                newOtherCharacterIds.push(foundChar.id);
+              } else if (!foundChar) {
+                toast.info(
+                  `AI suggested other character "${name}" not found in project characters.`
+                );
+              }
+            });
+          }
+
+          if (newPovCharacterId !== scene.pov_character_id) {
+            await onSceneUpdate({ pov_character_id: newPovCharacterId });
+          }
+
+          const currentOtherIds = scene.other_character_ids || [];
+          // Ensure comparison is robust to order differences
+          const sortedNewOtherIds = [...new Set(newOtherCharacterIds)].sort(); // Remove duplicates and sort
+          const sortedCurrentOtherIds = [...new Set(currentOtherIds)].sort(); // Remove duplicates and sort
+
+          if (
+            JSON.stringify(sortedNewOtherIds) !==
+            JSON.stringify(sortedCurrentOtherIds)
+          ) {
+            await onCharacterLinkChange(sortedNewOtherIds);
+          }
+
+          toast.success("Characters suggested by AI and updated.", {
+            id: toastId,
           });
+        } catch (jsonError) {
+          console.error("JSON Parse Error after cleaning:", jsonError);
+          console.error("Original Raw Response Text from AI:", rawResponseText);
+          console.error("Attempted Cleaned JSON Text:", cleanedJsonText);
+          toast.error(
+            "Failed to parse character suggestions from AI. The response format was unexpected even after cleaning.",
+            { id: toastId }
+          );
         }
-
-        if (newPovCharacterId !== scene.pov_character_id) {
-          await onSceneUpdate({ pov_character_id: newPovCharacterId });
-        }
-
-        const currentOtherIds = scene.other_character_ids || [];
-        const sortedNewOtherIds = [...newOtherCharacterIds].sort();
-        const sortedCurrentOtherIds = [...currentOtherIds].sort();
-        if (
-          JSON.stringify(sortedNewOtherIds) !==
-          JSON.stringify(sortedCurrentOtherIds)
-        ) {
-          await onCharacterLinkChange(newOtherCharacterIds);
-        }
-
-        toast.success("Characters suggested by AI and updated.", {
-          id: toastId,
-        });
       } else {
         const errorBlock = aiResponse.content?.find(
           (block) => block.type === "error"

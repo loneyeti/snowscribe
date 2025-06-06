@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { ListContainer } from "@/components/ui/ListContainer";
 import { ListItem } from "@/components/ui/ListItem";
@@ -421,9 +422,14 @@ export function SiteSettingsClient() {
     );
   };
 
+  const router = useRouter();
+
   const middleColumn = (
     <>
-      <ContextualHeader title="Settings Categories" />
+      <ContextualHeader
+        title="Settings Categories"
+        onBack={() => router.push("/")}
+      />
       <ListContainer>
         <ListItem
           title="AI"

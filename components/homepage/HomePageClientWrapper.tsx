@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Heading } from "@/components/typography/Heading";
 import { HomePageHeaderActions } from "@/components/homepage/HomePageHeaderActions";
+import { Settings2 } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
 import HomePageClientContent from "@/app/HomePageClientContent";
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
 import type { User } from "@supabase/supabase-js";
@@ -24,6 +27,7 @@ export function HomePageClientWrapper({
   projectCount: initialProjectCount,
   errorOccurred,
 }: HomePageClientWrapperProps) {
+  const router = useRouter();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [displayProjects, setDisplayProjects] = useState<Project[] | null>(
     initialProjects
@@ -66,10 +70,17 @@ export function HomePageClientWrapper({
             <Link href="/" className="mr-6 flex items-center space-x-2">
               <span className="font-bold text-xl">Snowscribe</span>
             </Link>
-            <HomePageHeaderActions
-              user={user}
-              onOpenCreateModal={handleOpenCreateModal}
-            />
+            <div className="flex items-center gap-4">
+              <IconButton
+                icon={Settings2}
+                aria-label="Settings"
+                onClick={() => router.push("/settings")}
+              />
+              <HomePageHeaderActions
+                user={user}
+                onOpenCreateModal={handleOpenCreateModal}
+              />
+            </div>
           </div>
         </header>
 
