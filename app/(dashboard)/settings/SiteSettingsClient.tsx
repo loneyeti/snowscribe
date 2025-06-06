@@ -50,8 +50,38 @@ type AISubCategory =
   | null;
 
 export function SiteSettingsClient() {
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [selectedCategory, setSelectedCategory] =
     useState<SettingsCategory>("AI");
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          setIsAdmin(false);
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_site_admin")
+          .eq("id", user.id)
+          .single();
+
+        setIsAdmin(profile?.is_site_admin === true);
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, []);
   const [selectedSubCategory, setSelectedSubCategory] =
     useState<AISubCategory>(null);
 
@@ -423,6 +453,22 @@ export function SiteSettingsClient() {
   };
 
   const router = useRouter();
+
+  if (isAdmin === null) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>Verifying access...</p>
+      </div>
+    );
+  }
+
+  if (isAdmin === false) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>You do not have permission to view Site Settings.</p>
+      </div>
+    );
+  }
 
   const middleColumn = (
     <>

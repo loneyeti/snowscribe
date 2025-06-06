@@ -7,6 +7,7 @@ import { Heading } from "@/components/typography/Heading";
 import { HomePageHeaderActions } from "@/components/homepage/HomePageHeaderActions";
 import { Settings2 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
+import { getClientProfile } from "@/lib/data/profiles";
 import HomePageClientContent from "@/app/HomePageClientContent";
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
 import type { User } from "@supabase/supabase-js";
@@ -34,11 +35,20 @@ export function HomePageClientWrapper({
   );
   const [currentProjectCount, setCurrentProjectCount] =
     useState<number>(initialProjectCount);
+  const [isSiteAdmin, setIsSiteAdmin] = useState(false);
 
   useEffect(() => {
     setDisplayProjects(initialProjects);
     setCurrentProjectCount(initialProjects?.length ?? 0);
   }, [initialProjects]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const profile = await getClientProfile();
+      setIsSiteAdmin(profile?.is_site_admin ?? false);
+    };
+    fetchProfile();
+  }, []);
 
   const handleOpenCreateModal = () => setIsCreateModalOpen(true);
   const handleCloseCreateModal = () => setIsCreateModalOpen(false);
@@ -71,11 +81,13 @@ export function HomePageClientWrapper({
               <span className="font-bold text-xl">Snowscribe</span>
             </Link>
             <div className="flex items-center gap-4">
-              <IconButton
-                icon={Settings2}
-                aria-label="Settings"
-                onClick={() => router.push("/settings")}
-              />
+              {isSiteAdmin && (
+                <IconButton
+                  icon={Settings2}
+                  aria-label="Settings"
+                  onClick={() => router.push("/settings")}
+                />
+              )}
               <HomePageHeaderActions
                 user={user}
                 onOpenCreateModal={handleOpenCreateModal}

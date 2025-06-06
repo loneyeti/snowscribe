@@ -1,15 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isSiteAdmin } from "@/lib/supabase/guards";
 import { aiModelSchema } from "@/lib/schemas/aiModel.schema";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const isAdmin = await isSiteAdmin(supabase);
+  
+  if (!isAdmin) {
+    return NextResponse.json(
+      { error: "Forbidden: You do not have permission to perform this action" }, 
+      { status: 403 }
+    );
   }
 
   const { searchParams } = new URL(request.url);
@@ -41,12 +43,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const isAdmin = await isSiteAdmin(supabase);
+  
+  if (!isAdmin) {
+    return NextResponse.json(
+      { error: "Forbidden: You do not have permission to perform this action" }, 
+      { status: 403 }
+    );
   }
 
   const json = await request.json();

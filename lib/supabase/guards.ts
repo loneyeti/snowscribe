@@ -1,5 +1,5 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/lib/supabase/database.types'; // Import the Database type
+import type { Database } from './database.types'; // Import the Database type
 
 interface ProjectVerificationSuccess {
   project: { id: string }; // Can be expanded if more project details are needed by callers
@@ -57,4 +57,34 @@ export async function verifyProjectOwnership(
   }
 
   return { project: projectData, error: null, status: 200 };
+}
+
+/**
+ * Checks if the currently authenticated user is a site administrator.
+ * @param supabase The Supabase client instance.
+ * @returns Promise resolving to true if user is admin, false otherwise.
+ */
+export async function isSiteAdmin(
+  supabase: SupabaseClient<Database>
+): Promise<boolean> {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  
+  if (userError || !user) {
+    return false;
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('is_site_admin')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) {
+    // This can happen if the profile hasn't been created yet for a new user.
+    // We can safely assume they are not an admin.
+    console.warn(`Could not fetch profile for admin check, user ID: ${user.id}. Error: ${profileError.message}`);
+    return false;
+  }
+
+  return profile?.is_site_admin === true;
 }

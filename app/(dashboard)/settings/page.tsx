@@ -1,27 +1,18 @@
 import React from "react";
-import { SiteSettingsClient } from "./SiteSettingsClient"; // Client component to be created
-
-// TODO: Add admin role check here in the future
-// import { createClient } from "@/lib/supabase/server";
-// import { redirect } from "next/navigation";
+import { SiteSettingsClient } from "./SiteSettingsClient";
+import { createClient } from "@/lib/supabase/server";
+import { isSiteAdmin } from "@/lib/supabase/guards";
+import { redirect } from "next/navigation";
 
 export default async function SettingsPage() {
-  // Future admin check:
-  // const supabase = await createClient();
-  // const { data: { user } } = await supabase.auth.getUser();
-  // if (!user) {
-  //   redirect("/login");
-  // }
-  // const { data: profile } = await supabase
-  //   .from("profiles")
-  //   .select("role")
-  //   .eq("id", user.id)
-  //   .single();
-  //
-  // if (profile?.role !== 'admin') {
-  //    redirect('/'); // Or redirect to an unauthorized page
-  // }
+  const supabase = await createClient();
+  const isAdmin = await isSiteAdmin(supabase);
 
-  // For now, render the client component directly
+  if (!isAdmin) {
+    // Redirect non-admins to the homepage
+    redirect("/");
+  }
+
+  // Only render the settings page if the user is an admin
   return <SiteSettingsClient />;
 }

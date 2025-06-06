@@ -1,37 +1,64 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { getErrorMessage } from "@/lib/utils";
+import type { Profile } from "@/lib/types";
+import { getCookieHeader } from "./dataUtils";
 
-/**
- * Updates a user's credit usage by calling the increment_credit_usage RPC function.
- * This should only be called from a trusted server-side environment.
- * @param userId - The UUID of the user to update
- * @param creditsToAdd - The number of credits to add (must be positive)
- * @returns Promise with success status and optional error message
- */
+const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+
+export async function getClientProfile(): Promise<Pick<Profile, 'id' | 'is_site_admin'> | null> {
+  const apiUrl = `${API_BASE_URL}/api/profiles`;
+  const cookieHeader = await getCookieHeader();
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { 'Cookie': cookieHeader }),
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`Error fetching profile: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const profileData = await response.json();
+    return profileData;
+  } catch (error) {
+    console.error('Error fetching profile:', getErrorMessage(error));
+    return null;
+  }
+}
+
 export async function updateCreditUsage(
   userId: string,
   creditsToAdd: number
 ): Promise<{ success: boolean; error?: string }> {
-  // Validate inputs
   if (!userId) {
     return { success: false, error: "User ID is required" };
   }
   if (creditsToAdd <= 0) {
-    return { success: true }; // No operation for zero or negative credits
+    return { success: true };
   }
-  console.log("Called updateCreditUsage");
-  const supabase = await createClient();
+
+  const apiUrl = `${API_BASE_URL}/api/profiles`;
+  const cookieHeader = await getCookieHeader();
 
   try {
-    const { error } = await supabase.rpc("increment_credit_usage", {
-      user_id_to_update: userId,
-      credits_to_add: creditsToAdd,
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { 'Cookie': cookieHeader }),
+      },
+      body: JSON.stringify({ userId, creditsToAdd }),
     });
 
-    if (error) {
-      throw new Error(error.message);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update credit usage');
     }
 
     return { success: true };
