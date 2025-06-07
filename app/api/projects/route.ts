@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   }
 
   // Destructure genre_id and remove genre (string)
-  const { title, genre_id, description, target_word_count } = validationResult.data;
+  const { title, genre_id, log_line, target_word_count } = validationResult.data;
 
   const { data: newProject, error: insertError } = await supabase
     .from('projects')
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       title,
       genre_id, // Use genre_id
-      description,
+      log_line,
       target_word_count,
     })
     .select()

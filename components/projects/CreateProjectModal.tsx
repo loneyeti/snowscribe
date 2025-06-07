@@ -25,7 +25,7 @@ export function CreateProjectModal({
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [genreId, setGenreId] = useState<string>(""); // Store genre ID as string from select
-  const [description, setDescription] = useState("");
+  const [logLine, setLogLine] = useState("");
   const [targetWordCount, setTargetWordCount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>(
@@ -60,7 +60,7 @@ export function CreateProjectModal({
   const resetForm = () => {
     setTitle("");
     setGenreId(""); // Reset genreId
-    setDescription("");
+    setLogLine("");
     setTargetWordCount("");
     setErrors({});
     setIsLoading(false);
@@ -79,10 +79,8 @@ export function CreateProjectModal({
     const formData: Omit<CreateProjectValues, "genre_id"> & {
       genre_id?: number;
     } = {
-      // Prepare for parsing
       title,
-      // genre: genre, // Old genre string, no longer primary
-      description: description || undefined,
+      log_line: logLine || undefined,
       target_word_count: targetWordCount
         ? parseInt(targetWordCount, 10)
         : undefined,
@@ -232,24 +230,24 @@ export function CreateProjectModal({
 
         <div>
           <label
-            htmlFor="description"
+            htmlFor="log_line"
             className="block text-sm font-medium text-foreground mb-1"
           >
-            Description (Optional)
+            Log Line (Optional)
           </label>
           <Textarea
-            id="description"
-            name="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            id="log_line"
+            name="log_line"
+            value={logLine}
+            onChange={(e) => setLogLine(e.target.value)}
             placeholder="A brief summary or logline for your novel."
             rows={3}
-            className={errors.description ? "border-destructive" : ""}
+            className={errors.log_line ? "border-destructive" : ""}
             disabled={isLoading || isFetchingGenres}
           />
-          {errors.description && (
+          {errors.log_line && (
             <p className="mt-1 text-xs text-destructive">
-              {errors.description.join(", ")}
+              {errors.log_line.join(", ")}
             </p>
           )}
         </div>

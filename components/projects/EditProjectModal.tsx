@@ -41,7 +41,7 @@ export function EditProjectModal({
     defaultValues: {
       title: project.title || "",
       genre_id: project.genre_id ?? undefined,
-      description: project.description || "",
+      log_line: project.log_line || "",
       target_word_count: project.target_word_count ?? undefined,
     },
   });
@@ -66,7 +66,7 @@ export function EditProjectModal({
       reset({
         title: project.title || "",
         genre_id: project.genre_id ?? undefined,
-        description: project.description || "",
+        log_line: project.log_line || "",
         target_word_count: project.target_word_count ?? undefined,
       });
       if (genres.length === 0) {
@@ -222,29 +222,29 @@ export function EditProjectModal({
 
         <div>
           <label
-            htmlFor="description"
+            htmlFor="log_line"
             className="block text-sm font-medium text-foreground mb-1"
           >
-            Description (Optional)
+            Log Line (Optional)
           </label>
           <Controller
-            name="description"
+            name="log_line"
             control={control}
             render={({ field }) => (
               <Textarea
                 {...field}
                 value={field.value || ""}
-                id="description"
+                id="log_line"
                 placeholder="A brief summary or logline for your novel."
                 rows={3}
-                className={errors.description ? "border-destructive" : ""}
+                className={errors.log_line ? "border-destructive" : ""}
                 disabled={isSubmitting || isFetchingGenres}
               />
             )}
           />
-          {errors.description && (
+          {errors.log_line && (
             <p className="mt-1 text-xs text-destructive">
-              {errors.description.message}
+              {errors.log_line.message}
             </p>
           )}
         </div>
