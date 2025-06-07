@@ -9,6 +9,7 @@ import type { Character, SceneTag, Chapter, Scene } from "@/lib/types";
 import { getCharacters } from "@/lib/data/characters";
 import { toast } from "sonner"; // For error notifications
 import { createClient } from "@/lib/supabase/client";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 interface ProjectDataContextType {
   allProjectCharacters: Character[];
@@ -140,124 +141,102 @@ export const ProjectDataProvider: React.FC<{
       return;
     }
 
-    let scenesUpdateChannel: ReturnType<
-      ReturnType<typeof createClient>["channel"]
-    > | null = null;
-    let isMounted = true;
+    const supabase = createClient();
+    // Define the channel outside of an async function
+    const channel = supabase.channel(`project-${projectId}-scenes-update`);
 
-    const setupChannel = async () => {
-      try {
-        const supabase = createClient();
-        scenesUpdateChannel = supabase
-          .channel(`project-${projectId}-scenes-update`, {
-            config: {
-              presence: { key: `project-${projectId}` },
-              broadcast: { ack: true },
-            },
-          })
-          .on(
-            "postgres_changes",
-            {
-              event: "UPDATE",
-              schema: "public",
-              table: "scenes",
-            },
-            (payload) => {
-              if (!isMounted) return;
-              console.log("Real-time scene update received:", payload);
-              const updatedScene = payload.new as Scene;
+    // Define the handler function for scene updates
+    const handleSceneUpdate = (
+      payload: RealtimePostgresChangesPayload<Scene>
+    ) => {
+      console.log("Real-time scene update received:", payload);
+      const updatedScene = payload.new as Scene;
 
-              const chapterExists = chapters.some(
-                (c) => c.id === updatedScene.chapter_id
-              );
-              if (!chapterExists) {
-                console.log(
-                  "Change detected in a chapter not currently loaded. Refetching all chapters."
-                );
-                fetchChapters();
-                return;
-              }
+      setChapters((prevChapters) => {
+        const chapterExists = prevChapters.some(
+          (c) => c.id === updatedScene.chapter_id
+        );
 
-              setChapters((prevChapters) => {
-                return prevChapters.map((chapter) => {
-                  if (chapter.id === updatedScene.chapter_id) {
-                    const sceneExists = chapter.scenes?.some(
-                      (s) => s.id === updatedScene.id
-                    );
-                    if (!sceneExists) {
-                      const newScenes = [
-                        ...(chapter.scenes || []),
-                        updatedScene,
-                      ].sort((a, b) => a.order - b.order);
-                      return { ...chapter, scenes: newScenes };
-                    }
+        if (!chapterExists) {
+          console.log(
+            "Change detected for a scene in a chapter not currently loaded. Refetching all chapters."
+          );
+          fetchChapters();
+          return prevChapters; // Return current state; fetchChapters will update it later.
+        }
 
-                    const updatedScenes = chapter.scenes?.map((scene) =>
-                      scene.id === updatedScene.id
-                        ? { ...scene, ...updatedScene }
-                        : scene
-                    );
-                    return { ...chapter, scenes: updatedScenes };
-                  }
-                  return chapter;
-                });
-              });
-              toast.info(
-                `Scene "${updatedScene.title || "Untitled"}" was updated.`
+        // If the chapter exists, update it immutably
+        return prevChapters.map((chapter) => {
+          if (chapter.id === updatedScene.chapter_id) {
+            const sceneExists = chapter.scenes?.some(
+              (s) => s.id === updatedScene.id
+            );
+
+            let updatedScenes;
+            if (sceneExists) {
+              // Scene exists, so we update it in the list
+              updatedScenes =
+                chapter.scenes?.map((scene) =>
+                  scene.id === updatedScene.id
+                    ? { ...scene, ...updatedScene }
+                    : scene
+                ) ?? [];
+            } else {
+              // Scene is new to this chapter (e.g., just created), so we add it
+              updatedScenes = [...(chapter.scenes || []), updatedScene].sort(
+                (a, b) => a.order - b.order
               );
             }
+            return { ...chapter, scenes: updatedScenes };
+          }
+          return chapter;
+        });
+      });
+
+      toast.info(`Scene "${updatedScene.title || "Untitled"}" was updated.`);
+    };
+
+    // Set up the subscription
+    channel
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "scenes",
+        },
+        handleSceneUpdate
+      )
+      .subscribe((status, err) => {
+        // The subscribe callback is for monitoring status, not for primary error handling of the setup.
+        if (status === "SUBSCRIBED") {
+          console.log(
+            `Successfully subscribed to real-time scene updates for project ${projectId}`
           );
-
-        let subscriptionSuccessful = false;
-
-        await scenesUpdateChannel.subscribe((status: string, err?: Error) => {
-          if (!isMounted) return;
-
-          if (status === "SUBSCRIBED") {
-            subscriptionSuccessful = true;
-            console.log(
-              `Successfully subscribed to scene updates for project ${projectId}`
-            );
-          }
-          if (status === "CHANNEL_ERROR") {
-            console.error("Real-time channel error:", {
-              status,
-              error: err,
-              projectId,
-              timestamp: new Date().toISOString(),
-            });
-            toast.error(
-              "Real-time connection failed. Updates may not appear automatically."
-            );
-          }
-        });
-
-        if (!subscriptionSuccessful) {
-          throw new Error("Failed to subscribe to channel");
+        } else if (status === "CHANNEL_ERROR") {
+          console.error("Real-time channel subscription error:", {
+            error: err,
+            projectId,
+            timestamp: new Date().toISOString(),
+          });
+          toast.error(
+            "Real-time connection failed. Updates may not appear automatically."
+          );
+        } else if (status === "TIMED_OUT") {
+          console.warn("Real-time connection timed out.");
+          toast.warning("Real-time connection timed out.");
+        } else if (status === "CLOSED") {
+          console.log("Real-time channel closed.");
         }
-      } catch (error) {
-        console.error("Error setting up real-time channel:", {
-          error,
-          projectId,
-          timestamp: new Date().toISOString(),
-        });
-        toast.error(
-          "Failed to establish real-time connection. Please refresh the page."
-        );
-      }
-    };
+      });
 
-    setupChannel();
-
+    // Cleanup function for when the component unmounts or projectId changes
     return () => {
-      isMounted = false;
-      if (scenesUpdateChannel) {
-        scenesUpdateChannel.unsubscribe().catch((err: Error) => {
-          console.error("Error unsubscribing from channel:", err);
-        });
-      }
+      supabase.removeChannel(channel).catch((err: Error) => {
+        console.error("Error unsubscribing from real-time channel:", err);
+      });
     };
-  }, [projectId, chapters, fetchChapters]);
+  }, [projectId, fetchChapters]); // Correct, stable dependency array
 
   const value = {
     allProjectCharacters,
