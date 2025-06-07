@@ -46,7 +46,7 @@ export function PrimarySidebar({
   // Removed internal activeItem state and handleNavItemClick
 
   return (
-    <aside className="w-16 bg-gradient-to-b from-gray-900 to-gray-950 text-gray-100 flex flex-col items-center py-6 shadow-2xl border-r border-gray-800">
+    <aside className="w-16 bg-card text-card-foreground flex flex-col items-center py-6 shadow-2xl border-r border-border">
       {/* Logo or App Icon placeholder */}
       <div className="mb-8 relative">
         <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center backdrop-blur-sm">

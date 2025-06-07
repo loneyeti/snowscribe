@@ -104,20 +104,6 @@ export function WordCountProgressIndicator({
           <div className="w-full h-full bg-gradient-to-r from-transparent via-slate-300/10 to-transparent dark:via-slate-600/10" />
         </div>
       </div>
-
-      {/* Target information */}
-      <div className="flex justify-between items-center mt-2">
-        <span className="text-xs text-slate-500/70 dark:text-slate-400/70 font-medium">
-          Target: {targetWords.toLocaleString()} words
-        </span>
-        {progressPercentage > 0 && (
-          <span className="text-xs text-slate-500/70 dark:text-slate-400/70 font-medium">
-            {targetWords - currentWords > 0
-              ? `${(targetWords - currentWords).toLocaleString()} remaining`
-              : `${(currentWords - targetWords).toLocaleString()} over target`}
-          </span>
-        )}
-      </div>
     </div>
   );
 }
