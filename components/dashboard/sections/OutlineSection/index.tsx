@@ -1,8 +1,7 @@
 // components/dashboard/sections/OutlineSection/index.tsx
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import type { Project, Scene } from "@/lib/types";
 import { useOutlineData } from "@/hooks/dashboard/useOutlineData";
-import { createClient } from "@/lib/supabase/client";
 import { useManuscriptData } from "@/hooks/dashboard/useManuscriptData"; // For chapters & scenes
 import { useCharactersData } from "@/hooks/dashboard/useCharactersData"; // For characters list
 import { useProjectData } from "@/contexts/ProjectDataContext"; // For allSceneTags
@@ -157,31 +156,7 @@ export function OutlineSection({
     fetchAllChars,
   ]);
 
-  // Set up Supabase realtime subscription for scene updates
-  useEffect(() => {
-    if (!isActive || !initialProject.id) return;
-
-    const supabase = createClient();
-    const channel = supabase
-      .channel("scenes-updates")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "scenes",
-          filter: `project_id=eq.${initialProject.id}`,
-        },
-        () => {
-          fetchProjectChapters();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [isActive, initialProject.id, fetchProjectChapters]);
+  // Real-time updates are now handled by ProjectDataContext
   // Use project data context for all scene tags
   const { allSceneTags, isLoadingAllSceneTags, refreshAllSceneTags } =
     useProjectData();
