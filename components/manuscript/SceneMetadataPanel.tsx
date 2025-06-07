@@ -61,6 +61,7 @@ export function SceneMetadataPanel({
   const [currentDescription, setCurrentDescription] = useState(
     scene.outline_description || ""
   );
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<
@@ -103,6 +104,76 @@ export function SceneMetadataPanel({
   const handleSaveDescription = async () => {
     await onSceneUpdate({ outline_description: currentDescription });
     setIsEditingDescription(false);
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!scene.title && !scene.content?.trim()) {
+      toast.info(
+        "A scene title or content is required to generate a description."
+      );
+      return;
+    }
+    setIsGeneratingDescription(true);
+    const toastId = toast.loading(
+      "AI is generating a description for the scene..."
+    );
+
+    try {
+      const userPrompt = `Based on the provided scene context (title: "${
+        scene.title || "Untitled"
+      }" and its content), generate a concise and informative outline description. The description should summarize the key events, character actions, and plot significance of the scene in 1-3 sentences. Return only the generated description as plain text.`;
+
+      const aiResponse = await sendMessage(
+        projectId,
+        AI_TOOL_NAMES.SCENE_OUTLINER,
+        userPrompt,
+        { scene } // Pass the whole scene object as context
+      );
+
+      if (
+        aiResponse.content &&
+        aiResponse.content.length > 0 &&
+        aiResponse.content[0].type === "text"
+      ) {
+        const rawResponseText = (
+          aiResponse.content[0] as import("snowgander").TextBlock
+        ).text;
+
+        let generatedDescription = rawResponseText.trim();
+        // Clean up common AI conversational prefixes
+        generatedDescription = generatedDescription
+          .replace(
+            /^(here's a description:|description:|here is the description:|the description is:)\s*/i,
+            ""
+          )
+          .trim();
+        generatedDescription = generatedDescription
+          .replace(/^"|"$/g, "")
+          .trim();
+
+        setCurrentDescription(generatedDescription);
+        toast.success("AI generated description is ready to be saved.", {
+          id: toastId,
+        });
+      } else {
+        const errorBlock = aiResponse.content?.find(
+          (block) => block.type === "error"
+        ) as import("snowgander").ErrorBlock | undefined;
+        throw new Error(
+          errorBlock?.publicMessage || "AI did not return a valid description."
+        );
+      }
+    } catch (error) {
+      console.error("Failed to generate scene description:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not generate description.",
+        { id: toastId }
+      );
+    } finally {
+      setIsGeneratingDescription(false);
+    }
   };
 
   const handleSaveCategory = async () => {
@@ -464,25 +535,46 @@ export function SceneMetadataPanel({
                   className="text-sm w-full bg-input"
                   placeholder="Enter scene description..."
                 />
-                <div className="flex justify-end space-x-2 mt-2">
+                <div className="flex justify-between items-center mt-2">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="text-xs"
-                    onClick={() => {
-                      setIsEditingDescription(false);
-                      setCurrentDescription(scene.outline_description || "");
-                    }}
+                    className="text-xs h-7"
+                    onClick={handleGenerateDescription}
+                    disabled={isGeneratingDescription}
+                    title="Generate description based on scene content"
                   >
-                    Cancel
+                    {isGeneratingDescription ? (
+                      <Loader2 size={14} className="mr-1.5 animate-spin" />
+                    ) : (
+                      <Sparkles size={14} className="mr-1.5" />
+                    )}
+                    {isGeneratingDescription
+                      ? "Generating..."
+                      : "Generate with AI"}
                   </Button>
-                  <Button
-                    size="sm"
-                    className="text-xs"
-                    onClick={handleSaveDescription}
-                  >
-                    <Save size={12} className="mr-1" /> Save
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => {
+                        setIsEditingDescription(false);
+                        setCurrentDescription(scene.outline_description || "");
+                      }}
+                      disabled={isGeneratingDescription}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="text-xs"
+                      onClick={handleSaveDescription}
+                      disabled={isGeneratingDescription}
+                    >
+                      <Save size={12} className="mr-1" /> Save
+                    </Button>
+                  </div>
                 </div>
               </>
             ) : (

@@ -1,7 +1,8 @@
 // components/dashboard/sections/OutlineSection/index.tsx
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import type { Project, Scene } from "@/lib/types";
 import { useOutlineData } from "@/hooks/dashboard/useOutlineData";
+import { createClient } from "@/lib/supabase/client";
 import { useManuscriptData } from "@/hooks/dashboard/useManuscriptData"; // For chapters & scenes
 import { useCharactersData } from "@/hooks/dashboard/useCharactersData"; // For characters list
 import { useProjectData } from "@/contexts/ProjectDataContext"; // For allSceneTags
@@ -56,6 +57,65 @@ export function OutlineSection({
     selectedChapter,
   } = useManuscriptData(initialProject.id);
 
+  // Centralized scene update handler
+  const handleSceneUpdate = useCallback(
+    async (chapterId: string, sceneId: string, updatedData: Partial<Scene>) => {
+      try {
+        // Update database
+        const updatedScene = await hookHandleSceneOutlineUpdate(
+          chapterId,
+          sceneId,
+          updatedData
+        );
+
+        if (!updatedScene) return;
+
+        // Update chapters state to reflect changes
+        setChapters((prevChapters) =>
+          prevChapters.map((chapter) =>
+            chapter.id === chapterId
+              ? {
+                  ...chapter,
+                  scenes:
+                    chapter.scenes?.map((s) =>
+                      s.id === sceneId ? { ...s, ...updatedScene } : s
+                    ) || [],
+                }
+              : chapter
+          )
+        );
+
+        // Update selected scene if it's the one being edited
+        setSelectedScene((prev) =>
+          prev && prev.id === sceneId ? { ...prev, ...updatedScene } : prev
+        );
+
+        // Update scenes for selected chapter if needed
+        if (selectedChapter && selectedChapter.id === chapterId) {
+          setScenesForSelectedChapter((prevScenes) =>
+            prevScenes.map((s) =>
+              s.id === sceneId ? { ...s, ...updatedScene } : s
+            )
+          );
+        }
+
+        toast.success("Scene updated successfully");
+      } catch (error) {
+        console.error("Failed to update scene:", error);
+        toast.error(
+          error instanceof Error ? error.message : "Failed to update scene"
+        );
+      }
+    },
+    [
+      hookHandleSceneOutlineUpdate,
+      setChapters,
+      setSelectedScene,
+      setScenesForSelectedChapter,
+      selectedChapter,
+    ]
+  );
+
   // Use characters data hook for character list
   const {
     characters: allCharactersForProject,
@@ -96,6 +156,32 @@ export function OutlineSection({
     isLoadingAllChars,
     fetchAllChars,
   ]);
+
+  // Set up Supabase realtime subscription for scene updates
+  useEffect(() => {
+    if (!isActive || !initialProject.id) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel("scenes-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "scenes",
+          filter: `project_id=eq.${initialProject.id}`,
+        },
+        () => {
+          fetchProjectChapters();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [isActive, initialProject.id, fetchProjectChapters]);
   // Use project data context for all scene tags
   const { allSceneTags, isLoadingAllSceneTags, refreshAllSceneTags } =
     useProjectData();
@@ -219,49 +305,7 @@ export function OutlineSection({
     </>
   );
 
-  // Handler passed to ChapterSceneOutlineList for when a scene's core fields are updated
-  // This updates the master list of chapters in useManuscriptData
-  const handleSceneUpdateFromOutlineList = useCallback(
-    async (chapterId: string, sceneId: string, updatedData: Partial<Scene>) => {
-      const updatedScene = await hookHandleSceneOutlineUpdate(
-        chapterId,
-        sceneId,
-        updatedData
-      );
-      if (updatedScene) {
-        setChapters((prevChapters) =>
-          prevChapters.map((ch) => {
-            if (ch.id === chapterId) {
-              return {
-                ...ch,
-                scenes: (ch.scenes || []).map((sc) =>
-                  sc.id === sceneId ? { ...sc, ...updatedScene } : sc
-                ),
-              };
-            }
-            return ch;
-          })
-        );
-        setSelectedScene((prev) =>
-          prev && prev.id === sceneId ? { ...prev, ...updatedScene } : prev
-        );
-        if (selectedChapter && selectedChapter.id === chapterId) {
-          setScenesForSelectedChapter((prevScenes) =>
-            prevScenes.map((s) =>
-              s.id === sceneId ? { ...s, ...updatedScene } : s
-            )
-          );
-        }
-      }
-    },
-    [
-      hookHandleSceneOutlineUpdate,
-      setChapters,
-      setSelectedScene,
-      setScenesForSelectedChapter,
-      selectedChapter,
-    ]
-  );
+  // Remove unused handleSceneUpdateFromOutlineList since we're using handleSceneUpdate now
 
   const mainDetailColumnContent = (
     <>
@@ -370,7 +414,7 @@ export function OutlineSection({
               characters={allCharactersForProject}
               sceneTags={allSceneTags}
               projectId={initialProject.id}
-              onSceneUpdate={handleSceneUpdateFromOutlineList}
+              onSceneUpdate={handleSceneUpdate}
             />
           )}
         </div>
