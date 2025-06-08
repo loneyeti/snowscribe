@@ -1,7 +1,7 @@
 "use client"; // AppShell needs to be a client component to manage state
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppHeader } from "./AppHeader";
 import { PrimarySidebar } from "./PrimarySidebar";
 import type { Project, Genre } from "@/lib/types";
@@ -17,8 +17,9 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, project }: AppShellProps) {
-  const [activeSection, setActiveSection] = useState<string>("manuscript");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeSection = searchParams.get("section") || "manuscript"; // Default to 'manuscript' if not in URL
   const [currentProjectData, setCurrentProjectData] = useState(project);
 
   useEffect(() => {
@@ -29,7 +30,9 @@ export function AppShell({ children, project }: AppShellProps) {
     if (sectionId === "settings") {
       router.push("/settings");
     } else {
-      setActiveSection(sectionId);
+      const newUrl = `/project/${project.id}?section=${sectionId}`;
+      // We use router.push() so the browser back button works as expected.
+      router.push(newUrl, { scroll: false });
     }
   };
 
