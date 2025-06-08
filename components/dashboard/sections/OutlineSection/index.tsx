@@ -47,71 +47,32 @@ export function OutlineSection({
   } = useOutlineData(initialProject, initialProject.id);
 
   // Use manuscript data hook for character management
+  // Use project data context for all scene tags and refresh trigger
   const {
-    fetchProjectChapters,
-    setSelectedScene,
-    setScenesForSelectedChapter,
-    selectedChapter,
-    setChapters,
-  } = useManuscriptData(initialProject.id);
+    allSceneTags,
+    isLoadingAllSceneTags,
+    refreshAllSceneTags,
+    triggerSceneUpdate,
+  } = useProjectData();
 
-  // Centralized scene update handler
+  // Use manuscript data hook just for fetchProjectChapters
+  const { fetchProjectChapters } = useManuscriptData(initialProject.id);
+
+  // Centralized scene update handler - now just calls update hook and triggers refresh
   const handleSceneUpdate = useCallback(
     async (chapterId: string, sceneId: string, updatedData: Partial<Scene>) => {
-      try {
-        // Update database
-        const updatedScene = await hookHandleSceneOutlineUpdate(
-          chapterId,
-          sceneId,
-          updatedData
-        );
+      const updatedScene = await hookHandleSceneOutlineUpdate(
+        chapterId,
+        sceneId,
+        updatedData
+      );
 
-        if (!updatedScene) return;
-
-        // Update chapters state to reflect changes
-        setChapters((prevChapters) =>
-          prevChapters.map((chapter) =>
-            chapter.id === chapterId
-              ? {
-                  ...chapter,
-                  scenes:
-                    chapter.scenes?.map((s) =>
-                      s.id === sceneId ? { ...s, ...updatedScene } : s
-                    ) || [],
-                }
-              : chapter
-          )
-        );
-
-        // Update selected scene if it's the one being edited
-        setSelectedScene((prev) =>
-          prev && prev.id === sceneId ? { ...prev, ...updatedScene } : prev
-        );
-
-        // Update scenes for selected chapter if needed
-        if (selectedChapter && selectedChapter.id === chapterId) {
-          setScenesForSelectedChapter((prevScenes) =>
-            prevScenes.map((s) =>
-              s.id === sceneId ? { ...s, ...updatedScene } : s
-            )
-          );
-        }
-
-        toast.success("Scene updated successfully");
-      } catch (error) {
-        console.error("Failed to update scene:", error);
-        toast.error(
-          error instanceof Error ? error.message : "Failed to update scene"
-        );
+      if (updatedScene) {
+        // This will trigger the useEffect in useOutlineData to refetch chapters
+        triggerSceneUpdate();
       }
     },
-    [
-      hookHandleSceneOutlineUpdate,
-      setChapters,
-      setSelectedScene,
-      setScenesForSelectedChapter,
-      selectedChapter,
-    ]
+    [hookHandleSceneOutlineUpdate, triggerSceneUpdate]
   );
 
   // Use characters data hook for character list
@@ -154,10 +115,6 @@ export function OutlineSection({
     isLoadingAllChars,
     fetchAllChars,
   ]);
-
-  // Use project data context for all scene tags
-  const { allSceneTags, isLoadingAllSceneTags, refreshAllSceneTags } =
-    useProjectData();
 
   console.log("[OutlineSection] Current outlineView:", outlineView);
   console.log("[OutlineSection] Chapters length:", chapters.length);
@@ -386,6 +343,7 @@ export function OutlineSection({
               sceneTags={allSceneTags}
               projectId={initialProject.id}
               onSceneUpdate={handleSceneUpdate}
+              onSceneCreated={triggerSceneUpdate}
             />
           )}
         </div>

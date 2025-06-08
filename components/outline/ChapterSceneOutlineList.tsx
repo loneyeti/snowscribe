@@ -45,7 +45,8 @@ interface ChapterSceneOutlineListProps {
     chapterId: string,
     sceneId: string,
     updatedData: Partial<Scene>
-  ) => void;
+  ) => Promise<void>;
+  onSceneCreated: () => void;
 }
 
 // Scene category color mapping
@@ -74,6 +75,7 @@ export function ChapterSceneOutlineList({
   sceneTags,
   projectId,
   onSceneUpdate,
+  onSceneCreated,
 }: ChapterSceneOutlineListProps) {
   console.log("ChapterSceneOutlineList - Props Received:");
   console.log("Chapters:", chapters);
@@ -798,8 +800,8 @@ export function ChapterSceneOutlineList({
             setIsCreateSceneModalOpen(false);
             setCreatingSceneInChapterId(null);
           }}
-          onSceneCreated={(newScene) => {
-            onSceneUpdate(creatingSceneInChapterId, newScene.id, newScene);
+          onSceneCreated={() => {
+            onSceneCreated();
             setIsCreateSceneModalOpen(false);
             setCreatingSceneInChapterId(null);
           }}
