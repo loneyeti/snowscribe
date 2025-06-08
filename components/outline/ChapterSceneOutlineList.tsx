@@ -375,6 +375,7 @@ export function ChapterSceneOutlineList({
                                   onClick={() => {
                                     setEditingSceneId(scene.id);
                                     setEditFormData({
+                                      id: scene.id,
                                       outline_description:
                                         scene.outline_description || "",
                                       pov_character_id:
@@ -641,14 +642,10 @@ export function ChapterSceneOutlineList({
                                     <Button
                                       size="sm"
                                       onClick={() => {
-                                        const {
-                                          tag_ids,
-                                          ...sceneDataWithoutTags
-                                        } = editFormData;
                                         onSceneUpdate(
                                           chapter.id,
                                           scene.id,
-                                          sceneDataWithoutTags
+                                          editFormData
                                         );
                                         setEditingSceneId(null);
                                         setEditFormData({});

@@ -126,19 +126,62 @@ export async function PUT(request: Request, { params }: { params: SceneParams })
     return NextResponse.json(existingScene);
   }
 
-  const { data: updatedScene, error: updateError } = await supabase
+  // Step 1: Perform the update. We don't need to select data here.
+  const { error: updateError } = await supabase
     .from('scenes')
     .update(validationResult.data)
-    .eq('id', sceneId) // Only need to match by sceneId for the update, as ownership is verified.
-    .select()
-    .single();
+    .eq('id', sceneId);
 
   if (updateError) {
     console.error(`Error updating scene ${sceneId}:`, updateError);
     return NextResponse.json({ error: 'Failed to update scene', details: updateError.message }, { status: 500 });
   }
 
-  return NextResponse.json(updatedScene);
+  // Step 2: After a successful update, re-fetch the scene with all its relations.
+  const { data: fullUpdatedScene, error: fetchUpdatedError } = await supabase
+    .from('scenes')
+    .select(`
+      *,
+      scene_characters(character_id),
+      scene_applied_tags(tag_id)
+    `)
+    .eq('id', sceneId)
+    .single();
+
+  if (fetchUpdatedError) {
+    console.error(`Error re-fetching scene ${sceneId} after update:`, fetchUpdatedError);
+    return NextResponse.json({ error: 'Scene updated, but failed to fetch complete data.', details: fetchUpdatedError.message }, { status: 500 });
+  }
+
+  if (!fullUpdatedScene) {
+    return NextResponse.json({ error: 'Updated scene not found.' }, { status: 404 });
+  }
+
+  // Step 3: Process the fetched data to flatten relations into arrays.
+  // This ensures the returned object has the same shape the client-side expects.
+  const sceneWithRawRelations = fullUpdatedScene as Omit<Scene, 'other_character_ids' | 'tag_ids'> & {
+    scene_characters: { character_id: string }[] | null;
+    scene_applied_tags: { tag_id: string }[] | null;
+  };
+
+  const finalScene: Scene = {
+    ...sceneWithRawRelations,
+    other_character_ids: (sceneWithRawRelations.scene_characters || []).map(sc => sc.character_id),
+    tag_ids: (sceneWithRawRelations.scene_applied_tags || []).map(sat => sat.tag_id),
+  };
+
+  // Define a type for the scene with temporary relation properties
+  type SceneWithTempRelations = Scene & {
+    scene_characters?: { character_id: string }[];
+    scene_applied_tags?: { tag_id: string }[];
+  };
+
+  // Clean up temporary relation properties before sending the response.
+  delete (finalScene as SceneWithTempRelations).scene_characters;
+  delete (finalScene as SceneWithTempRelations).scene_applied_tags;
+
+  // Step 4: Return the fully-formed scene object.
+  return NextResponse.json(finalScene);
 }
 
 // DELETE /api/projects/[projectId]/chapters/[chapterId]/scenes/[sceneId]
