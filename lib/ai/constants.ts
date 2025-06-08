@@ -15,6 +15,7 @@ export const AI_TOOL_NAMES = {
   SCENE_CHARACTER_ANALYZER: 'scene_character_analyzer',
   SCENE_TAG_SUGGESTER: 'scene_tag_suggester',
   SCENE_CATEGORY_SUGGESTER: 'scene_category_suggester',
+  SCENE_OUTLINER: 'scene_outliner',
 } as const;
 
 export type AIToolName = typeof AI_TOOL_NAMES[keyof typeof AI_TOOL_NAMES];
