@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import type { Project } from "@/lib/types";
 
 // Import Section Components
@@ -25,13 +26,21 @@ interface ProjectDashboardClientProps {
 
 export function ProjectDashboardClient({
   project,
-  activeSection = "manuscript",
+  activeSection: activeSectionProp = "manuscript",
 }: ProjectDashboardClientProps) {
+  const searchParams = useSearchParams();
+  const sectionFromUrl = searchParams.get("section");
+
+  // Determine the active section. URL parameter takes precedence.
+  const activeSection = sectionFromUrl || activeSectionProp;
+
   useEffect(() => {
     // Actions to take when the entire project context changes.
     // Most resets are now handled by hooks re-initializing or sections based on `isActive`.
     console.log(`[ProjectDashboardClient] Project changed to: ${project.id}`);
-  }, [project]);
+    // Log the active section for debugging
+    console.log(`[ProjectDashboardClient] Active section is: ${activeSection}`);
+  }, [project, activeSection]);
 
   return (
     <ProjectDataProvider projectId={project.id}>

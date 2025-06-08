@@ -1,12 +1,16 @@
 // hooks/dashboard/useManuscriptData.ts
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Chapter, Scene } from '../../lib/types';
+import { getChaptersByProjectId } from '../../lib/data/chapters';
 import { getScenesByChapterId } from '../../lib/data/scenes';
 import { toast } from 'sonner';
 import { countWords } from '../../lib/utils';
 
 export function useManuscriptData(projectId: string) {
+  const router = useRouter();
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [isLoadingDeepLink, setIsLoadingDeepLink] = useState(false);
   const [isLoadingChapters, setIsLoadingChapters] = useState(false); // Default to false
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [scenesForSelectedChapter, setScenesForSelectedChapter] = useState<Scene[]>([]);
@@ -21,12 +25,7 @@ export function useManuscriptData(projectId: string) {
     setScenesForSelectedChapter([]);
     setSelectedScene(null);
     try {
-      const response = await fetch(`/api/projects/${projectId}/chapters`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Failed to load chapters."}));
-        throw new Error(errorData.error || `Server error: ${response.status}`);
-      }
-      const fetchedChapters: Chapter[] = await response.json();
+      const fetchedChapters = await getChaptersByProjectId(projectId);
       setChapters(fetchedChapters.sort((a,b) => a.order - b.order));
     } catch (error) {
       console.error("useManuscriptData: Failed to fetch chapters:", error);
@@ -128,8 +127,61 @@ export function useManuscriptData(projectId: string) {
   }, []);
 
 
+  const handleDeepLink = useCallback(async (chapterId: string, sceneId: string) => {
+    if (isLoadingDeepLink) return;
+
+    setIsLoadingDeepLink(true);
+    const toastId = toast.loading("Navigating to scene...");
+
+    try {
+      // 1. Fetch all chapters if not already present
+      let allChapters = chapters;
+      if (allChapters.length === 0) {
+        const fetchedChapters = await getChaptersByProjectId(projectId);
+        if (!fetchedChapters) throw new Error("Failed to load chapters for navigation.");
+        allChapters = fetchedChapters.sort((a: Chapter, b: Chapter) => a.order - b.order);
+        setChapters(allChapters);
+      }
+
+      // 2. Find and select the target chapter
+      const targetChapter = allChapters.find(c => c.id === chapterId);
+      if (!targetChapter) throw new Error("Chapter specified in URL not found.");
+      setSelectedChapter(targetChapter);
+
+      // 3. Fetch scenes for the target chapter
+      setIsLoadingScenes(true);
+      const scenesForChapter = await getScenesByChapterId(projectId, chapterId);
+      const sortedScenes = scenesForChapter.sort((a,b) => a.order - b.order);
+      setScenesForSelectedChapter(sortedScenes);
+      setIsLoadingScenes(false);
+
+      // 4. Find and select the target scene
+      const targetScene = sortedScenes.find(s => s.id === sceneId);
+      if (!targetScene) throw new Error("Scene specified in URL not found.");
+      
+      // Set the scene and its word count
+      setSelectedScene(targetScene);
+      setCurrentSceneWordCount(targetScene.word_count || 0);
+
+      // 5. Clean up URL after successful deep link
+      const newUrl = `/project/${projectId}?section=manuscript`;
+      router.replace(newUrl, { scroll: false });
+
+      toast.success("Navigated to scene successfully!", { id: toastId });
+
+    } catch (error) {
+      console.error("Deep link navigation failed:", error);
+      toast.error(error instanceof Error ? error.message : "Could not navigate to the specified scene.", { id: toastId });
+      setSelectedChapter(null);
+      setSelectedScene(null);
+    } finally {
+      setIsLoadingDeepLink(false);
+    }
+  }, [projectId, router, chapters, isLoadingDeepLink]);
+
   return {
     chapters, setChapters, // Expose setChapters for outline updates
+    handleDeepLink,
     isLoadingChapters,
     selectedChapter, setSelectedChapter,
     scenesForSelectedChapter, setScenesForSelectedChapter, // Expose setScenes for outline/drag-drop

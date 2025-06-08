@@ -1,5 +1,5 @@
 // components/dashboard/sections/ManuscriptSection/index.tsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import type { Project, Scene, Chapter } from "@/lib/types";
 import { useManuscriptData } from "@/hooks/dashboard/useManuscriptData";
 import { useSceneDragDrop } from "@/hooks/dashboard/useSceneDragDrop";
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { cactusSerif } from "@/lib/fonts";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { UpdateSceneValues } from "@/lib/schemas/scene.schema";
 import {
   updateScene,
@@ -62,8 +63,125 @@ export function ManuscriptSection({
   } = useManuscriptData(project.id);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { allProjectCharacters, allSceneTags } = useProjectData();
+
+  const [isHandlingDeepLink, setIsHandlingDeepLink] = useState(false);
+  const processedSceneIdRef = useRef<string | null>(null);
+
+  // Handle deep linking from URL
+  useEffect(() => {
+    if (!isActive) return;
+
+    const chapterId = searchParams.get("chapterId");
+    const sceneId = searchParams.get("sceneId");
+
+    // Only run if we have a sceneId and it's different from the one we last processed
+    if (sceneId && sceneId !== processedSceneIdRef.current) {
+      processedSceneIdRef.current = sceneId; // Set the latch immediately
+      if (!chapterId) return; // Ensure chapterId exists before proceeding
+
+      const handleDeepLink = async () => {
+        setIsHandlingDeepLink(true);
+        try {
+          // 1. Fetch all chapters if not already loaded
+          let allChapters = chapters;
+          if (allChapters.length === 0) {
+            const response = await fetch(
+              `/api/projects/${project.id}/chapters`
+            );
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(
+                errorData.message || "Failed to load chapters from server"
+              );
+            }
+            const data = await response.json();
+            if (!Array.isArray(data)) {
+              throw new Error("Invalid chapters data format received");
+            }
+            allChapters = data.sort(
+              (a: Chapter, b: Chapter) => a.order - b.order
+            );
+          }
+
+          // 2. Find and select the target chapter
+          const targetChapter = allChapters.find((c) => c.id === chapterId);
+          if (!targetChapter) {
+            throw new Error("Chapter specified in URL not found");
+          }
+          dataHandleChapterSelect(targetChapter);
+          setManuscriptView("scenes");
+
+          // 3. Fetch scenes for the target chapter
+          const scenesForChapter = await getScenesByChapterId(
+            project.id,
+            chapterId
+          );
+          if (!Array.isArray(scenesForChapter)) {
+            throw new Error("Invalid scenes data format received");
+          }
+          const sortedScenes = scenesForChapter.sort(
+            (a, b) => a.order - b.order
+          );
+          setScenesForSelectedChapter(sortedScenes);
+
+          // 4. Find and select the target scene
+          const targetScene = sortedScenes.find((s) => s.id === sceneId);
+          if (!targetScene) {
+            throw new Error(
+              `Scene ${sceneId} not found in chapter ${chapterId}`
+            );
+          }
+          dataHandleSceneSelect(targetScene);
+
+          // Clean up URL after deep link is handled
+          const newUrl = `/project/${project.id}?section=manuscript`;
+          router.replace(newUrl, { scroll: false });
+          toast.success(
+            `Navigated to scene: ${targetScene.title || "Untitled Scene"}`
+          );
+          processedSceneIdRef.current = null; // Reset latch after successful navigation
+        } catch (error) {
+          console.error("Deep link navigation failed:", {
+            error,
+            chapterId,
+            sceneId,
+            projectId: project.id,
+          });
+          toast.error(
+            `Could not navigate to scene: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+            {
+              action: {
+                label: "Retry",
+                onClick: () => handleDeepLink(),
+              },
+            }
+          );
+          // Reset to a safe state
+          dataHandleBackToChapters();
+          setManuscriptView("chapters");
+          processedSceneIdRef.current = null; // Reset latch on error too
+        } finally {
+          setIsHandlingDeepLink(false);
+        }
+      };
+
+      handleDeepLink();
+    }
+  }, [
+    isActive,
+    searchParams,
+    project.id,
+    chapters,
+    dataHandleChapterSelect,
+    dataHandleSceneSelect,
+    dataHandleBackToChapters,
+    setScenesForSelectedChapter,
+  ]);
 
   const [manuscriptView, setManuscriptView] =
     useState<ManuscriptView>("chapters");
@@ -304,6 +422,16 @@ export function ManuscriptSection({
   );
 
   if (!isActive) return null;
+
+  if (isHandlingDeepLink) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Paragraph className="text-muted-foreground">
+          Loading scene...
+        </Paragraph>
+      </div>
+    );
+  }
 
   const middleColumnContent = (
     <>

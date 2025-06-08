@@ -1,3 +1,5 @@
+"use server";
+
 import type { Chapter } from "@/lib/types";
 import { getCookieHeader } from "./dataUtils";
 

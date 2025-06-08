@@ -1,3 +1,5 @@
+"use server";
+
 import type { Scene } from "@/lib/types";
 import type { UpdateSceneValues } from "@/lib/schemas/scene.schema";
 import { getCookieHeader } from "./dataUtils";

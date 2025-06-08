@@ -12,6 +12,8 @@ import { ALL_PRIMARY_SCENE_CATEGORIES } from "@/lib/types";
 import { ListContainer } from "@/components/ui/ListContainer";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import { IconButton } from "@/components/ui/IconButton";
 import {
   Loader2,
   Sparkles,
@@ -391,6 +393,23 @@ export function ChapterSceneOutlineList({
                                   <Edit3 size={14} className="mr-1.5" />
                                   Edit
                                 </Button>
+                                <Link
+                                  href={`/project/${projectId}?section=manuscript&chapterId=${chapter.id}&sceneId=${scene.id}`}
+                                  passHref
+                                >
+                                  <IconButton
+                                    asChild
+                                    icon={BookOpen}
+                                    variant="ghost"
+                                    size="sm"
+                                    aria-label="Go to Manuscript"
+                                    title="Go to Manuscript"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-xs h-auto"
+                                    onClick={(e: React.MouseEvent) =>
+                                      e.stopPropagation()
+                                    }
+                                  />
+                                </Link>
                               </div>
 
                               {/* Scene Description */}
