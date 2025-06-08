@@ -4,18 +4,38 @@ import type { Chapter, Scene } from '../../lib/types';
 import { getScenesByChapterId } from '../../lib/data/scenes';
 import { toast } from 'sonner';
 import { countWords } from '../../lib/utils';
-import { useProjectData } from '../../contexts/ProjectDataContext';
 
 export function useManuscriptData(projectId: string) {
-  // GET THE CENTRALIZED STATE FROM CONTEXT
-  const { chapters, setChapters, isLoadingChapters, fetchChapters: fetchProjectChapters } = useProjectData();
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [isLoadingChapters, setIsLoadingChapters] = useState(false); // Default to false
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [scenesForSelectedChapter, setScenesForSelectedChapter] = useState<Scene[]>([]);
   const [isLoadingScenes, setIsLoadingScenes] = useState(false);
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
   const [currentSceneWordCount, setCurrentSceneWordCount] = useState(0);
 
-  // Remove the local fetchProjectChapters function since we're using the context version
+  const fetchProjectChapters = useCallback(async () => {
+    if (!projectId) return;
+    setIsLoadingChapters(true);
+    setSelectedChapter(null); // Reset dependent states
+    setScenesForSelectedChapter([]);
+    setSelectedScene(null);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/chapters`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Failed to load chapters."}));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+      const fetchedChapters: Chapter[] = await response.json();
+      setChapters(fetchedChapters.sort((a,b) => a.order - b.order));
+    } catch (error) {
+      console.error("useManuscriptData: Failed to fetch chapters:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to load chapters.");
+      setChapters([]); // Ensure chapters is an array on error
+    } finally {
+      setIsLoadingChapters(false);
+    }
+  }, [projectId]);
 
   const fetchScenesForChapter = useCallback(async (chapterId: string) => {
     if (!projectId || !chapterId) return;
@@ -88,9 +108,8 @@ export function useManuscriptData(projectId: string) {
   }, [projectId, selectedChapter, selectedScene]);
 
   const handleChapterCreated = useCallback((newChapter: Chapter) => {
-    // This now updates the central state from ProjectDataContext
     setChapters((prev) => [...prev, newChapter].sort((a, b) => a.order - b.order));
-  }, [setChapters]);
+  }, []);
 
   const handleSceneCreated = useCallback((newScene: Scene) => {
     setScenesForSelectedChapter((prev) => [...prev, newScene].sort((a, b) => a.order - b.order));
@@ -110,9 +129,8 @@ export function useManuscriptData(projectId: string) {
 
 
   return {
-    chapters,
+    chapters, setChapters, // Expose setChapters for outline updates
     isLoadingChapters,
-    setChapters, // Expose setChapters for outline updates
     selectedChapter, setSelectedChapter,
     scenesForSelectedChapter, setScenesForSelectedChapter, // Expose setScenes for outline/drag-drop
     isLoadingScenes,

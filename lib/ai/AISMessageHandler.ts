@@ -82,7 +82,6 @@ export async function sendMessage(
           break;
         case 'scene_analyzer': // For tools that analyze a single scene
         case 'scene_helper':   // Matches existing AISidePanel toolName
-        case 'scene_outliner': // Add this line
           formattedContext = (await import('@/lib/ai/contextFormatters')).formatSceneForAI((contextData as { scene: Scene }).scene);
           break;
         // Add cases for 'plot_hole_checker', 'scene_character_suggester', 'character_backstory_generator', 'outline_json_generator' etc.
