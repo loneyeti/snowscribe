@@ -1,15 +1,37 @@
 // hooks/dashboard/useOutlineData.ts
 import { useState, useCallback, useEffect } from 'react';
-import type { Project, Scene, UpdateSceneValues } from '@/lib/types';
+import type { Project, Scene, Chapter, UpdateSceneValues } from '@/lib/types';
 import { toast } from 'sonner';
-import { updateProjectSchema, UpdateProjectValues } from '@/lib/schemas/project.schema'; // For synopsis save
-import { updateScene } from '@/lib/data/scenes'; // For scene outline updates
+import { updateProjectSchema, UpdateProjectValues } from '@/lib/schemas/project.schema';
+import { updateScene } from '@/lib/data/scenes';
+import { useProjectData } from '@/contexts/ProjectDataContext';
+import { getChaptersByProjectId } from '@/lib/data/chapters';
 
 export function useOutlineData(initialProject: Project, projectId: string) {
   const [currentProjectDetails, setCurrentProjectDetails] = useState(initialProject);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { sceneUpdateKey } = useProjectData();
+
+  const fetchChaptersWithScenes = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const fetchedChapters = await getChaptersByProjectId(projectId);
+      setChapters(fetchedChapters);
+    } catch (error) {
+      toast.error('Failed to load outline data.');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectId]);
 
   useEffect(() => {
-    setCurrentProjectDetails(initialProject); // Sync if initialProject prop changes
+    fetchChaptersWithScenes();
+  }, [sceneUpdateKey, fetchChaptersWithScenes]);
+
+  useEffect(() => {
+    setCurrentProjectDetails(initialProject);
   }, [initialProject]);
 
   const handleSynopsisUpdate = useCallback(async (updatedSynopsisData: Pick<Project, "log_line" | "one_page_synopsis">) => {
@@ -74,9 +96,11 @@ export function useOutlineData(initialProject: Project, projectId: string) {
 
 
   return {
-    currentProjectDetails,
-    setCurrentProjectDetails,
+    project: currentProjectDetails,
+    chapters,
+    isLoading,
     handleSynopsisUpdate,
     handleSceneOutlineUpdate,
+    refetchChapters: fetchChaptersWithScenes,
   };
 }

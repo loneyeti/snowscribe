@@ -22,6 +22,7 @@ import { X, Edit3, Save, Sparkles, Loader2 } from "lucide-react";
 import { sendMessage } from "@/lib/ai/AISMessageHandler";
 import { AI_TOOL_NAMES } from "@/lib/ai/constants";
 import { toast } from "sonner";
+import { useProjectData } from "@/contexts/ProjectDataContext";
 
 export interface SceneMetadataPanelProps {
   isOpen: boolean;
@@ -101,9 +102,12 @@ export function SceneMetadataPanel({
     setCurrentPovCharId(scene.pov_character_id || null);
   }, [scene]);
 
+  const { triggerSceneUpdate } = useProjectData();
+
   const handleSaveDescription = async () => {
     await onSceneUpdate({ outline_description: currentDescription });
     setIsEditingDescription(false);
+    triggerSceneUpdate();
   };
 
   const handleGenerateDescription = async () => {
@@ -179,11 +183,13 @@ export function SceneMetadataPanel({
   const handleSaveCategory = async () => {
     await onSceneUpdate({ primary_category: currentCategory });
     setIsEditingCategory(false);
+    triggerSceneUpdate();
   };
 
   const handleSavePov = async () => {
     await onSceneUpdate({ pov_character_id: currentPovCharId });
     setIsEditingPov(false);
+    triggerSceneUpdate();
   };
 
   const handleSuggestCharacters = async () => {

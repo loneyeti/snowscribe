@@ -16,6 +16,8 @@ interface ProjectDataContextType {
   isLoadingAllSceneTags: boolean;
   refreshAllProjectCharacters: () => Promise<void>;
   refreshAllSceneTags: () => Promise<void>;
+  sceneUpdateKey: number;
+  triggerSceneUpdate: () => void;
 }
 
 const ProjectDataContext = createContext<ProjectDataContextType | undefined>(
@@ -33,6 +35,7 @@ export const ProjectDataProvider: React.FC<{
     useState(true);
   const [allSceneTags, setAllSceneTags] = useState<SceneTag[]>([]);
   const [isLoadingAllSceneTags, setIsLoadingAllSceneTags] = useState(true);
+  const [sceneUpdateKey, setSceneUpdateKey] = useState(0);
 
   const fetchAllProjectCharactersInternal = useCallback(async () => {
     if (!projectId) return;
@@ -95,6 +98,10 @@ export const ProjectDataProvider: React.FC<{
     fetchAllProjectSceneTagsInternal,
   ]);
 
+  const triggerSceneUpdate = useCallback(() => {
+    setSceneUpdateKey((prevKey) => prevKey + 1);
+  }, []);
+
   const value = {
     allProjectCharacters,
     allSceneTags,
@@ -102,6 +109,8 @@ export const ProjectDataProvider: React.FC<{
     isLoadingAllSceneTags,
     refreshAllProjectCharacters: fetchAllProjectCharactersInternal,
     refreshAllSceneTags: fetchAllProjectSceneTagsInternal,
+    sceneUpdateKey,
+    triggerSceneUpdate,
   };
 
   return (
