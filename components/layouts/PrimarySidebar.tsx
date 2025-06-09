@@ -10,6 +10,7 @@ import {
   FileDown, // For Export
 } from "lucide-react";
 import { PrimarySidebarNavItem } from "./PrimarySidebarNavItem";
+import Link from "next/link";
 
 // Define a type for the navigation items
 interface NavItemConfig {
@@ -49,10 +50,11 @@ export function PrimarySidebar({
     <aside className="w-16 bg-card text-card-foreground flex flex-col items-center py-6 shadow-2xl border-r border-border">
       {/* Logo or App Icon placeholder */}
       <div className="mb-8 relative">
-        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
-          <span className="text-3xl">❄️</span>
+        <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
+          <Link href={"/"}>
+            <img src="/snowscribe-logo-dark.png" alt="Snowscribe Logo" />
+          </Link>
         </div>
-        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse" />
       </div>
 
       <nav className="flex-grow flex flex-col items-center space-y-2 w-full px-2">

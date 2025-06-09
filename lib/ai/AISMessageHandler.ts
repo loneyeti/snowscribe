@@ -6,7 +6,7 @@ import { getAIModelById } from '@/lib/data/aiModels';
 // getAIVendorById is used internally by lib/data/chat.ts, so not directly needed here for the call.
 import { getSystemPromptByCategory } from '@/lib/data/aiPrompts';
 import { chat as snowganderChatService } from '@/lib/data/chat';
-import { updateCreditUsage } from '@/lib/data/profiles';
+// Remove updateCreditUsage import since we'll call RPC directly
 import { createClient } from '@/lib/supabase/server';
 import type { AIModel } from '@/lib/types';
 import type { ChatResponse as SnowganderChatResponse } from 'snowgander';
@@ -130,15 +130,19 @@ export async function sendMessage(
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user && aiResponse.usage && aiResponse.usage.totalCost > 0) {
-      // Convert dollars to micros (1 dollar = 1,000,000 micros)
       const creditsUsed = Math.ceil(aiResponse.usage.totalCost * 1000000);
       
-      console.log(`[AISMessageHandler] AI interaction used ${creditsUsed} credits. Updating for user ${user.id}.`);
-      
-      // Fire-and-forget credit update (errors handled in updateCreditUsage)
-      updateCreditUsage(user.id, creditsUsed).catch((err: unknown) => {
-        console.error(`[AISMessageHandler] Non-blocking credit update failed:`, err);
+      // Call RPC directly instead of fetching API route
+      const { error: rpcError } = await supabase.rpc('increment_credit_usage', {
+        user_id_to_update: user.id,
+        credits_to_add: creditsUsed,
       });
+
+      if (rpcError) {
+        console.error(`[AISMessageHandler] Non-blocking credit update failed:`, rpcError);
+      } else {
+        console.log(`[AISMessageHandler] AI interaction used ${creditsUsed} credits. Updated for user ${user.id}.`);
+      }
     }
 
     // 6. Log AI Interaction
