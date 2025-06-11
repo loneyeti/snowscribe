@@ -2,8 +2,8 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Chapter, Scene } from '../../lib/types';
-import { getChaptersByProjectId } from '../../lib/data/chapters';
-import { getScenesByChapterId } from '../../lib/data/scenes';
+import { getChapters } from '../../lib/data/chapters';
+import { getScenesByChapterId, updateScene } from '../../lib/data/scenes';
 import { toast } from 'sonner';
 import { countWords } from '../../lib/utils';
 
@@ -25,8 +25,8 @@ export function useManuscriptData(projectId: string) {
     setScenesForSelectedChapter([]);
     setSelectedScene(null);
     try {
-      const fetchedChapters = await getChaptersByProjectId(projectId);
-      setChapters(fetchedChapters.sort((a,b) => a.order - b.order));
+      const fetchedChapters = await getChapters(projectId);
+      setChapters(fetchedChapters.sort((a: Chapter, b: Chapter) => a.order - b.order));
     } catch (error) {
       console.error("useManuscriptData: Failed to fetch chapters:", error);
       toast.error(error instanceof Error ? error.message : "Failed to load chapters.");
@@ -78,19 +78,14 @@ export function useManuscriptData(projectId: string) {
     setCurrentSceneWordCount(wordCount);
 
     try {
-      const response = await fetch(
-        `/api/projects/${projectId}/chapters/${selectedChapter.id}/scenes/${selectedScene.id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: text }), // word_count is handled by DB trigger
-        }
+      // Replace the fetch call with the server action
+      const updatedSceneFromServer = await updateScene(
+        projectId,
+        selectedChapter.id,
+        selectedScene.id,
+        { content: text } // Pass only the content to be updated
       );
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to save scene content.");
-      }
-      const updatedSceneFromServer: Scene = await response.json();
+
       setSelectedScene((prev) => prev ? { ...prev, content: text, word_count: updatedSceneFromServer.word_count } : null);
       setScenesForSelectedChapter((prevScenes) =>
         prevScenes.map((s) =>
@@ -101,7 +96,6 @@ export function useManuscriptData(projectId: string) {
     } catch (error) {
       console.error("useManuscriptData: Failed to save scene content:", error);
       toast.error(error instanceof Error ? error.message : "Could not save scene.");
-      // Optionally re-fetch scene to revert optimistic updates
       return null;
     }
   }, [projectId, selectedChapter, selectedScene]);
@@ -137,7 +131,7 @@ export function useManuscriptData(projectId: string) {
       // 1. Fetch all chapters if not already present
       let allChapters = chapters;
       if (allChapters.length === 0) {
-        const fetchedChapters = await getChaptersByProjectId(projectId);
+        const fetchedChapters = await getChapters(projectId);
         if (!fetchedChapters) throw new Error("Failed to load chapters for navigation.");
         allChapters = fetchedChapters.sort((a: Chapter, b: Chapter) => a.order - b.order);
         setChapters(allChapters);

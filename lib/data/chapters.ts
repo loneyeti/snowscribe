@@ -1,49 +1,59 @@
 "use server";
-
 import type { Chapter } from "@/lib/types";
-import { getCookieHeader } from "./dataUtils";
+import * as chapterService from "@/lib/services/chapterService";
+import { getAuthenticatedUser } from "@/lib/auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-
-export async function getChaptersByProjectId(projectId: string): Promise<Chapter[]> {
-  if (!projectId) {
-    console.error("getChaptersByProjectId called with no projectId");
+export async function getChapters(projectId: string): Promise<Chapter[]> {
+  try {
+    const user = await getAuthenticatedUser();
+    return await chapterService.getChapters(projectId, user.id);
+  } catch (error) {
+    console.error(`Error in getChapters Server Action for project ${projectId}:`, error);
     return [];
   }
+}
 
-  const apiUrl = `${API_BASE_URL}/api/projects/${projectId}/chapters`;
-
+export async function getChapter(
+  projectId: string, 
+  chapterId: string
+): Promise<Chapter | null> {
   try {
-    const cookieHeader = await getCookieHeader();
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(cookieHeader && { 'Cookie': cookieHeader }), // Conditionally add Cookie header
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
-      console.error(`API error fetching chapters for project ${projectId} from ${apiUrl}: ${response.status} ${response.statusText}`, errorData);
-      return []; // Return empty array on error as per original function's behavior
-    }
-
-    const chaptersData: Chapter[] = await response.json();
-    
-    if (!chaptersData) {
-      console.error(`No data returned for chapters of project ${projectId} from ${apiUrl}`);
-      return [];
-    }
-
-    return chaptersData;
-
+    const user = await getAuthenticatedUser();
+    return await chapterService.getChapter(projectId, chapterId, user.id);
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(`Network or other error fetching chapters for project ${projectId} from ${apiUrl}:`, error.message);
-    } else {
-      console.error(`An unknown error occurred while fetching chapters for project ${projectId} from ${apiUrl}:`, error);
-    }
-    return []; // Return empty array on error
+    console.error(`Error in getChapter Server Action for chapter ${chapterId}:`, error);
+    return null;
   }
 }
+
+export async function createChapter(
+  projectId: string, 
+  chapterData: { title: string; description?: string; order?: number }
+): Promise<Chapter> {
+  const user = await getAuthenticatedUser();
+  return chapterService.createChapter(projectId, user.id, {
+    ...chapterData,
+    project_id: projectId
+  });
+}
+
+export async function updateChapter(
+  projectId: string,
+  chapterId: string,
+  chapterData: { title?: string; description?: string; order?: number }
+): Promise<Chapter> {
+  const user = await getAuthenticatedUser();
+  return chapterService.updateChapter(
+    projectId, 
+    chapterId, 
+    user.id, 
+    chapterData
+  );
+}
+
+export async function deleteChapter(projectId: string, chapterId: string): Promise<void> {
+  const user = await getAuthenticatedUser();
+  await chapterService.deleteChapter(projectId, chapterId, user.id);
+}
+
+export const getChaptersByProjectId = getChapters;

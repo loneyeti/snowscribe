@@ -1,27 +1,18 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { withAuth } from '@/lib/api/utils';
+import { getProfileForUser } from '@/lib/services/profileService';
+import { getErrorMessage } from '@/lib/utils';
+import type { NextRequest } from 'next/server';
 
-export async function GET() {
-  const supabase = await createClient();
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    console.error('Error fetching user for GET /api/profiles:', userError);
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, is_site_admin')
-    .eq('id', user.id)
-    .single();
-
-  if (error) {
-    console.error('Error fetching profile:', error);
-    return NextResponse.json({ error: 'Failed to fetch profile', details: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
+export async function GET(request: NextRequest) {
+  return withAuth(request, async (req: Request, authContext: { user: { id: string } }) => {
+    try {
+      const profile = await getProfileForUser(authContext.user.id);
+      return NextResponse.json(profile);
+    } catch (error) {
+      return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    }
+  });
 }
 
 // Removed POST handler - credit updates now handled directly via RPC call in AISMessageHandler

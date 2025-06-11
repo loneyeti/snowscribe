@@ -1,7 +1,7 @@
 // lib/ai/AISMessageHandler.ts
 "use server"; // Mark as a server module
 
-import { getToolModelByToolName } from '@/lib/data/toolModels';
+import { getToolModelByName } from '@/lib/data/toolModels';
 import { getAIModelById } from '@/lib/data/aiModels';
 // getAIVendorById is used internally by lib/data/chat.ts, so not directly needed here for the call.
 import { getSystemPromptByCategory } from '@/lib/data/aiPrompts';
@@ -32,7 +32,7 @@ export async function sendMessage(
 
   try {
     // 1. Fetch Tool-Specific Configuration
-    const toolModelEntry = await getToolModelByToolName(toolName);
+    const toolModelEntry = await getToolModelByName(toolName);
     if (!toolModelEntry || !toolModelEntry.model_id) {
       const errorMsg = `Tool model configuration for '${toolName}' not found or model_id missing: ${JSON.stringify(toolModelEntry)}`;
       console.error(`[AISMessageHandler] ${errorMsg}`);

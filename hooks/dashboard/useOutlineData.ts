@@ -4,8 +4,9 @@ import type { Project, Scene, Chapter, UpdateSceneValues } from '@/lib/types';
 import { toast } from 'sonner';
 import { updateProjectSchema, UpdateProjectValues } from '@/lib/schemas/project.schema';
 import { updateScene } from '@/lib/data/scenes';
+import { updateProject } from '@/lib/data/projects';
 import { useProjectData } from '@/contexts/ProjectDataContext';
-import { getChaptersByProjectId } from '@/lib/data/chapters';
+import { getChapters } from '@/lib/data/chapters';
 
 export function useOutlineData(initialProject: Project, projectId: string) {
   const [currentProjectDetails, setCurrentProjectDetails] = useState(initialProject);
@@ -16,7 +17,7 @@ export function useOutlineData(initialProject: Project, projectId: string) {
   const fetchChaptersWithScenes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedChapters = await getChaptersByProjectId(projectId);
+      const fetchedChapters = await getChapters(projectId);
       setChapters(fetchedChapters);
     } catch (error) {
       toast.error('Failed to load outline data.');
@@ -47,16 +48,7 @@ export function useOutlineData(initialProject: Project, projectId: string) {
     }
 
     try {
-        const response = await fetch(`/api/projects/${projectId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(validationResult.data),
-        });
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || "Failed to save synopsis.");
-        }
-        const updatedProjectFromServer: Project = await response.json();
+        const updatedProjectFromServer = await updateProject(projectId, validationResult.data);
         setCurrentProjectDetails(prev => ({...prev, ...updatedProjectFromServer}));
         toast.success("Synopsis updated successfully.");
         return updatedProjectFromServer;

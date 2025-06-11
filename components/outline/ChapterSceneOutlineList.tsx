@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { chat } from "@/lib/data/chat";
-import { getToolModelByToolName } from "@/lib/data/toolModels";
+import { getToolModelByName } from "@/lib/data/toolModels";
 import { getSystemPromptByCategory } from "@/lib/data/aiPrompts";
 import type { TextBlock, ChatResponse } from "snowgander";
 import { ManageSceneCharactersModal } from "@/components/modals/ManageSceneCharactersModal";
@@ -133,7 +133,7 @@ export function ChapterSceneOutlineList({
     try {
       const toolName = "scene_outliner";
 
-      const toolModelConfig = await getToolModelByToolName(toolName);
+      const toolModelConfig = await getToolModelByName(toolName);
       if (!toolModelConfig || !toolModelConfig.model_id) {
         console.error(
           `AI model configuration for '${toolName}' not found or model_id is missing.`
@@ -428,7 +428,7 @@ export function ChapterSceneOutlineList({
                               {/* Scene Metadata */}
                               <div className="flex flex-wrap gap-3 text-xs">
                                 {/* POV Character */}
-                                <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-400">
+                                <div className="flex items-center space-x=1.5 text-slate-600 dark:text-slate-400">
                                   <User size={14} />
                                   <span className="font-medium">POV:</span>
                                   <span>
@@ -445,7 +445,7 @@ export function ChapterSceneOutlineList({
                                 {/* Other Characters */}
                                 {scene.other_character_ids &&
                                   scene.other_character_ids.length > 0 && (
-                                    <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-400">
+                                    <div className="flex items-center space-x=1.5 text-slate-600 dark:text-slate-400">
                                       <Users size={14} />
                                       <span className="font-medium">
                                         Characters:
@@ -466,7 +466,7 @@ export function ChapterSceneOutlineList({
 
                                 {/* Tags */}
                                 {scene.tag_ids && scene.tag_ids.length > 0 && (
-                                  <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-400">
+                                  <div className="flex items-center space-x=1.5 text-slate-600 dark:text-slate-400">
                                     <Tag size={14} />
                                     <span className="font-medium">Tags:</span>
                                     <div className="flex flex-wrap gap-1">
@@ -519,7 +519,7 @@ export function ChapterSceneOutlineList({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="mt-2 text-xs text-primary hover:text-primary/90 px-0"
+                                      className="mt=2 text-xs text-primary hover:text-primary/90 px=0"
                                       onClick={() =>
                                         handleGenerateSceneOutlineDescription(
                                           scene
@@ -530,9 +530,9 @@ export function ChapterSceneOutlineList({
                                       }
                                     >
                                       {isGeneratingOutline === scene.id ? (
-                                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                                        <Loader2 className="w=3 h=3 mr=1.5 animate=spin" />
                                       ) : (
-                                        <Sparkles className="w-3 h-3 mr-1.5" />
+                                        <Sparkles className="w=3 h=3 mr=1.5" />
                                       )}
                                       {isGeneratingOutline === scene.id
                                         ? "Generating..."

@@ -5,11 +5,11 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIChatInterface } from "./AIChatInterface";
 import { AIToolButton } from "./AIToolButton";
-import { getToolModelByToolName } from "@/lib/data/toolModels";
+import { getToolModelByName } from "@/lib/data/toolModels";
 import { getSystemPromptByCategory } from "@/lib/data/aiPrompts";
 import MarkdownComponent from "./MarkdownComponent";
 
-import type { ChatResponse, TextBlock } from 'snowgander';
+import type { ChatResponse, TextBlock } from "snowgander";
 
 // This should match the ToolModel type from the database schema
 interface AI_Vendor {
@@ -65,26 +65,35 @@ export function AISidePanel({
     prompt: string;
     systemPrompt: string;
   } | null>(null);
-  
+
   // Function to fetch system prompt by category
   const fetchSystemPrompt = async (category: string) => {
-    console.log(`[AISidePanel] fetchSystemPrompt called with category: ${category}`);
+    console.log(
+      `[AISidePanel] fetchSystemPrompt called with category: ${category}`
+    );
     try {
-      console.log(`[AISidePanel] Calling getSystemPromptByCategory with category: ${category}`);
+      console.log(
+        `[AISidePanel] Calling getSystemPromptByCategory with category: ${category}`
+      );
       const promptText = await getSystemPromptByCategory(category);
-      console.log(`[AISidePanel] getSystemPromptByCategory returned for ${category}:`, {
-        hasPrompt: !!promptText,
-        promptLength: promptText?.length || 0,
-        defaultSystemPromptLength: defaultSystemPrompt?.length || 0
-      });
-      
+      console.log(
+        `[AISidePanel] getSystemPromptByCategory returned for ${category}:`,
+        {
+          hasPrompt: !!promptText,
+          promptLength: promptText?.length || 0,
+          defaultSystemPromptLength: defaultSystemPrompt?.length || 0,
+        }
+      );
+
       if (!promptText) {
-        console.warn(`[AISidePanel] No prompt found for category: ${category}, using default`);
+        console.warn(
+          `[AISidePanel] No prompt found for category: ${category}, using default`
+        );
       }
-      
+
       return promptText || defaultSystemPrompt;
     } catch (error) {
-      console.error('[AISidePanel] Error in fetchSystemPrompt:', error);
+      console.error("[AISidePanel] Error in fetchSystemPrompt:", error);
       console.warn(`[AISidePanel] Using default system prompt due to error`);
       return defaultSystemPrompt;
     }
@@ -103,46 +112,46 @@ export function AISidePanel({
       setIsLoading(true);
       try {
         console.log(`Fetching tool model for tool: ${toolName}`);
-        const response = await getToolModelByToolName(toolName);
-        
+        const response = await getToolModelByName(toolName);
+
         // Handle both array and single object responses
         const models = Array.isArray(response) ? response : [response];
         console.log("Processed models:", models);
-        
+
         // Get the first model from the response array
         const model = models[0];
-        
+
         if (!model) {
           throw new Error(`No model found for tool: ${toolName}`);
         }
-        
+
         console.log("Using model:", model);
-        
+
         // Get the model ID - try ai_models.id first, then model_id, then fallback to id
         const modelId = model.model_id;
-        
+
         if (!modelId) {
           console.warn("No model ID found in the response:", model);
           throw new Error("No valid model ID found in the response");
         }
-        
+
         console.log("Model ID:", modelId);
-        
+
         // Fetch the system prompt for this tool's category (toolName)
         const systemPrompt = await fetchSystemPrompt(toolName);
-        
+
         const newToolModel = {
           id: modelId,
           prompt: model.prompt || defaultPrompt,
           systemPrompt: systemPrompt,
         };
-        
+
         console.log("Setting toolModel state:", newToolModel);
         setToolModel(newToolModel);
       } catch (error) {
         console.error("Error loading tool model or system prompt:", error);
         const fallbackModel = {
-          id: 'default',
+          id: "default",
           prompt: defaultPrompt,
           systemPrompt: defaultSystemPrompt,
         };
@@ -194,7 +203,7 @@ export function AISidePanel({
         onClick={onClose}
         aria-hidden="true"
       />
-      
+
       {/* Panel */}
       <div
         className={cn(
@@ -215,7 +224,7 @@ export function AISidePanel({
             <X className="h-5 w-5" />
           </button>
         </div>
-        
+
         {/* Content */}
         <div className="h-[calc(100%-57px)] overflow-y-auto p-4">
           {children || (
@@ -241,16 +250,30 @@ export function AISidePanel({
                       {aiResponse?.content && aiResponse.content.length > 0 && (
                         <div className="mt-4 space-y-4">
                           {aiResponse.content.map((block, index) => {
-                            if (block.type === 'text' && 'text' in block) {
+                            if (block.type === "text" && "text" in block) {
                               return (
-                                <div key={`markdown-${index}`} className="prose dark:prose-invert w-full mx-auto align-left object-left content-left items-left text-left">
-                                  <MarkdownComponent key={index} markdown={block.text} />
+                                <div
+                                  key={`markdown-${index}`}
+                                  className="prose dark:prose-invert w-full mx-auto align-left object-left content-left items-left text-left"
+                                >
+                                  <MarkdownComponent
+                                    key={index}
+                                    markdown={block.text}
+                                  />
                                 </div>
                               );
-                            } else if (block.type === 'error' && 'publicMessage' in block) {
+                            } else if (
+                              block.type === "error" &&
+                              "publicMessage" in block
+                            ) {
                               return (
-                                <div key={index} className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
-                                  <p className="text-red-600 dark:text-red-400">{block.publicMessage}</p>
+                                <div
+                                  key={index}
+                                  className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded"
+                                >
+                                  <p className="text-red-600 dark:text-red-400">
+                                    {block.publicMessage}
+                                  </p>
                                 </div>
                               );
                             }

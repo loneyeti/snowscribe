@@ -1,167 +1,86 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { isSiteAdmin } from "@/lib/supabase/guards";
+import { NextResponse } from "next/server";
+import * as aiVendorService from "@/lib/services/aiVendorService";
+import { getErrorMessage } from "@/lib/utils";
 import { aiVendorSchema } from "@/lib/schemas/aiVendor.schema";
 
+interface VendorParams {
+  vendorId: string;
+}
+
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { vendorId: string } }
+  request: Request,
+  { params }: { params: VendorParams }
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const isAdmin = await isSiteAdmin(supabase);
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { vendorId } = await params;
-
-  if (!vendorId) {
-    return NextResponse.json({ error: "Vendor ID is required" }, { status: 400 });
-  }
-
-  const { data: vendor, error } = await supabase
-    .from("ai_vendors")
-    .select("*")
-    .eq("id", vendorId)
-    .single();
-
-  if (error) {
-    console.error("Error fetching AI vendor:", error);
-    if (error.code === "PGRST116") { // PostgREST error for "Not found"
-      return NextResponse.json({ error: "AI vendor not found" }, { status: 404 });
+  try {
+    const vendor = await aiVendorService.getAIVendorById(params.vendorId);
+    if (!vendor) {
+      return NextResponse.json(
+        { error: "AI vendor not found" },
+        { status: 404 }
+      );
     }
+    return NextResponse.json(vendor);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
     return NextResponse.json(
-      { error: "Failed to fetch AI vendor" },
-      { status: 500 }
+      { error: message },
+      { status: message.includes('Forbidden') ? 403 : 500 }
     );
   }
-
-  if (!vendor) {
-    return NextResponse.json({ error: "AI vendor not found" }, { status: 404 });
-  }
-
-  return NextResponse.json(vendor);
 }
 
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: { vendorId: string } }
+  request: Request,
+  { params }: { params: VendorParams }
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const isAdmin = await isSiteAdmin(supabase);
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { vendorId } = await params;
-
-  if (!vendorId) {
-    return NextResponse.json({ error: "Vendor ID is required" }, { status: 400 });
-  }
-
-  const json = await request.json();
-  // For PUT, we expect all fields, but schema handles optionality for some
-  const result = aiVendorSchema.safeParse(json); 
-
-  if (!result.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: result.error.format() },
-      { status: 400 }
-    );
-  }
-
-  const { name, api_key_env_var } = result.data;
-
-  const { data: updatedVendor, error } = await supabase
-    .from("ai_vendors")
-    .update({ name, api_key_env_var })
-    .eq("id", vendorId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error updating AI vendor:", error);
-    if (error.code === "PGRST116") {
-      return NextResponse.json({ error: "AI vendor not found" }, { status: 404 });
+  try {
+    const json = await request.json();
+    const result = aiVendorSchema.partial().safeParse(json);
+    
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: result.error.format() },
+        { status: 400 }
+      );
     }
-    if (error.code === "23505") { // Unique constraint violation
-        return NextResponse.json(
-          { error: "AI vendor with this name already exists." },
-          { status: 409 }
-        );
-      }
+
+    const updatedVendor = await aiVendorService.updateAIVendor(
+      params.vendorId,
+      result.data
+    );
+    return NextResponse.json(updatedVendor);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
     return NextResponse.json(
-      { error: "Failed to update AI vendor" },
-      { status: 500 }
+      { error: message },
+      { 
+        status: message.includes('Forbidden') ? 403 :
+               message.includes('already exists') ? 409 :
+               500 
+      }
     );
   }
-
-  if (!updatedVendor) {
-    return NextResponse.json({ error: "AI vendor not found after update attempt" }, { status: 404 });
-  }
-
-  return NextResponse.json(updatedVendor);
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { vendorId: string } }
+  request: Request,
+  { params }: { params: VendorParams }
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const isAdmin = await isSiteAdmin(supabase);
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { vendorId } = await params;
-
-  if (!vendorId) {
-    return NextResponse.json({ error: "Vendor ID is required" }, { status: 400 });
-  }
-
-  const { error } = await supabase
-    .from("ai_vendors")
-    .delete()
-    .eq("id", vendorId);
-
-  if (error) {
-    console.error("Error deleting AI vendor:", error);
-     if (error.code === "PGRST116") { 
-      return NextResponse.json({ error: "AI vendor not found" }, { status: 404 });
-    }
-    // Handle potential foreign key constraint violations if vendors are linked elsewhere
-    if (error.code === '23503') { // foreign_key_violation
-        return NextResponse.json({ error: "Cannot delete vendor, it is referenced by other entities (e.g., AI Models)." }, { status: 409 });
-    }
+  try {
+    await aiVendorService.deleteAIVendor(params.vendorId);
     return NextResponse.json(
-      { error: "Failed to delete AI vendor" },
-      { status: 500 }
+      { message: "AI vendor deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return NextResponse.json(
+      { error: message },
+      { 
+        status: message.includes('Forbidden') ? 403 :
+               message.includes('referenced') ? 409 :
+               500 
+      }
     );
   }
-
-  return NextResponse.json({ message: "AI vendor deleted successfully" }, { status: 200 });
 }

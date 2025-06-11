@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 import { chat } from "@/lib/data/chat";
-import { getToolModelByToolName } from "@/lib/data/toolModels";
+import { getToolModelByName } from "@/lib/data/toolModels";
 import { getSystemPromptByCategory } from "@/lib/data/aiPrompts";
 import type { TextBlock, ChatResponse } from "snowgander";
 
@@ -89,7 +89,7 @@ export function ProjectSynopsisEditor({
     try {
       // 2. Fetch Tool Model configuration (to get model_id)
       const toolName = "log_line_generator"; // This should match the category in ai_prompts
-      const toolModelConfig = await getToolModelByToolName(toolName);
+      const toolModelConfig = await getToolModelByName(toolName);
 
       if (!toolModelConfig || !toolModelConfig.model_id) {
         console.error(
@@ -212,7 +212,7 @@ export function ProjectSynopsisEditor({
     setIsGeneratingSynopsis(true);
     try {
       const toolName = "synopsis_generator"; // Matches category in ai_prompts and name in tool_model from seed.sql
-      const toolModelConfig = await getToolModelByToolName(toolName);
+      const toolModelConfig = await getToolModelByName(toolName);
 
       if (!toolModelConfig || !toolModelConfig.model_id) {
         console.error(

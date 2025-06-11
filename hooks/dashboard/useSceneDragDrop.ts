@@ -2,15 +2,14 @@
 import React, { useState, useCallback } from "react";
 import type { Scene } from "../../lib/types";
 import { toast } from "sonner";
+import { reorderScenesInChapter } from "../../lib/data/scenes";
 
 export function useSceneDragDrop(
   projectId: string,
   selectedChapterId: string | null,
   scenesForSelectedChapter: Scene[],
   // Callback to update local state in useManuscriptData
-  updateLocalSceneOrderCallback: (reorderedScenes: Scene[]) => void,
-  // Callback to persist order to backend (from useManuscriptData or ManuscriptSection)
-  persistSceneOrderCallback: (projectId: string, chapterId: string, reorderedScenes: Scene[]) => Promise<void>
+  updateLocalSceneOrderCallback: (reorderedScenes: Scene[]) => void
 ) {
   const [draggedSceneId, setDraggedSceneId] = useState<string | null>(null);
   const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
@@ -72,16 +71,22 @@ export function useSceneDragDrop(
           // Update local state optimistically
           updateLocalSceneOrderCallback(reorderedScenes);
 
-          // Persist to backend
+          // Prepare data for the server action
+          const scenesWithNewOrder = reorderedScenes.map((scene, index) => ({
+            id: scene.id,
+            order: index,
+          }));
+
+          const toastId = toast.loading("Saving new scene order...");
           try {
-            await persistSceneOrderCallback(projectId, selectedChapterId, reorderedScenes);
+            // Call the new server action instead of the callback
+            await reorderScenesInChapter(projectId, selectedChapterId, scenesWithNewOrder);
+            toast.success("Scene order saved!", { id: toastId });
           } catch (error) {
-            // Revert optimistic update on error by re-fetching or restoring previous order
-            toast.error("Failed to save scene order. Reverting.");
-            // This might require fetching original scenes or having a rollback mechanism
-            // For simplicity, the persistSceneOrderCallback itself might handle re-fetching on error
-            // Or, the ManuscriptSection could trigger a re-fetch.
+            toast.error("Failed to save scene order. Reverting.", { id: toastId });
             console.error("Error persisting scene order:", error);
+            // On failure, revert the optimistic UI update by re-setting the original order
+            updateLocalSceneOrderCallback(scenesForSelectedChapter);
           }
         }
       }
@@ -90,7 +95,6 @@ export function useSceneDragDrop(
       selectedChapterId,
       scenesForSelectedChapter,
       updateLocalSceneOrderCallback,
-      persistSceneOrderCallback,
       projectId,
     ]
   );

@@ -1,78 +1,44 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { isSiteAdmin } from "@/lib/supabase/guards";
+import * as aiVendorService from "@/lib/services/aiVendorService";
+import { getErrorMessage } from "@/lib/utils";
 import { aiVendorSchema } from "@/lib/schemas/aiVendor.schema";
 
 export async function GET() {
-  const supabase = await createClient();
-  const isAdmin = await isSiteAdmin(supabase);
-  
-  if (!isAdmin) {
+  try {
+    const vendors = await aiVendorService.getAIVendors();
+    return NextResponse.json(vendors);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
     return NextResponse.json(
-      { error: "Forbidden: You do not have permission to perform this action" }, 
-      { status: 403 }
+      { error: message },
+      { status: message.includes('Forbidden') ? 403 : 500 }
     );
   }
-
-  const { data: vendors, error } = await supabase
-    .from("ai_vendors")
-    .select("*")
-    .order("name", { ascending: true });
-
-  if (error) {
-    console.error("Error fetching AI vendors:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch AI vendors" },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json(vendors);
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const isAdmin = await isSiteAdmin(supabase);
-  
-  if (!isAdmin) {
-    return NextResponse.json(
-      { error: "Forbidden: You do not have permission to perform this action" }, 
-      { status: 403 }
-    );
-  }
-
-  const json = await request.json();
-  const result = aiVendorSchema.safeParse(json);
-
-  if (!result.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: result.error.format() },
-      { status: 400 }
-    );
-  }
-
-  const { name, api_key_env_var } = result.data;
-
-  const { data: newVendor, error } = await supabase
-    .from("ai_vendors")
-    .insert([{ name, api_key_env_var }])
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error creating AI vendor:", error);
-    // Check for unique constraint violation (e.g., duplicate name)
-    if (error.code === "23505") { // PostgreSQL unique_violation
+  try {
+    const json = await request.json();
+    const result = aiVendorSchema.safeParse(json);
+    
+    if (!result.success) {
       return NextResponse.json(
-        { error: "AI vendor with this name already exists." },
-        { status: 409 }
+        { error: "Validation failed", details: result.error.format() },
+        { status: 400 }
       );
     }
+
+    const newVendor = await aiVendorService.createAIVendor(result.data);
+    return NextResponse.json(newVendor, { status: 201 });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
     return NextResponse.json(
-      { error: "Failed to create AI vendor" },
-      { status: 500 }
+      { error: message },
+      { 
+        status: message.includes('Forbidden') ? 403 :
+               message.includes('already exists') ? 409 :
+               500 
+      }
     );
   }
-
-  return NextResponse.json(newVendor, { status: 201 });
 }

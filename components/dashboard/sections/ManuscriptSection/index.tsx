@@ -192,47 +192,6 @@ export function ManuscriptSection({
   const [isSceneMetadataPanelOpen, setIsSceneMetadataPanelOpen] =
     useState(false);
 
-  const persistSceneOrderBackend = useCallback(
-    async (projId: string, chapId: string, reorderedScenes: Scene[]) => {
-      if (!chapId || reorderedScenes.length === 0) return;
-
-      const scenesWithNewOrder = reorderedScenes.map((scene, index) => ({
-        id: scene.id,
-        order: index,
-      }));
-
-      const toastId = toast.loading("Saving new scene order...");
-      try {
-        const response = await fetch(
-          `/api/projects/${projId}/chapters/${chapId}/scenes/reorder`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ scenes: scenesWithNewOrder }),
-          }
-        );
-        if (response.ok) {
-          toast.success("Scene order saved!", { id: toastId });
-        } else {
-          const errorData = await response
-            .json()
-            .catch(() => ({ error: "Failed to save order." }));
-          toast.error(errorData.error || "Could not save scene order.", {
-            id: toastId,
-          });
-          await fetchScenesForChapter(chapId);
-        }
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Error saving scene order.",
-          { id: toastId }
-        );
-        await fetchScenesForChapter(chapId);
-      }
-    },
-    [fetchScenesForChapter]
-  );
-
   const {
     draggedSceneId,
     dragOverSceneId,
@@ -245,8 +204,7 @@ export function ManuscriptSection({
     project.id,
     selectedChapter?.id ?? null,
     scenesForSelectedChapter,
-    updateLocalSceneOrder,
-    persistSceneOrderBackend
+    updateLocalSceneOrder
   );
 
   useEffect(() => {

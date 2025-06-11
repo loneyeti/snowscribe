@@ -1,35 +1,15 @@
 "use server";
-
-import { getErrorMessage } from "@/lib/utils";
-import type { Profile } from "@/lib/types";
-import { getCookieHeader } from "./dataUtils";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+import type { Profile } from '../types';
+import * as profileService from '../services/profileService';
+import { getAuthenticatedUser } from '../auth';
 
 export async function getClientProfile(): Promise<Pick<Profile, 'id' | 'is_site_admin'> | null> {
-  const apiUrl = `${API_BASE_URL}/api/profiles`;
-  const cookieHeader = await getCookieHeader();
-
   try {
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(cookieHeader && { 'Cookie': cookieHeader }),
-      },
-    });
-
-    if (!response.ok) {
-      console.error(`Error fetching profile: ${response.status} ${response.statusText}`);
-      return null;
-    }
-
-    const profileData = await response.json();
-    return profileData;
+    const user = await getAuthenticatedUser();
+    return await profileService.getProfileForUser(user.id);
   } catch (error) {
-    console.error('Error fetching profile:', getErrorMessage(error));
+    // This can fail if user is not logged in, which is a valid state.
+    console.log("Could not get client profile, likely not logged in:", error);
     return null;
   }
 }
-
-// Removed updateCreditUsage function - now handled directly via RPC call in AISMessageHandler
