@@ -1,31 +1,24 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { withProjectAuth } from "@/lib/api/utils";
-
-const createSceneTagSchema = z.object({
-  name: z.string().min(1, "Tag name is required."),
-  project_id: z.string().uuid("Valid Project ID is required."),
-});
+import { getSceneTags, createSceneTag } from "@/lib/services/sceneTagService";
+import { createSceneTagSchema } from "@/lib/services/sceneTagService";
+import { getErrorMessage } from "@/lib/utils";
 
 export async function GET(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  return withProjectAuth(request, params, async (req, p) => {
-    const supabase = await createClient();
-    const { data: tags, error: dbError } = await supabase
-      .from("scene_tags")
-      .select('*')
-      .or(`project_id.eq.${p.projectId},project_id.is.null`)
-      .order('name', { ascending: true });
-
-    if (dbError) {
-      console.error("Error fetching scene tags:", dbError);
-      return NextResponse.json({ error: "Failed to fetch scene tags", details: dbError.message }, { status: 500 });
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
+    try {
+      const tags = await getSceneTags(p.projectId, authContext.user.id);
+      return NextResponse.json(tags);
+    } catch (error) {
+      console.error("Error fetching scene tags:", error);
+      return NextResponse.json(
+        { error: getErrorMessage(error) },
+        { status: 500 }
+      );
     }
-
-    return NextResponse.json(tags || []);
   });
 }
 
@@ -33,45 +26,34 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
-    const supabase = await createClient();
-    let jsonData;
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
-      jsonData = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
+      const jsonData = await req.json();
+      const validationResult = createSceneTagSchema.safeParse({ 
+        ...jsonData, 
+        project_id: p.projectId 
+      });
 
-    const validationResult = createSceneTagSchema.safeParse({ ...jsonData, project_id: p.projectId });
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: "Validation failed", details: validationResult.error.format() },
-        { status: 400 }
-      );
-    }
+      if (!validationResult.success) {
+        return NextResponse.json(
+          { error: "Validation failed", details: validationResult.error.format() },
+          { status: 400 }
+        );
+      }
 
-    const { name } = validationResult.data;
-    const { data: newTag, error: insertError } = await supabase
-      .from("scene_tags")
-      .insert({
-        name,
-        project_id: p.projectId,
-        user_id: authContext.user.id,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error("Error creating scene tag:", insertError);
-      if (insertError.code === "23505") {
-        return NextResponse.json({ error: `Tag "${name}" already exists for this project.` }, { status: 409 });
+      const { name } = validationResult.data;
+      const newTag = await createSceneTag(p.projectId, authContext.user.id, name);
+      return NextResponse.json(newTag, { status: 201 });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      console.error("Error creating scene tag:", error);
+      if (message.includes('already exists')) {
+        return NextResponse.json({ error: message }, { status: 409 });
       }
       return NextResponse.json(
-        { error: "Failed to create scene tag", details: insertError.message },
+        { error: message },
         { status: 500 }
       );
     }
-
-    return NextResponse.json(newTag, { status: 201 });
   });
 }

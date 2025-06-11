@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { verifyProjectOwnership } from '@/lib/supabase/guards';
+import { verifyProjectOwnership, isSiteAdmin } from '@/lib/supabase/guards';
 import { type User } from '@supabase/supabase-js';
 import { type Project } from '@/lib/types';
 import { NextResponse } from 'next/server';
@@ -69,32 +69,43 @@ export async function withAuth(
  */
 export async function withProjectAuth<T extends { projectId: string }>(
   request: Request,
-  params: T,
+  paramsResolver: () => Promise<T>,
   handler: ProjectAuthenticatedHandler<T>
 ): Promise<NextResponse> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  const ownership = await verifyProjectOwnership(
-    supabase,
-    params.projectId,
-    user.id
-  );
+    // Await the params resolution
+    const params = await paramsResolver();
 
-  if (ownership.error) {
+    const ownership = await verifyProjectOwnership(
+      supabase,
+      params.projectId,
+      user.id
+    );
+
+    if (ownership.error) {
+      return NextResponse.json(
+        { error: ownership.error.message },
+        { status: ownership.status }
+      );
+    }
+
+    return handler(request, params, { user, project: ownership.project as Project });
+  } catch (error) {
+    console.error("Error in withProjectAuth:", error);
     return NextResponse.json(
-      { error: ownership.error.message },
-      { status: ownership.status }
+      { error: "Internal server error" },
+      { status: 500 }
     );
   }
-
-  return handler(request, params, { user, project: ownership.project as Project });
 }
 
 /**
@@ -153,4 +164,27 @@ export async function withSceneAuth<T extends { projectId: string; chapterId: st
     chapterId: params.chapterId,
     sceneId: params.sceneId
   });
+}
+
+/**
+ * A higher-order function to wrap API route handlers with admin authentication.
+ * Verifies the user is both authenticated and has admin privileges.
+ */
+export async function withAdminAuth(
+  request: Request,
+  handler: SimpleAuthenticatedHandler
+): Promise<NextResponse> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const adminCheck = await isSiteAdmin(supabase);
+  if (!adminCheck) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  return handler(request, { user });
 }

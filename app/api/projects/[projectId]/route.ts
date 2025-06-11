@@ -9,7 +9,7 @@ interface Params {
 import { withProjectAuth } from '@/lib/api/utils';
 
 export async function GET(request: Request, { params }: { params: Params }) {
-  return withProjectAuth(request, params, async (req, p) => {
+  return withProjectAuth(request, async () => params, async (req, p) => {
     const supabase = await createClient();
 
     const { data: projectData, error: projectFetchError } = await supabase
@@ -66,7 +66,7 @@ export async function GET(request: Request, { params }: { params: Params }) {
 }
 
 export async function PUT(request: Request, { params }: { params: Params }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     const supabase = await createClient();
     let jsonData;
     try {
@@ -149,7 +149,7 @@ export async function PUT(request: Request, { params }: { params: Params }) {
 }
 
 export async function DELETE(request: Request, { params }: { params: Params }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     const supabase = await createClient();
     const { error: deleteError } = await supabase
       .from('projects')

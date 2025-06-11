@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { withProjectAuth } from "@/lib/api/utils";
 import { z } from "zod";
+import * as sceneService from "@/lib/services/sceneService";
+import { getErrorMessage } from "@/lib/utils";
 
 const sceneOrderUpdateSchema = z.object({
   id: z.string().uuid({ message: "Scene ID must be a valid UUID." }),
@@ -21,63 +22,36 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: ReorderParams }
 ) {
-  return withProjectAuth(request, params, async (req, p) => {
-    const supabase = await createClient();
-
-    const { data: chapterData, error: chapterError } = await supabase
-      .from("chapters")
-      .select("id")
-      .eq("id", p.chapterId)
-      .eq("project_id", p.projectId)
-      .single();
-
-    if (chapterError || !chapterData) {
-      return NextResponse.json(
-        { error: "Chapter not found or does not belong to the project." },
-        { status: 404 }
-      );
-    }
-
-    let json;
+  return withProjectAuth(request, params, async (req, p, authContext) => {
     try {
-      json = await req.json();
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid JSON in request body." },
-        { status: 400 }
-      );
-    }
+      const json = await req.json();
+      const validationResult = batchSceneOrderUpdateRequestSchema.safeParse(json);
 
-    const validationResult = batchSceneOrderUpdateRequestSchema.safeParse(json);
-
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: "Invalid request body", details: validationResult.error.format() },
-        { status: 400 }
-      );
-    }
-
-    const { scenes: scenesToUpdate } = validationResult.data;
-
-    for (const sceneUpdate of scenesToUpdate) {
-      const { error: updateError } = await supabase
-        .from("scenes")
-        .update({
-          order: sceneUpdate.order,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", sceneUpdate.id)
-        .eq("chapter_id", p.chapterId);
-
-      if (updateError) {
-        console.error(`Error updating order for scene ${sceneUpdate.id}:`, updateError);
+      if (!validationResult.success) {
         return NextResponse.json(
-          { error: `Failed to update order for scene ${sceneUpdate.id}. ${updateError.message}` },
-          { status: 500 }
+          { error: "Invalid request body", details: validationResult.error.format() },
+          { status: 400 }
         );
       }
-    }
 
-    return NextResponse.json({ message: "Scene order updated successfully" });
+      await sceneService.reorderScenes(
+        p.projectId,
+        p.chapterId,
+        authContext.user.id,
+        validationResult.data.scenes
+      );
+
+      return NextResponse.json({ message: "Scene order updated successfully" });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      if (message.includes('not found')) {
+        return NextResponse.json({ error: message }, { status: 404 });
+      }
+      console.error("Error reordering scenes:", error);
+      return NextResponse.json(
+        { error: message },
+        { status: 500 }
+      );
+    }
   });
 }

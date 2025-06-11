@@ -11,6 +11,13 @@ export const toolModelSchema = z.object({
 });
 export type ToolModel = z.infer<typeof toolModelSchema>;
 
+// Schema for creating a tool model
+export const createToolModelValuesSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  model_id: z.string().uuid({ message: "Valid AI Model ID is required." }),
+});
+export type CreateToolModelValues = z.infer<typeof createToolModelValuesSchema>;
+
 // Schema for ToolModel when AIModel data is included
 export const toolModelWithAIModelSchema = toolModelSchema.extend({
   ai_models: aiModelSchema.pick({

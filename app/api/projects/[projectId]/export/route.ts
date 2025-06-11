@@ -24,7 +24,7 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const project = await getProjectById(p.projectId);
       const chapters = await getChaptersByProjectId(p.projectId);
