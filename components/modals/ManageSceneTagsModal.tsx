@@ -7,6 +7,7 @@ import type { SceneTag } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { toast } from "sonner";
+import { updateSceneTags } from "@/lib/data/scenes";
 
 interface ManageSceneTagsModalProps {
   isOpen: boolean;
@@ -57,22 +58,7 @@ export function ManageSceneTagsModal({
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/projects/${projectId}/scenes/${sceneId}/tags`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ tagIds: Array.from(selectedIds) }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update scene tags");
-      }
-
+      await updateSceneTags(projectId, sceneId, Array.from(selectedIds));
       toast.success("Scene tags updated successfully!");
       onSave(sceneId, Array.from(selectedIds));
       onClose();

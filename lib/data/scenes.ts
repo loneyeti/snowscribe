@@ -24,6 +24,15 @@ export async function updateSceneTags(projectId: string, sceneId: string, tagIds
     await sceneService.updateSceneTags(projectId, sceneId, user.id, tagIds);
 }
 
+export async function createScene(
+  projectId: string,
+  chapterId: string,
+  sceneData: { title: string; content?: string; order?: number; primary_category?: string }
+): Promise<Scene> {
+  const user = await getAuthenticatedUser();
+  return sceneService.createScene(projectId, chapterId, user.id, sceneData);
+}
+
 export async function reorderScenesInChapter(projectId: string, chapterId: string, scenes: { id: string; order: number }[]): Promise<void> {
     const user = await getAuthenticatedUser();
     await sceneService.reorderScenes(projectId, chapterId, user.id, scenes);

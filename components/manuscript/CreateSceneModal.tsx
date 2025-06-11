@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 import type { Scene } from "@/lib/types";
 import { createSceneSchema } from "@/lib/schemas/scene.schema";
+import { createScene } from "@/lib/data/scenes";
 
 interface CreateSceneModalProps {
   projectId: string;
@@ -52,24 +53,8 @@ export function CreateSceneModal({
     }
 
     try {
-      const response = await fetch(
-        `/api/projects/${projectId}/chapters/${chapterId}/scenes`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(validationResult.data),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage =
-          errorData.error ||
-          `Failed to create scene (status: ${response.status})`;
-        throw new Error(errorMessage);
-      }
-
-      const newScene: Scene = await response.json();
+      const { project_id, chapter_id, ...sceneData } = validationResult.data;
+      const newScene = await createScene(projectId, chapterId, sceneData);
       toast.success("Scene created successfully!");
       onSceneCreated(newScene);
       setTitle(""); // Reset form

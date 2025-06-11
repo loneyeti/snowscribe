@@ -5,6 +5,7 @@ import type { Project } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "sonner";
+import { updateProject } from "@/lib/data/projects";
 import { Loader2, Sparkles } from "lucide-react";
 import { chat } from "@/lib/data/chat";
 import { getToolModelByName } from "@/lib/data/toolModels";
@@ -46,21 +47,10 @@ export function ProjectSynopsisEditor({
   const handleSaveSynopses = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          log_line: logLine,
-          one_page_synopsis: onePageSynopsis,
-        }),
+      const updatedProject = await updateProject(project.id, {
+        log_line: logLine,
+        one_page_synopsis: onePageSynopsis,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to save project synopses.");
-      }
-
-      const updatedProject = await response.json();
       toast.success("Synopses saved successfully!");
       onSynopsisUpdate({
         log_line: updatedProject.log_line,

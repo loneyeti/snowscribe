@@ -1,6 +1,6 @@
 "use server";
 import type { Project, Genre } from "@/lib/types";
-import type { UpdateProjectValues } from "@/lib/schemas/project.schema";
+import type { CreateProjectValues, UpdateProjectValues } from "@/lib/schemas/project.schema";
 import * as projectService from "@/lib/services/projectService";
 import { getAuthenticatedUser } from "@/lib/auth";
 
@@ -31,6 +31,11 @@ export async function deleteProject(projectId: string): Promise<void> {
     console.error(`Error in deleteProject Server Action for project ${projectId}:`, error);
     throw error;
   }
+}
+
+export async function createProject(projectData: CreateProjectValues): Promise<Project> {
+  const user = await getAuthenticatedUser();
+  return projectService.createProject(user.id, projectData);
 }
 
 export async function updateProject(projectId: string, projectData: UpdateProjectValues): Promise<Project> {

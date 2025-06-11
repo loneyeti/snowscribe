@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/Button";
 import type { Character } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { toast } from "sonner"; // Import toast
+import { toast } from "sonner";
+import { updateSceneCharacters } from "@/lib/data/scenes";
 
 interface ManageSceneCharactersModalProps {
   isOpen: boolean;
@@ -57,24 +58,9 @@ export function ManageSceneCharactersModal({
     // Make handleSave async
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/projects/${projectId}/scenes/${sceneId}/characters`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ characterIds: Array.from(selectedIds) }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update scene characters");
-      }
-
+      await updateSceneCharacters(projectId, sceneId, Array.from(selectedIds));
       toast.success("Scene characters updated successfully!");
-      onSave(sceneId, Array.from(selectedIds)); // Pass sceneId back
+      onSave(sceneId, Array.from(selectedIds));
       onClose();
     } catch (error) {
       console.error("Error updating scene characters:", error);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react"; // Added useEffect
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "sonner";
 import type { CreateProjectValues } from "@/lib/schemas/project.schema";
-import { createProjectSchema } from "@/lib/schemas/project.schema"; // For client-side validation (optional but good practice)
-import type { Project, Genre } from "@/lib/types"; // Import Project and Genre types
+import { createProjectSchema } from "@/lib/schemas/project.schema";
+import type { Project, Genre } from "@/lib/types";
+import { createProject } from "@/lib/data/projects";
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -115,21 +116,7 @@ export function CreateProjectModal({
     }
 
     try {
-      const response = await fetch("/api/projects", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(validationResult.data),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.error || `Failed to create project (status ${response.status})`
-        );
-      }
+      const result = await createProject(validationResult.data);
 
       toast.success("Novel project created successfully!");
       if (onProjectCreated) {

@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 import type { Chapter } from "@/lib/types";
-import { createChapterSchema } from "@/lib/schemas/chapter.schema"; // Corrected import name
+import { createChapterSchema } from "@/lib/schemas/chapter.schema";
+import { createChapter } from "@/lib/data/chapters";
 
 interface CreateChapterModalProps {
   projectId: string;
@@ -47,21 +48,8 @@ export function CreateChapterModal({
     }
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/chapters`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validationResult.data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage =
-          errorData.error ||
-          `Failed to create chapter (status: ${response.status})`;
-        throw new Error(errorMessage);
-      }
-
-      const newChapter: Chapter = await response.json();
+      const { project_id, ...chapterData } = validationResult.data;
+      const newChapter = await createChapter(projectId, chapterData);
       toast.success("Chapter created successfully!");
       onChapterCreated(newChapter);
       setTitle(""); // Reset form

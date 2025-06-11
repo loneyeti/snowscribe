@@ -7,7 +7,8 @@ import React, {
 } from "react";
 import type { Character, SceneTag } from "@/lib/types";
 import { getCharacters } from "@/lib/data/characters";
-import { toast } from "sonner"; // For error notifications
+import { getSceneTags } from "@/lib/data/sceneTags";
+import { toast } from "sonner";
 
 interface ProjectDataContextType {
   allProjectCharacters: Character[];
@@ -59,14 +60,7 @@ export const ProjectDataProvider: React.FC<{
     if (!projectId) return;
     setIsLoadingAllSceneTags(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/scene-tags`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-          error: "Failed to load scene tags and parse error response.",
-        }));
-        throw new Error(errorData.error || `Server error: ${response.status}`);
-      }
-      const fetchedTags = (await response.json()) as SceneTag[];
+      const fetchedTags = await getSceneTags(projectId);
       setAllSceneTags(fetchedTags);
     } catch (error) {
       console.error("ProjectDataContext: Failed to fetch scene tags:", error);

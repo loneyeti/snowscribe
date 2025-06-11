@@ -14,6 +14,7 @@ import {
 } from "@/lib/schemas/project.schema";
 import type { Project, Genre } from "@/lib/types";
 import { getErrorMessage } from "@/lib/utils";
+import { updateProject } from "@/lib/data/projects";
 
 interface EditProjectModalProps {
   isOpen: boolean;
@@ -96,16 +97,7 @@ export function EditProjectModal({
     }
 
     try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to update project.");
-      }
+      const result = await updateProject(project.id, payload);
       toast.success("Project details updated successfully!");
       onProjectUpdated(result);
       onClose();
