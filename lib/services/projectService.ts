@@ -9,6 +9,19 @@ import {
   updateProjectSchema
 } from '../schemas/project.schema';
 import type { Project, Genre } from '../types';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  AlignmentType,
+  Header,
+  PageNumber,
+  convertInchesToTwip,
+  NumberFormat,
+} from 'docx';
+import { getChapters } from './chapterService';
+
 /**
  * Fetches all projects for a given user.
  * @param userId - The ID of the user.
@@ -160,4 +173,104 @@ export async function deleteProject(projectId: string, userId: string): Promise<
     console.error(`Error deleting project ${projectId}:`, error);
     throw new Error('Failed to delete project.');
   }
+}
+
+function sanitizeText(text: string): string {
+  if (!text) return '';
+  // This regex removes characters that are invalid in XML, which docx files are.
+   
+  const invalidXMLCharsRegex = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+  return text.replace(invalidXMLCharsRegex, '');
+}
+
+export async function generateManuscriptDocx(projectId: string, userId: string): Promise<{ buffer: Buffer; filename: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user || user.id !== userId) {
+    throw new Error("User not authenticated or does not match for DOCX generation.");
+  }
+
+  const project = await getProjectById(projectId, userId);
+  const chapters = await getChapters(projectId, userId);
+
+  if (!project || !chapters) {
+    throw new Error('Project data not found');
+  }
+
+  const authorName = user.email || 'Author'; // Replace with profile name if available
+  const authorLastName = authorName.split(' ')[0] || 'Author';
+  const projectKeyword = project.title.split(' ')[0] || 'Manuscript';
+
+  const doc = new Document({
+    styles: {
+      paragraphStyles: [
+        {
+          id: 'Normal', name: 'Normal', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+          run: { size: 24, font: { ascii: 'Times New Roman', eastAsia: 'Times New Roman', hAnsi: 'Times New Roman' } },
+          paragraph: { spacing: { line: 480, before: 0, after: 0 } },
+        },
+        {
+          id: 'SceneBreak', name: 'Scene Break', basedOn: 'Normal', next: 'Normal',
+          paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 240, after: 240 } },
+        },
+      ],
+    },
+    sections: [
+      { // Title Page Section
+        properties: { page: { margin: { top: convertInchesToTwip(1), right: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1) } } },
+        children: [
+          new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun(sanitizeText(authorName))] }),
+          new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun(sanitizeText(user.email || ''))] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(`Approx. ${Math.round((project.wordCount || 0) / 100) * 100} words`)] }),
+          new Paragraph({ children: [], spacing: { before: 2400 } }),
+          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: sanitizeText(project.title) || 'Untitled', bold: true, size: 32 })] }),
+          new Paragraph({ spacing: { before: 240 }, alignment: AlignmentType.CENTER, children: [new TextRun(`by ${sanitizeText(authorName)}`)] }),
+        ],
+      },
+      { // Main Content Section
+        properties: {
+          page: {
+            margin: { top: convertInchesToTwip(1), right: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1) },
+            pageNumbers: { start: 1, formatType: NumberFormat.DECIMAL },
+          },
+        },
+        headers: {
+          default: new Header({
+            children: [
+              new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(`${sanitizeText(authorLastName)} / ${sanitizeText(projectKeyword)} / `), new TextRun({ children: [PageNumber.CURRENT] })] }),
+            ],
+          }),
+        },
+        children: (() => {
+          const allContent: Paragraph[] = [];
+          chapters.sort((a, b) => a.order - b.order).forEach((chapter, chapterIndex) => {
+            allContent.push(new Paragraph({ pageBreakBefore: chapterIndex > 0, alignment: AlignmentType.CENTER, spacing: { before: 2400, after: 480 }, children: [new TextRun({ text: sanitizeText(chapter.title) || `Chapter ${chapterIndex + 1}`, bold: true })] }));
+            const sortedScenes = chapter.scenes ? chapter.scenes.sort((a, b) => a.order - b.order) : [];
+            if (sortedScenes.length > 0) {
+              sortedScenes.forEach((scene, sceneIndex) => {
+                const sanitizedContent = sanitizeText(scene.content || '');
+                const lines = sanitizedContent.split('\n');
+                lines.forEach((line) => {
+                  if (line.trim() === '') { return; }
+                  allContent.push(new Paragraph({ style: 'Normal', indent: { firstLine: convertInchesToTwip(0.5) }, children: [new TextRun(line)] }));
+                });
+                if (sceneIndex < sortedScenes.length - 1) {
+                  allContent.push(new Paragraph({ style: 'SceneBreak', children: [new TextRun('#')] }));
+                }
+              });
+            }
+          });
+          allContent.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 480 }, children: [new TextRun('The End')] }));
+          return allContent;
+        })(),
+      },
+    ],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  const safeTitle = (project.title || 'Untitled').replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '_');
+  const filename = `${safeTitle}_Manuscript.docx`;
+
+  return { buffer, filename };
 }

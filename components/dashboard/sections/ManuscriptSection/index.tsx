@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { cactusSerif } from "@/lib/fonts";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { getChapters } from "@/lib/data/chapters";
 import { useSearchParams } from "next/navigation";
 import { UpdateSceneValues } from "@/lib/schemas/scene.schema";
 import {
@@ -88,16 +89,7 @@ export function ManuscriptSection({
           // 1. Fetch all chapters if not already loaded
           let allChapters = chapters;
           if (allChapters.length === 0) {
-            const response = await fetch(
-              `/api/projects/${project.id}/chapters`
-            );
-            if (!response.ok) {
-              const errorData = await response.json().catch(() => ({}));
-              throw new Error(
-                errorData.message || "Failed to load chapters from server"
-              );
-            }
-            const data = await response.json();
+            const data = await getChapters(project.id);
             if (!Array.isArray(data)) {
               throw new Error("Invalid chapters data format received");
             }

@@ -11,6 +11,7 @@ import type { CreateProjectValues } from "@/lib/schemas/project.schema";
 import { createProjectSchema } from "@/lib/schemas/project.schema";
 import type { Project, Genre } from "@/lib/types";
 import { createProject } from "@/lib/data/projects";
+import { getGenres } from "@/lib/data/genres";
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -40,16 +41,12 @@ export function CreateProjectModal({
       const fetchGenres = async () => {
         setIsFetchingGenres(true);
         try {
-          const response = await fetch("/api/genres");
-          if (!response.ok) {
-            throw new Error("Failed to fetch genres");
-          }
-          const data = await response.json();
+          // Call the server action directly
+          const data = await getGenres();
           setGenres(data);
         } catch (error) {
           console.error("Error fetching genres:", error);
           toast.error("Could not load genres. Please try again.");
-          // Optionally, you could set an error state here to display in the UI
         } finally {
           setIsFetchingGenres(false);
         }

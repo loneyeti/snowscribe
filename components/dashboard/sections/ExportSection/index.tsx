@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
+import { exportProjectAsDocx } from "@/lib/data/projects";
 import { Heading } from "@/components/typography/Heading";
 import { Paragraph } from "@/components/typography/Paragraph";
 import { FileDown, Loader2 } from "lucide-react";
@@ -24,22 +25,28 @@ export function ExportSection({ project, isActive }: ExportSectionProps) {
     );
 
     try {
-      const response = await fetch(`/api/projects/${project.id}/export`, {
-        method: "POST",
-      });
+      // Call the server action instead of fetch
+      const result = await exportProjectAsDocx(project.id);
 
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: "An unknown error occurred during export." }));
-        throw new Error(errorData.error);
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      const blob = await response.blob();
+      // Client-side download from Base64 string
+      const byteCharacters = atob(result.content);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${project.title.replace(/ /g, "_")}_Manuscript.docx`;
+      a.download = result.filename;
       document.body.appendChild(a);
       a.click();
       a.remove();

@@ -37,6 +37,7 @@ import { ManageSceneCharactersModal } from "@/components/modals/ManageSceneChara
 import { ManageSceneTagsModal } from "@/components/modals/ManageSceneTagsModal";
 import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal";
 import { updateSceneCharacters, updateSceneTags } from "@/lib/data/scenes";
+import { useProjectData } from "@/contexts/ProjectDataContext";
 
 interface ChapterSceneOutlineListProps {
   chapters: Chapter[];
@@ -79,6 +80,7 @@ export function ChapterSceneOutlineList({
   onSceneUpdate,
   onSceneCreated,
 }: ChapterSceneOutlineListProps) {
+  const { triggerSceneUpdate } = useProjectData();
   console.log("ChapterSceneOutlineList - Props Received:");
   console.log("Chapters:", chapters);
   console.log("Characters (allProjectCharacters):", characters);
@@ -726,38 +728,21 @@ export function ChapterSceneOutlineList({
           projectId={projectId}
           sceneId={managingCharsForScene?.id || ""}
           onSave={async (sceneId, selectedCharacterIds) => {
-            if (managingCharsForScene) {
-              try {
-                await updateSceneCharacters(
-                  projectId,
-                  sceneId,
-                  selectedCharacterIds
-                );
-                const response = await fetch(
-                  `/api/projects/${projectId}/chapters/${managingCharsForScene.chapter_id}/scenes`
-                );
-                if (response.ok) {
-                  const scenes = await response.json();
-                  const updatedScene = scenes.find(
-                    (s: Scene) => s.id === sceneId
-                  );
-                  if (updatedScene) {
-                    onSceneUpdate(
-                      managingCharsForScene.chapter_id,
-                      sceneId,
-                      updatedScene
-                    );
-                  }
-                }
-                toast.success("Other characters updated.");
-              } catch (error: unknown) {
-                console.error("Failed to update scene characters:", error);
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : "Could not update other characters."
-                );
-              }
+            try {
+              await updateSceneCharacters(
+                projectId,
+                sceneId,
+                selectedCharacterIds
+              );
+              triggerSceneUpdate();
+              toast.success("Other characters updated successfully.");
+            } catch (error: unknown) {
+              console.error("Failed to update scene characters:", error);
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Could not update other characters."
+              );
             }
           }}
           sceneTitle={managingCharsForScene?.title || "Untitled Scene"}
@@ -776,34 +761,17 @@ export function ChapterSceneOutlineList({
           projectId={projectId}
           sceneId={managingTagsForScene?.id || ""}
           onSave={async (sceneId, selectedTagIds) => {
-            if (managingTagsForScene) {
-              try {
-                await updateSceneTags(projectId, sceneId, selectedTagIds);
-                const response = await fetch(
-                  `/api/projects/${projectId}/chapters/${managingTagsForScene.chapter_id}/scenes`
-                );
-                if (response.ok) {
-                  const scenes = await response.json();
-                  const updatedScene = scenes.find(
-                    (s: Scene) => s.id === sceneId
-                  );
-                  if (updatedScene) {
-                    onSceneUpdate(
-                      managingTagsForScene.chapter_id,
-                      sceneId,
-                      updatedScene
-                    );
-                  }
-                }
-                toast.success("Scene tags updated.");
-              } catch (error: unknown) {
-                console.error("Failed to update scene tags:", error);
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : "Could not update scene tags."
-                );
-              }
+            try {
+              await updateSceneTags(projectId, sceneId, selectedTagIds);
+              triggerSceneUpdate();
+              toast.success("Scene tags updated successfully.");
+            } catch (error: unknown) {
+              console.error("Failed to update scene tags:", error);
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Could not update scene tags."
+              );
             }
           }}
           sceneTitle={managingTagsForScene?.title || "Untitled Scene"}

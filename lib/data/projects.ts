@@ -1,44 +1,60 @@
+// lib/data/projects.ts
 "use server";
-import type { Project, Genre } from "@/lib/types";
-import type { CreateProjectValues, UpdateProjectValues } from "@/lib/schemas/project.schema";
-import * as projectService from "@/lib/services/projectService";
-import { getAuthenticatedUser } from "@/lib/auth";
+import * as projectService from "../services/projectService";
+import { getAuthenticatedUser } from "../auth";
+import type { Project, Genre } from "../types";
 
+/**
+ * Server Action to generate a DOCX file for a project and return it as a Base64 string.
+ */
+export async function exportProjectAsDocx(projectId: string): Promise<{ filename: string; content: string; error?: string }> {
+  try {
+    const user = await getAuthenticatedUser();
+    const { buffer, filename } = await projectService.generateManuscriptDocx(projectId, user.id);
+    const content = buffer.toString('base64');
+    return { filename, content };
+  } catch (error) {
+    console.error("Error exporting project as DOCX:", error);
+    return { filename: '', content: '', error: error instanceof Error ? error.message : 'Failed to generate document.' };
+  }
+}
+
+/**
+ * Gets a project by ID after verifying user ownership, including genre and word count
+ */
 export async function getProjectById(projectId: string): Promise<(Project & { genres: Genre | null; wordCount: number }) | null> {
-  if (!projectId) {
-    console.error("getProjectById called with no projectId");
-    return null;
-  }
-
-  try {
-    const user = await getAuthenticatedUser();
-    return await projectService.getProjectById(projectId, user.id);
-  } catch (error) {
-    console.error(`Error in getProjectById Server Action for project ${projectId}:`, error);
-    return null;
-  }
+  const user = await getAuthenticatedUser();
+  return projectService.getProjectById(projectId, user.id);
 }
 
-export async function deleteProject(projectId: string): Promise<void> {
-  if (!projectId) {
-    throw new Error("Project ID is required to delete a project.");
-  }
-
-  try {
-    const user = await getAuthenticatedUser();
-    await projectService.deleteProject(projectId, user.id);
-  } catch (error) {
-    console.error(`Error in deleteProject Server Action for project ${projectId}:`, error);
-    throw error;
-  }
-}
-
-export async function createProject(projectData: CreateProjectValues): Promise<Project> {
+/**
+ * Creates a new project
+ */
+export async function createProject(projectData: Parameters<typeof projectService.createProject>[1]): Promise<Project> {
   const user = await getAuthenticatedUser();
   return projectService.createProject(user.id, projectData);
 }
 
-export async function updateProject(projectId: string, projectData: UpdateProjectValues): Promise<Project> {
+/**
+ * Updates an existing project
+ */
+export async function updateProject(projectId: string, projectData: Parameters<typeof projectService.updateProject>[2]): Promise<Project> {
   const user = await getAuthenticatedUser();
   return projectService.updateProject(projectId, user.id, projectData);
+}
+
+/**
+ * Deletes a project
+ */
+export async function deleteProject(projectId: string): Promise<void> {
+  const user = await getAuthenticatedUser();
+  return projectService.deleteProject(projectId, user.id);
+}
+
+/**
+ * Gets all projects for the authenticated user
+ */
+export async function getProjectsForUser(): Promise<Project[]> {
+  const user = await getAuthenticatedUser();
+  return projectService.getProjectsForUser(user.id);
 }

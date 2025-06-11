@@ -15,6 +15,7 @@ import {
 import type { Project, Genre } from "@/lib/types";
 import { getErrorMessage } from "@/lib/utils";
 import { updateProject } from "@/lib/data/projects";
+import { getGenres } from "@/lib/data/genres";
 
 interface EditProjectModalProps {
   isOpen: boolean;
@@ -50,9 +51,7 @@ export function EditProjectModal({
   const fetchGenres = async () => {
     setIsFetchingGenres(true);
     try {
-      const response = await fetch("/api/genres");
-      if (!response.ok) throw new Error("Failed to fetch genres");
-      const data = await response.json();
+      const data = await getGenres();
       setGenres(data);
     } catch (error) {
       toast.error("Could not load genres.");
