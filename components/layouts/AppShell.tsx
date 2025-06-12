@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppHeader } from "./AppHeader";
 import { PrimarySidebar } from "./PrimarySidebar";
+import { EditProjectModal } from "@/components/projects/EditProjectModal";
 import type { Project, Genre } from "@/lib/types";
 import { sceneUpdateEmitter } from "@/lib/utils/eventEmitter";
 
@@ -22,6 +23,7 @@ export function AppShell({ children, project }: AppShellProps) {
   const searchParams = useSearchParams();
   const activeSection = searchParams.get("section") || "manuscript"; // Default to 'manuscript' if not in URL
   const [currentProjectData, setCurrentProjectData] = useState(project);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     setCurrentProjectData(project); // Sync with initial or refreshed server prop
@@ -57,6 +59,9 @@ export function AppShell({ children, project }: AppShellProps) {
     router.refresh(); // Refresh server data to ensure consistency everywhere
   };
 
+  const handleOpenEditModal = () => setIsEditModalOpen(true);
+  const handleCloseEditModal = () => setIsEditModalOpen(false);
+
   const childrenWithProps = React.Children.map(children, (child) => {
     if (React.isValidElement<AppShellInjectedProps>(child)) {
       return React.cloneElement(child, {
@@ -82,12 +87,20 @@ export function AppShell({ children, project }: AppShellProps) {
           projectId={currentProjectData.id}
           initialProjectData={currentProjectData}
           onProjectDetailsUpdated={handleProjectUpdate}
+          onEditClick={handleOpenEditModal}
         />
-        <main className="flex-1 overflow-y-auto p-6">
-          {" "}
-          {/* Added p-6 for some initial padding */}
-          {childrenWithProps}
-        </main>
+        <main className="flex-1 overflow-y-auto p-6">{childrenWithProps}</main>
+        {isEditModalOpen && (
+          <EditProjectModal
+            isOpen={isEditModalOpen}
+            onClose={handleCloseEditModal}
+            project={currentProjectData}
+            onProjectUpdated={(updatedProject) => {
+              handleProjectUpdate(updatedProject);
+              handleCloseEditModal();
+            }}
+          />
+        )}
       </div>
     </div>
   );

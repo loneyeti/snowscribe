@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { WordCountProgressIndicator } from "@/components/ui/WordCountProgressIndicator";
 import { UserMenuButton } from "@/components/auth/UserMenuButton";
 import { cactusSerif } from "@/lib/fonts";
 import { Pencil } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
-import { EditProjectModal } from "@/components/projects/EditProjectModal";
 import { cn } from "@/lib/utils";
 import type { Project, Genre } from "@/lib/types";
 
@@ -20,6 +19,7 @@ interface AppHeaderProps {
   onProjectDetailsUpdated: (
     updatedProject: Project & { genres?: Genre | null }
   ) => void;
+  onEditClick: () => void;
 }
 
 export function AppHeader({
@@ -27,18 +27,12 @@ export function AppHeader({
   projectGenre,
   currentWords,
   targetWords,
-  initialProjectData,
-  onProjectDetailsUpdated,
+  onEditClick,
 }: AppHeaderProps) {
-  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
-
-  const handleOpenEditProjectModal = () => setIsEditProjectModalOpen(true);
-  const handleCloseEditProjectModal = () => setIsEditProjectModalOpen(false);
-
   return (
     <header
       className={cn(
-        "relative px-6 py-5 w-full",
+        "relative z-30 px-6 py-5 w-full",
         "bg-white/90 dark:bg-slate-900/95 backdrop-blur-md",
         "border-b border-slate-200/50 dark:border-slate-700/50",
         "shadow-lg shadow-slate-200/20 dark:shadow-slate-900/30",
@@ -70,7 +64,7 @@ export function AppHeader({
             <IconButton
               icon={Pencil}
               aria-label="Edit Project Details"
-              onClick={handleOpenEditProjectModal}
+              onClick={onEditClick}
               variant="ghost"
               size="sm"
               className={cn(
@@ -126,18 +120,6 @@ export function AppHeader({
           targetWords={targetWords}
         />
       </div>
-
-      {isEditProjectModalOpen && initialProjectData && (
-        <EditProjectModal
-          isOpen={isEditProjectModalOpen}
-          onClose={handleCloseEditProjectModal}
-          project={initialProjectData}
-          onProjectUpdated={(updatedProjectData) => {
-            onProjectDetailsUpdated(updatedProjectData);
-            handleCloseEditProjectModal();
-          }}
-        />
-      )}
     </header>
   );
 }
