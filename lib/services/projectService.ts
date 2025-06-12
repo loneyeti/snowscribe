@@ -31,7 +31,7 @@ export async function getProjectsForUser(userId: string): Promise<Project[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('projects')
-    .select('*')
+    .select('*, word_count') // Include word_count column
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -39,7 +39,8 @@ export async function getProjectsForUser(userId: string): Promise<Project[]> {
     console.error('Error fetching projects:', error);
     throw new Error('Failed to fetch projects.');
   }
-  return data || [];
+  // Map the snake_case word_count to camelCase wordCount
+  return (data || []).map(({ word_count, ...p }) => ({ ...p, wordCount: word_count ?? 0 }));
 }
 
 /**
@@ -57,9 +58,10 @@ export async function getProjectById(projectId: string, userId: string): Promise
     throw new Error(ownership.error.message);
   }
 
+  // Select the word_count column directly
   const { data: projectData, error: projectError } = await supabase
     .from('projects')
-    .select(`*, genres (*)`)
+    .select(`*, genres (*), word_count`) // Include word_count column
     .eq('id', projectId)
     .single();
 
@@ -67,32 +69,13 @@ export async function getProjectById(projectId: string, userId: string): Promise
     console.error(`Error fetching project details for ${projectId}:`, projectError);
     return null;
   }
-
-  let totalWordCount = 0;
-  const { data: chapters, error: chaptersError } = await supabase
-    .from('chapters')
-    .select('id')
-    .eq('project_id', projectId);
-
-  if (chaptersError) {
-    console.error(`Error fetching chapters for word count (project: ${projectId}):`, chaptersError);
-  } else if (chapters && chapters.length > 0) {
-    const chapterIds = chapters.map(c => c.id);
-    const { data: scenes, error: scenesError } = await supabase
-      .from('scenes')
-      .select('word_count')
-      .in('chapter_id', chapterIds);
-    
-    if (scenesError) {
-      console.error(`Error fetching scenes for word count (project: ${projectId}):`, scenesError);
-    } else if (scenes) {
-      totalWordCount = scenes.reduce((sum, scene) => sum + (scene.word_count || 0), 0);
-    }
-  }
+  
+  // Map the snake_case word_count to camelCase wordCount
+  const { word_count, ...rest } = projectData;
   
   return {
-    ...projectData,
-    wordCount: totalWordCount
+    ...rest,
+    wordCount: word_count ?? 0
   };
 }
 
@@ -109,7 +92,7 @@ export async function createProject(userId: string, projectData: CreateProjectVa
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({ ...validatedData, user_id: userId })
-    .select()
+    .select('*, word_count') // Include word_count column
     .single();
     
   if (error) {
@@ -117,7 +100,9 @@ export async function createProject(userId: string, projectData: CreateProjectVa
     throw new Error('Failed to create project.');
   }
 
-  return newProject;
+  // Map the snake_case word_count to camelCase wordCount
+  const { word_count, ...rest } = newProject;
+  return { ...rest, wordCount: word_count ?? 0 };
 }
 
 /**
@@ -140,7 +125,7 @@ export async function updateProject(projectId: string, userId: string, projectDa
     .from('projects')
     .update(validatedData)
     .eq('id', projectId)
-    .select(`*, genres (*)`)
+    .select(`*, genres (*), word_count`) // Include word_count column
     .single();
 
   if (error) {
@@ -148,7 +133,9 @@ export async function updateProject(projectId: string, userId: string, projectDa
     throw new Error('Failed to update project.');
   }
   
-  return updatedProject;
+  // Map the snake_case word_count to camelCase wordCount
+  const { word_count, ...rest } = updatedProject;
+  return { ...rest, wordCount: word_count ?? 0 };
 }
 
 /**

@@ -16,7 +16,7 @@ export async function getChapter(
 
   const { data: chapter, error } = await supabase
     .from('chapters')
-    .select('*')
+    .select('*, word_count') // Include word_count column
     .eq('id', chapterId)
     .eq('project_id', projectId)
     .single();
@@ -71,7 +71,7 @@ export async function createChapter(
       description: chapterData.description || '',
       order
     })
-    .select()
+    .select('*, word_count') // Include word_count column
     .single();
 
   if (error) {
@@ -100,7 +100,7 @@ export async function updateChapter(
     })
     .eq('id', chapterId)
     .eq('project_id', projectId)
-    .select()
+    .select('*, word_count') // Include word_count column
     .single();
 
   if (error) {
@@ -139,10 +139,10 @@ export async function getChaptersWithScenes(
   const ownership = await verifyProjectOwnership(supabase, projectId, userId);
   if (ownership.error) throw new Error(ownership.error.message);
 
-  // First get chapters
+  // First get chapters with word_count
   const { data: chapters, error: chaptersError } = await supabase
     .from('chapters')
-    .select('*')
+    .select('*, word_count') // Include word_count column
     .eq('project_id', projectId)
     .order('order', { ascending: true });
   
@@ -176,7 +176,7 @@ export async function getChapters(projectId: string, userId: string): Promise<Ch
 
   const { data: chapters, error } = await supabase
     .from('chapters')
-    .select('*')
+    .select('*, word_count') // Include word_count column
     .eq('project_id', projectId)
     .order('order', { ascending: true });
 

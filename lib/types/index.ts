@@ -16,7 +16,7 @@ export interface Project {
   created_at: string; // TIMESTAMPTZ
   updated_at: string; // TIMESTAMPTZ
   // Optional fields that might be derived or added later for UI
-  wordCount?: number;
+  wordCount: number;
   thumbnailUrl?: string;
 }
 
@@ -51,7 +51,7 @@ export interface Chapter {
   created_at: string; // TIMESTAMPTZ
   updated_at: string; // TIMESTAMPTZ
   scenes?: Scene[]; // For holding nested scenes, typically id and content
-  word_count?: number; // Calculated field
+  word_count: number; // Calculated field
   scene_count?: number; // Calculated field
 }
 

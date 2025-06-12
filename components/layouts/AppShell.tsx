@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppHeader } from "./AppHeader";
 import { PrimarySidebar } from "./PrimarySidebar";
 import type { Project, Genre } from "@/lib/types";
+import { sceneUpdateEmitter } from "@/lib/utils/eventEmitter";
 
 interface AppShellInjectedProps {
   activeSection?: string;
@@ -25,6 +26,19 @@ export function AppShell({ children, project }: AppShellProps) {
   useEffect(() => {
     setCurrentProjectData(project); // Sync with initial or refreshed server prop
   }, [project]);
+
+  // Listen for scene updates and refresh project data
+  useEffect(() => {
+    const handleSceneUpdate = () => {
+      router.refresh();
+    };
+
+    sceneUpdateEmitter.on("sceneUpdated", handleSceneUpdate);
+
+    return () => {
+      sceneUpdateEmitter.off("sceneUpdated", handleSceneUpdate);
+    };
+  }, [router]);
 
   const handleSectionChange = (sectionId: string) => {
     if (sectionId === "settings") {
