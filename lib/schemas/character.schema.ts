@@ -7,8 +7,11 @@ export const characterBaseSchema = z.object({
   image_url: z.union([
     z.string().url({ message: 'Image URL must be a valid URL.' }),
     z.literal(''),
+    z.null(),
     z.undefined()
-  ]).optional(),
+  ])
+  .optional()
+  .transform(val => val === null ? '' : val), // Convert null to empty string
 });
 
 export const createCharacterSchema = characterBaseSchema.extend({

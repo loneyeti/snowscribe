@@ -1,4 +1,6 @@
-"use server";
+// This is a server-side only module
+'use server';
+
 import type { Chapter } from "@/lib/types";
 import * as chapterService from "@/lib/services/chapterService";
 import { getAuthenticatedUser } from "@/lib/auth";
@@ -31,10 +33,13 @@ export async function createChapter(
   chapterData: { title: string; description?: string; order?: number }
 ): Promise<Chapter> {
   const user = await getAuthenticatedUser();
-  return chapterService.createChapter(projectId, user.id, {
-    ...chapterData,
+  const createData = {
+    title: chapterData.title,
+    description: chapterData.description || '',
+    order: chapterData.order,
     project_id: projectId
-  });
+  };
+  return chapterService.createChapter(projectId, user.id, createData);
 }
 
 export async function updateChapter(

@@ -3,10 +3,10 @@ import { useState, useCallback, useEffect } from 'react';
 import type { Project, Scene, Chapter, UpdateSceneValues } from '@/lib/types';
 import { toast } from 'sonner';
 import { updateProjectSchema, UpdateProjectValues } from '@/lib/schemas/project.schema';
-import { updateScene } from '@/lib/data/scenes';
+import { updateScene, updateSceneCharacters, updateSceneTags } from '@/lib/data/scenes';
 import { updateProject } from '@/lib/data/projects';
 import { useProjectData } from '@/contexts/ProjectDataContext';
-import { getChapters } from '@/lib/data/chapters';
+import { getChaptersWithScenes } from '@/lib/services/chapterService';
 
 export function useOutlineData(initialProject: Project, projectId: string) {
   const [currentProjectDetails, setCurrentProjectDetails] = useState(initialProject);
@@ -17,7 +17,7 @@ export function useOutlineData(initialProject: Project, projectId: string) {
   const fetchChaptersWithScenes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedChapters = await getChapters(projectId);
+      const fetchedChapters = await getChaptersWithScenes(projectId, initialProject.user_id);
       setChapters(fetchedChapters);
     } catch (error) {
       toast.error('Failed to load outline data.');
@@ -66,18 +66,25 @@ export function useOutlineData(initialProject: Project, projectId: string) {
     updatedData: Partial<Scene>
   ): Promise<Scene | null> => {
     try {
-      const payload: UpdateSceneValues = {};
-      if (updatedData.outline_description !== undefined) payload.outline_description = updatedData.outline_description;
-      if (updatedData.pov_character_id !== undefined) payload.pov_character_id = updatedData.pov_character_id;
-      if (updatedData.primary_category !== undefined) payload.primary_category = updatedData.primary_category;
-
-      if (Object.keys(payload).length === 0) {
-        // If only tag_ids or other_character_ids changed, this payload might be empty.
-        // The component ChapterSceneOutlineList will call specific handlers for those.
+      const payload: UpdateSceneValues = {
+        outline_description: updatedData.outline_description,
+        pov_character_id: updatedData.pov_character_id,
+        primary_category: updatedData.primary_category
+      };
+      
+      // Handle character and tag updates separately through junction tables
+      if (updatedData.scene_characters) {
+        const characterIds = updatedData.scene_characters.map(c => c.character_id);
+        await updateSceneCharacters(projectId, sceneId, characterIds);
+      }
+      
+      if (updatedData.scene_applied_tags) {
+        const tagIds = updatedData.scene_applied_tags.map(t => t.tag_id);
+        await updateSceneTags(projectId, sceneId, tagIds);
       }
 
       const updatedSceneFromAPI = await updateScene(projectId, chapterId, sceneId, payload);
-      toast.success("Scene outline details saved.");
+      toast.success("Scene details saved successfully.");
       return updatedSceneFromAPI;
     } catch (error) {
       console.error("useOutlineData: Failed to save scene outline details:", error);

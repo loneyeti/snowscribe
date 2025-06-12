@@ -66,8 +66,8 @@ export interface Scene {
   notes?: string | null;
   outline_description?: string | null; // Added for outline feature
   pov_character_id?: string | null; // Added for outline feature, references characters(id)
-  other_character_ids?: string[]; // Added for outline feature, array of character UUIDs
-  tag_ids?: string[]; // Added for outline feature, array of scene_tag UUIDs
+  scene_characters?: Array<{ character_id: string }>; // Array of character relationships
+  scene_applied_tags?: Array<{ tag_id: string }>; // Array of tag relationships
   primary_category?: PrimarySceneCategory | null; // ADD THIS LINE
   created_at: string; // TIMESTAMPTZ
   updated_at: string; // TIMESTAMPTZ

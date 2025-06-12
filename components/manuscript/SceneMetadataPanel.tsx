@@ -40,8 +40,10 @@ export interface SceneMetadataPanelProps {
       >
     >
   ) => Promise<void>;
-  onCharacterLinkChange: (characterIds: string[]) => Promise<void>;
-  onTagLinkChange: (tagIds: string[]) => Promise<void>;
+  onCharacterLinkChange: (
+    characterIds: Array<{ character_id: string }>
+  ) => Promise<void>;
+  onTagLinkChange: (tagIds: Array<{ tag_id: string }>) => Promise<void>;
   className?: string;
 }
 
@@ -274,7 +276,8 @@ export function SceneMetadataPanel({
             await onSceneUpdate({ pov_character_id: newPovCharacterId });
           }
 
-          const currentOtherIds = scene.other_character_ids || [];
+          const currentOtherIds =
+            scene.scene_characters?.map((c) => c.character_id) || [];
           // Ensure comparison is robust to order differences
           const sortedNewOtherIds = [...new Set(newOtherCharacterIds)].sort(); // Remove duplicates and sort
           const sortedCurrentOtherIds = [...new Set(currentOtherIds)].sort(); // Remove duplicates and sort
@@ -283,7 +286,9 @@ export function SceneMetadataPanel({
             JSON.stringify(sortedNewOtherIds) !==
             JSON.stringify(sortedCurrentOtherIds)
           ) {
-            await onCharacterLinkChange(sortedNewOtherIds);
+            await onCharacterLinkChange(
+              sortedNewOtherIds.map((id) => ({ character_id: id }))
+            );
           }
 
           toast.success("Characters suggested by AI and updated.", {
@@ -368,7 +373,7 @@ export function SceneMetadataPanel({
           })
           .filter((id): id is string => !!id);
 
-        await onTagLinkChange(newTagIds);
+        await onTagLinkChange(newTagIds.map((id) => ({ tag_id: id })));
 
         toast.success("Scene tags suggested by AI and updated.", {
           id: toastId,
@@ -690,12 +695,13 @@ export function SceneMetadataPanel({
               Tags
             </label>
             <div className="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
-              {scene.tag_ids && scene.tag_ids.length > 0 ? (
-                scene.tag_ids.map((tagId) => {
-                  const tag = allProjectSceneTags.find((t) => t.id === tagId);
+              {scene.scene_applied_tags &&
+              scene.scene_applied_tags.length > 0 ? (
+                scene.scene_applied_tags.map(({ tag_id }) => {
+                  const tag = allProjectSceneTags.find((t) => t.id === tag_id);
                   return tag ? (
                     <span
-                      key={tagId}
+                      key={tag_id}
                       className="px-2.5 py-1 text-xs bg-primary/10 text-primary font-medium rounded-full flex items-center"
                       style={
                         tag.color
@@ -810,12 +816,12 @@ export function SceneMetadataPanel({
               Other Characters
             </label>
             <div className="mb-2 min-h-[20px] pl-1">
-              {scene.other_character_ids &&
-              scene.other_character_ids.length > 0 ? (
-                scene.other_character_ids
+              {scene.scene_characters && scene.scene_characters.length > 0 ? (
+                scene.scene_characters
                   .map(
-                    (charId) =>
-                      allProjectCharacters.find((c) => c.id === charId)?.name
+                    ({ character_id }) =>
+                      allProjectCharacters.find((c) => c.id === character_id)
+                        ?.name
                   )
                   .filter(Boolean)
                   .join(", ")
@@ -862,9 +868,13 @@ export function SceneMetadataPanel({
             isOpen={isManageTagsModalOpen}
             onClose={() => setIsManageTagsModalOpen(false)}
             allProjectSceneTags={allProjectSceneTags}
-            currentSceneTagIds={scene.tag_ids || []}
+            currentSceneTagIds={
+              scene.scene_applied_tags?.map((t) => t.tag_id) || []
+            }
             onSave={async (savedSceneId, selectedTagIds) => {
-              await onTagLinkChange(selectedTagIds);
+              await onTagLinkChange(
+                selectedTagIds.map((id) => ({ tag_id: id }))
+              );
               setIsManageTagsModalOpen(false);
             }}
             sceneTitle={scene.title || "Scene"}
@@ -877,9 +887,13 @@ export function SceneMetadataPanel({
             isOpen={isManageCharsModalOpen}
             onClose={() => setIsManageCharsModalOpen(false)}
             allProjectCharacters={allProjectCharacters}
-            currentSceneCharacterIds={scene.other_character_ids || []}
+            currentSceneCharacterIds={
+              scene.scene_characters?.map((c) => c.character_id) || []
+            }
             onSave={async (savedSceneId, selectedCharacterIds) => {
-              await onCharacterLinkChange(selectedCharacterIds);
+              await onCharacterLinkChange(
+                selectedCharacterIds.map((id) => ({ character_id: id }))
+              );
               setIsManageCharsModalOpen(false);
             }}
             sceneTitle={scene.title || "Scene"}

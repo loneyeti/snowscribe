@@ -30,12 +30,17 @@ export function CharacterCardEditor({
   className,
 }: CharacterCardEditorProps) {
   const [character, setCharacter] = useState<CharacterFormData>(
-    initialData || {
-      name: "",
-      description: "",
-      notes: "",
-      image_url: "",
-    }
+    initialData
+      ? {
+          ...initialData,
+          image_url: initialData.image_url || "",
+        }
+      : {
+          name: "",
+          description: "",
+          notes: "",
+          image_url: "",
+        }
   );
 
   useEffect(() => {

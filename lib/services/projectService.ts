@@ -20,7 +20,7 @@ import {
   convertInchesToTwip,
   NumberFormat,
 } from 'docx';
-import { getChapters } from './chapterService';
+import { getChaptersWithScenes } from './chapterService';
 
 /**
  * Fetches all projects for a given user.
@@ -192,7 +192,7 @@ export async function generateManuscriptDocx(projectId: string, userId: string):
   }
 
   const project = await getProjectById(projectId, userId);
-  const chapters = await getChapters(projectId, userId);
+  const chapters = await getChaptersWithScenes(projectId, userId);
 
   if (!project || !chapters) {
     throw new Error('Project data not found');

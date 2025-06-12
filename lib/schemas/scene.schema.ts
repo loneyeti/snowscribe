@@ -37,7 +37,9 @@ export const createSceneSchema = sceneBaseSchema.extend({
   }),
 }).omit({ tag_ids: true }); // tag_ids are usually handled by a separate endpoint after scene creation
 
-export const updateSceneSchema = sceneBaseSchema.partial();
+export const updateSceneSchema = sceneBaseSchema.extend({
+  other_character_ids: z.array(z.string().uuid()).optional(),
+}).partial();
 
 export type CreateSceneValues = z.infer<typeof createSceneSchema>;
 export type UpdateSceneValues = z.infer<typeof updateSceneSchema>;

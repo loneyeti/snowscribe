@@ -36,7 +36,7 @@ import type { TextBlock, ChatResponse } from "snowgander";
 import { ManageSceneCharactersModal } from "@/components/modals/ManageSceneCharactersModal";
 import { ManageSceneTagsModal } from "@/components/modals/ManageSceneTagsModal";
 import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal";
-import { updateSceneCharacters, updateSceneTags } from "@/lib/data/scenes";
+// Scene updates are handled through onSceneUpdate prop
 import { useProjectData } from "@/contexts/ProjectDataContext";
 
 interface ChapterSceneOutlineListProps {
@@ -80,7 +80,7 @@ export function ChapterSceneOutlineList({
   onSceneUpdate,
   onSceneCreated,
 }: ChapterSceneOutlineListProps) {
-  const { triggerSceneUpdate } = useProjectData();
+  const {} = useProjectData();
   console.log("ChapterSceneOutlineList - Props Received:");
   console.log("Chapters:", chapters);
   console.log("Characters (allProjectCharacters):", characters);
@@ -381,13 +381,13 @@ export function ChapterSceneOutlineList({
                                   onClick={() => {
                                     setEditingSceneId(scene.id);
                                     setEditFormData({
-                                      id: scene.id,
+                                      ...scene,
                                       outline_description:
                                         scene.outline_description || "",
-                                      pov_character_id:
-                                        scene.pov_character_id || null,
-                                      primary_category:
-                                        scene.primary_category || null,
+                                      scene_characters:
+                                        scene.scene_characters || [],
+                                      scene_applied_tags:
+                                        scene.scene_applied_tags || [],
                                     });
                                   }}
                                   className="opacity-0 group-hover:opacity-100 transition-opacity text-xs px-3 py-1.5 h-auto"
@@ -445,19 +445,19 @@ export function ChapterSceneOutlineList({
                                 </div>
 
                                 {/* Other Characters */}
-                                {scene.other_character_ids &&
-                                  scene.other_character_ids.length > 0 && (
+                                {scene.scene_characters &&
+                                  scene.scene_characters.length > 0 && (
                                     <div className="flex items-center space-x=1.5 text-slate-600 dark:text-slate-400">
                                       <Users size={14} />
                                       <span className="font-medium">
                                         Characters:
                                       </span>
                                       <span>
-                                        {scene.other_character_ids
+                                        {scene.scene_characters
                                           .map(
-                                            (charId) =>
+                                            ({ character_id }) =>
                                               characters.find(
-                                                (c) => c.id === charId
+                                                (c) => c.id === character_id
                                               )?.name
                                           )
                                           .filter((name) => !!name)
@@ -467,30 +467,31 @@ export function ChapterSceneOutlineList({
                                   )}
 
                                 {/* Tags */}
-                                {scene.tag_ids && scene.tag_ids.length > 0 && (
-                                  <div className="flex items-center space-x=1.5 text-slate-600 dark:text-slate-400">
-                                    <Tag size={14} />
-                                    <span className="font-medium">Tags:</span>
-                                    <div className="flex flex-wrap gap-1">
-                                      {scene.tag_ids
-                                        .map(
-                                          (tagId) =>
-                                            sceneTags.find(
-                                              (t) => t.id === tagId
-                                            )?.name
-                                        )
-                                        .filter((name) => !!name)
-                                        .map((tagName, idx) => (
-                                          <span
-                                            key={idx}
-                                            className="px-2 py-0.5 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-md text-xs"
-                                          >
-                                            {tagName}
-                                          </span>
-                                        ))}
+                                {scene.scene_applied_tags &&
+                                  scene.scene_applied_tags.length > 0 && (
+                                    <div className="flex items-center space-x=1.5 text-slate-600 dark:text-slate-400">
+                                      <Tag size={14} />
+                                      <span className="font-medium">Tags:</span>
+                                      <div className="flex flex-wrap gap-1">
+                                        {scene.scene_applied_tags
+                                          .map(
+                                            ({ tag_id }) =>
+                                              sceneTags.find(
+                                                (t) => t.id === tag_id
+                                              )?.name
+                                          )
+                                          .filter((name) => !!name)
+                                          .map((tagName, idx) => (
+                                            <span
+                                              key={idx}
+                                              className="px-2 py-0.5 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-md text-xs"
+                                            >
+                                              {tagName}
+                                            </span>
+                                          ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
                               </div>
 
                               {/* Edit Form */}
@@ -723,27 +724,20 @@ export function ChapterSceneOutlineList({
           }}
           allProjectCharacters={characters}
           currentSceneCharacterIds={
-            managingCharsForScene?.other_character_ids || []
+            managingCharsForScene?.scene_characters?.map(
+              (c) => c.character_id
+            ) || []
           }
           projectId={projectId}
           sceneId={managingCharsForScene?.id || ""}
-          onSave={async (sceneId, selectedCharacterIds) => {
-            try {
-              await updateSceneCharacters(
-                projectId,
-                sceneId,
-                selectedCharacterIds
-              );
-              triggerSceneUpdate();
-              toast.success("Other characters updated successfully.");
-            } catch (error: unknown) {
-              console.error("Failed to update scene characters:", error);
-              toast.error(
-                error instanceof Error
-                  ? error.message
-                  : "Could not update other characters."
-              );
-            }
+          onSave={(sceneId, selectedCharacterIds) => {
+            setEditFormData((prev) => ({
+              ...prev,
+              scene_characters: selectedCharacterIds.map((character_id) => ({
+                character_id,
+              })),
+            }));
+            toast.success("Characters selection updated.");
           }}
           sceneTitle={managingCharsForScene?.title || "Untitled Scene"}
         />
@@ -757,22 +751,17 @@ export function ChapterSceneOutlineList({
             setManagingTagsForScene(null);
           }}
           allProjectSceneTags={sceneTags}
-          currentSceneTagIds={managingTagsForScene?.tag_ids || []}
+          currentSceneTagIds={
+            managingTagsForScene?.scene_applied_tags?.map((t) => t.tag_id) || []
+          }
           projectId={projectId}
           sceneId={managingTagsForScene?.id || ""}
-          onSave={async (sceneId, selectedTagIds) => {
-            try {
-              await updateSceneTags(projectId, sceneId, selectedTagIds);
-              triggerSceneUpdate();
-              toast.success("Scene tags updated successfully.");
-            } catch (error: unknown) {
-              console.error("Failed to update scene tags:", error);
-              toast.error(
-                error instanceof Error
-                  ? error.message
-                  : "Could not update scene tags."
-              );
-            }
+          onSave={(sceneId, selectedTagIds) => {
+            setEditFormData((prev) => ({
+              ...prev,
+              scene_applied_tags: selectedTagIds.map((tag_id) => ({ tag_id })),
+            }));
+            toast.success("Tags selection updated.");
           }}
           sceneTitle={managingTagsForScene?.title || "Untitled Scene"}
         />

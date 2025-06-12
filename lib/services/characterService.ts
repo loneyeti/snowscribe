@@ -77,7 +77,11 @@ export async function updateCharacter(
   const ownership = await verifyProjectOwnership(supabase, projectId, userId);
   if (ownership.error) throw new Error(ownership.error.message);
   
-  const validatedData = updateCharacterSchema.parse(characterData);
+  const dataToUpdate = {
+    ...characterData,
+    image_url: characterData.image_url === null ? '' : characterData.image_url
+  };
+  const validatedData = updateCharacterSchema.parse(dataToUpdate);
   
   const { data: updatedCharacter, error } = await supabase
     .from('characters')

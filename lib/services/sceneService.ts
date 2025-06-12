@@ -71,14 +71,24 @@ export async function updateSceneCharacters(projectId: string, sceneId: string, 
 
     const { error: deleteError } = await client.from('scene_characters').delete().eq('scene_id', sceneId);
     if (deleteError) {
-        throw new Error('Failed to update scene characters (delete step).');
+        console.error('Failed to delete existing character links:', deleteError);
+        throw new Error(`Failed to update scene characters (delete step): ${deleteError.message}`);
     }
 
     if (characterIds.length > 0) {
-        const newLinks = characterIds.map(charId => ({ scene_id: sceneId, character_id: charId }));
+        const newLinks = characterIds.map(charObj => {
+            const charId = typeof charObj === 'string' ? charObj : 
+                         (charObj as {character_id: string}).character_id;
+            return {
+                scene_id: sceneId, 
+                character_id: charId,
+                created_at: new Date().toISOString()
+            };
+        });
         const { error: insertError } = await client.from('scene_characters').insert(newLinks);
         if (insertError) {
-            throw new Error('Failed to update scene characters (insert step).');
+            console.error('Failed to insert new character links:', insertError);
+            throw new Error(`Failed to update scene characters: ${insertError.message}`);
         }
     }
 }
@@ -91,14 +101,24 @@ export async function updateSceneTags(projectId: string, sceneId: string, userId
 
     const { error: deleteError } = await client.from('scene_applied_tags').delete().eq('scene_id', sceneId);
     if (deleteError) {
-        throw new Error('Failed to update scene tags (delete step).');
+        console.error('Failed to delete existing scene tags:', deleteError);
+        throw new Error(`Failed to update scene tags (delete step): ${deleteError.message}`);
     }
 
     if (tagIds.length > 0) {
-        const newLinks = tagIds.map(tagId => ({ scene_id: sceneId, tag_id: tagId }));
+        const newLinks = tagIds.map(tagObj => {
+            const tagId = typeof tagObj === 'string' ? tagObj : 
+                         (tagObj as {tag_id: string}).tag_id;
+            return {
+                scene_id: sceneId, 
+                tag_id: tagId,
+                created_at: new Date().toISOString()
+            };
+        });
         const { error: insertError } = await client.from('scene_applied_tags').insert(newLinks);
         if (insertError) {
-            throw new Error('Failed to update scene tags (insert step).');
+            console.error('Failed to insert new scene tags:', insertError);
+            throw new Error(`Failed to update scene tags: ${insertError.message}`);
         }
     }
 }
