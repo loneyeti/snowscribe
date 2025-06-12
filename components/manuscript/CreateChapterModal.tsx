@@ -48,7 +48,7 @@ export function CreateChapterModal({
     }
 
     try {
-      const { project_id, ...chapterData } = validationResult.data;
+      const { ...chapterData } = validationResult.data;
       const newChapter = await createChapter(projectId, chapterData);
       toast.success("Chapter created successfully!");
       onChapterCreated(newChapter);

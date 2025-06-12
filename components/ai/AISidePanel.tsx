@@ -9,21 +9,26 @@ import { getToolModelByName } from "@/lib/data/toolModels";
 import { getSystemPromptByCategory } from "@/lib/data/aiPrompts";
 import MarkdownComponent from "./MarkdownComponent";
 
-import type { ChatResponse, TextBlock } from "snowgander";
+import type { ChatResponse } from "snowgander";
 
 // This should match the ToolModel type from the database schema
+/*
 interface AI_Vendor {
   id: string;
   name: string;
 }
+*/
 
+/*
 interface AI_Model {
   id: string;
   name: string;
   vendor_id: string;
   ai_vendors: AI_Vendor;
 }
+*/
 
+/*
 interface ToolModelResponse {
   id: string;
   name: string;
@@ -34,6 +39,7 @@ interface ToolModelResponse {
   system_prompt?: string | null;
   ai_models: AI_Model;
 }
+*/
 
 type AIComponentType = "chat" | "tool";
 

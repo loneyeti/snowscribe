@@ -53,7 +53,7 @@ export function CreateSceneModal({
     }
 
     try {
-      const { project_id, chapter_id, ...sceneData } = validationResult.data;
+      const { ...sceneData } = validationResult.data;
       const newScene = await createScene(projectId, chapterId, sceneData);
       toast.success("Scene created successfully!");
       onSceneCreated(newScene);

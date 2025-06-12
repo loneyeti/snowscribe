@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -36,7 +36,7 @@ export async function updateSession(request: NextRequest) {
   // For debugging: Log cookies and user for API requests
   if (request.nextUrl.pathname.startsWith('/api/projects')) {
     // console.log('[Middleware API Check] Path:', request.nextUrl.pathname);
-    const allCookies = request.cookies.getAll();
+    //const allCookies = request.cookies.getAll();
     // console.log('[Middleware API Check] Incoming Cookies:', JSON.stringify(allCookies, null, 2));
     const { data: { user: apiUser }, error: apiUserError } = await supabase.auth.getUser();
     if (apiUserError) {

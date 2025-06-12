@@ -7,7 +7,7 @@ import { getProjectById } from "@/lib/data/projects";
 import type { Project, Genre, Scene, Chapter } from "@/lib/types"; // Chapter still needed for re-export
 
 interface ProjectPageProps {
-  params: { projectId: string };
+  params: Promise<{ projectId: string }>;
 }
 
 // Re-exporting types for potential use by client components or other server components in this route group
