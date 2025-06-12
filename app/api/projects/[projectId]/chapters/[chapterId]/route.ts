@@ -9,7 +9,7 @@ interface ChapterParams {
 }
 
 export async function GET(request: Request, { params }: { params: ChapterParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const chapter = await chapterService.getChapter(
         p.projectId,
@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: { params: ChapterParams 
 }
 
 export async function PUT(request: Request, { params }: { params: ChapterParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const jsonData = await req.json();
       const updatedChapter = await chapterService.updateChapter(
@@ -44,7 +44,7 @@ export async function PUT(request: Request, { params }: { params: ChapterParams 
 }
 
 export async function DELETE(request: Request, { params }: { params: ChapterParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       await chapterService.deleteChapter(
         p.projectId,

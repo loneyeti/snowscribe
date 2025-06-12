@@ -9,7 +9,7 @@ interface ProjectParams {
 }
 
 export async function GET(request: Request, { params }: { params: ProjectParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const notes = await worldNoteService.getWorldBuildingNotes(p.projectId, authContext.user.id);
       return NextResponse.json(notes);
@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: { params: ProjectParams 
 }
 
 export async function POST(request: Request, { params }: { params: ProjectParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const jsonData = await req.json();
       const validationResult = createWorldBuildingNoteSchema.omit({ project_id: true }).safeParse(jsonData);

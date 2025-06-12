@@ -9,7 +9,7 @@ interface ChapterSceneParams {
 }
 
 export async function GET(request: Request, { params }: { params: ChapterSceneParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const scenes = await sceneService.getScenesByChapterId(p.projectId, p.chapterId, authContext.user.id);
       return NextResponse.json(scenes);
@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: { params: ChapterScenePa
 }
 
 export async function POST(request: Request, { params }: { params: ChapterSceneParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const jsonData = await req.json();
       const newScene = await sceneService.createScene(p.projectId, p.chapterId, authContext.user.id, jsonData);

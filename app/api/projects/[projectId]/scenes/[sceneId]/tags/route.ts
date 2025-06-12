@@ -14,7 +14,7 @@ const updateSceneTagsSchema = z.object({
 });
 
 export async function PUT(request: Request, { params }: { params: SceneTagParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const jsonData = await req.json();
       const validationResult = updateSceneTagsSchema.safeParse(jsonData);

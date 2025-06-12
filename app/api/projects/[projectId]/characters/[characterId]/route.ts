@@ -9,7 +9,7 @@ interface CharacterParams {
 }
 
 export async function GET(request: Request, { params }: { params: CharacterParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const character = await characterService.getCharacter(
         p.projectId, 
@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: { params: CharacterParam
 }
 
 export async function PUT(request: Request, { params }: { params: CharacterParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const jsonData = await req.json();
       const updatedCharacter = await characterService.updateCharacter(
@@ -44,7 +44,7 @@ export async function PUT(request: Request, { params }: { params: CharacterParam
 }
 
 export async function DELETE(request: Request, { params }: { params: CharacterParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       await characterService.deleteCharacter(
         p.projectId,

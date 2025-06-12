@@ -22,7 +22,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: ReorderParams }
 ) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const json = await req.json();
       const validationResult = batchSceneOrderUpdateRequestSchema.safeParse(json);

@@ -11,7 +11,7 @@ interface SceneParams {
 }
 
 export async function GET(request: Request, { params }: { params: SceneParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const scene = await sceneService.getSceneById(p.projectId, p.chapterId, p.sceneId, authContext.user.id);
       if (!scene) {
@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: { params: SceneParams })
 }
 
 export async function PUT(request: Request, { params }: { params: SceneParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const jsonData = await req.json();
       const validationResult = updateSceneSchema.safeParse(jsonData);
@@ -51,7 +51,7 @@ export async function PUT(request: Request, { params }: { params: SceneParams })
 }
 
 export async function DELETE(request: Request, { params }: { params: SceneParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       await sceneService.deleteScene(p.projectId, p.chapterId, p.sceneId, authContext.user.id);
       return NextResponse.json({ message: 'Scene deleted successfully' }, { status: 200 });

@@ -10,7 +10,7 @@ interface ProjectNoteParams {
 }
 
 export async function GET(request: Request, { params }: { params: ProjectNoteParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const note = await worldNoteService.getWorldBuildingNote(p.projectId, p.noteId, authContext.user.id);
       return NextResponse.json(note);
@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: { params: ProjectNotePar
 }
 
 export async function PUT(request: Request, { params }: { params: ProjectNoteParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       const jsonData = await req.json();
       const validationResult = updateWorldBuildingNoteSchema.safeParse(jsonData);
@@ -59,7 +59,7 @@ export async function PUT(request: Request, { params }: { params: ProjectNotePar
 }
 
 export async function DELETE(request: Request, { params }: { params: ProjectNoteParams }) {
-  return withProjectAuth(request, params, async (req, p, authContext) => {
+  return withProjectAuth(request, async () => params, async (req, p, authContext) => {
     try {
       await worldNoteService.deleteWorldBuildingNote(p.projectId, p.noteId, authContext.user.id);
       return NextResponse.json({ message: 'World building note deleted successfully' }, { status: 200 });
