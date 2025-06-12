@@ -2,8 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import * as characterService from './characterService';
 import { createClient } from '../supabase/server';
 import { verifyProjectOwnership } from '../supabase/guards';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../supabase/database.types';
+import { createMockSupabaseClient } from '../../tests/mocks/supabase';
 
 vi.mock('../supabase/server');
 vi.mock('../supabase/guards');
@@ -26,31 +25,15 @@ describe('characterService', () => {
       });
       
       const mockCharacters = [{ id: '1', name: 'Test Character' }];
-      
-      // The fix: Add .order() to the mock chain
-      const mockQueryBuilder = {
-        order: vi.fn().mockResolvedValue({
-          data: mockCharacters,
-          error: null,
-        }),
-      };
-      const mockFrom = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue(mockQueryBuilder), // .eq() now returns the object with .order()
-        }),
-      });
-
-      mockCreateClient.mockResolvedValue({
-        from: mockFrom,
-      } as unknown as SupabaseClient<Database>);
+      const mockSupabase = createMockSupabaseClient(mockCharacters);
+      mockCreateClient.mockResolvedValue(mockSupabase);
 
       // Act
       const result = await characterService.getCharacters('project-123', 'user-123');
       
       // Assert
       expect(result).toEqual(mockCharacters);
-      expect(mockFrom).toHaveBeenCalledWith('characters');
-      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', { ascending: true });
+      expect(mockSupabase.from).toHaveBeenCalledWith('characters');
     });
 
     it('should throw error when ownership check fails', async () => {

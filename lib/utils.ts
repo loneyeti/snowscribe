@@ -27,32 +27,48 @@ export function getErrorMessage(error: unknown): string {
   return 'An unknown error occurred';
 }
 
-// Helper function to extract JSON from a string that might be wrapped in markdown or have extra text
-export function extractJsonFromString(str: string): string | null {
-  if (!str) return null;
+// Helper function to extract JSON from a string or object that might be wrapped in markdown or have extra text
+export function extractJsonFromString<T = unknown>(input: unknown): T | null {
+  // Handle cases where input might be an object or already parsed JSON
+  if (typeof input === 'object' && input !== null) {
+    try {
+      return input as T;
+    } catch {
+      // Fall through to string processing
+    }
+  }
+
+  if (typeof input !== 'string' || !input.trim()) return null;
+
+  let jsonString: string | null = null;
 
   // Attempt to find JSON within markdown code blocks (```json ... ``` or ``` ... ```)
-  const markdownJsonMatch = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  const markdownJsonMatch = input.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (markdownJsonMatch && markdownJsonMatch[1]) {
-    return markdownJsonMatch[1].trim();
+    jsonString = markdownJsonMatch[1].trim();
   }
 
   // Attempt to find JSON that might be just { ... } or [ ... ]
   // This is a bit more heuristic but common for AI responses
-  const bracesJsonMatch = str.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-  if (bracesJsonMatch && bracesJsonMatch[0]) {
-    // Test if this extracted string is parsable JSON
-    try {
-      JSON.parse(bracesJsonMatch[0]);
-      return bracesJsonMatch[0].trim();
-    } catch (e) {
-      // It looked like JSON, but wasn't. Continue to next check.
-      console.error(`Not valid JSON: ${e}`)
+  if (!jsonString) {
+    const bracesJsonMatch = input.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    if (bracesJsonMatch && bracesJsonMatch[0]) {
+      jsonString = bracesJsonMatch[0].trim();
     }
   }
 
-  // If no clear JSON structure is found, return the trimmed original string
-  // and let the JSON.parse attempt catch if it's not valid.
-  // This handles cases where the AI *might* return valid JSON directly.
-  return str.trim();
+  // If no clear JSON structure is found, try parsing the whole string
+  if (!jsonString) {
+    jsonString = input.trim();
+  }
+
+  // Try to parse whatever we found
+  try {
+    if (jsonString) {
+      return JSON.parse(jsonString) as T;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }

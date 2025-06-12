@@ -221,7 +221,13 @@ export function SceneMetadataPanel({
           aiResponse.content[0] as import("snowgander").TextBlock
         ).text;
 
-        const cleanedJsonText = extractJsonFromString(rawResponseText);
+        if (typeof rawResponseText !== "string") {
+          console.error("Unexpected AI response format", rawResponseText);
+          toast.error("AI returned an unexpected response format");
+          return;
+        }
+
+        const cleanedJsonText = extractJsonFromString<string>(rawResponseText);
 
         if (!cleanedJsonText) {
           toast.error(
@@ -232,10 +238,14 @@ export function SceneMetadataPanel({
         }
 
         try {
-          const parsedResponse = JSON.parse(cleanedJsonText) as {
+          type AICharacterResponse = {
             povCharacterName: string | null;
             otherCharacterNames: string[];
           };
+
+          const parsedResponse = JSON.parse(
+            cleanedJsonText
+          ) as AICharacterResponse;
 
           let newPovCharacterId: string | null = null;
           if (parsedResponse.povCharacterName) {
