@@ -7,7 +7,7 @@ export const characterBaseSchema = z.object({
   image_url: z.union([
     z.string().url({ message: 'Image URL must be a valid URL.' }),
     z.literal(''),
-    z.null(),
+    /* z.null(), */
     z.undefined()
   ])
   .optional()

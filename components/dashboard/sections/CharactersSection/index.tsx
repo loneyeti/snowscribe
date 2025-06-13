@@ -93,11 +93,7 @@ export function CharactersSection({
             name: selectedCharacter.name,
             description: selectedCharacter.description || "",
             notes: selectedCharacter.notes || "",
-            image_url:
-              typeof selectedCharacter.image_url === "string" ||
-              selectedCharacter.image_url === null
-                ? selectedCharacter.image_url
-                : undefined,
+            image_url: selectedCharacter.image_url ?? "",
           }}
           onSave={async (data) => {
             await handleSaveCharacterEditorData(data);

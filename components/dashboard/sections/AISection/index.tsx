@@ -192,8 +192,8 @@ export function AISection({ project, isActive }: AISectionProps) {
           chapter.scenes?.forEach((scene) => {
             const isPov =
               scene.pov_character_id === selectedCharacterForChat.id;
-            const isOther = scene.other_character_ids?.includes(
-              selectedCharacterForChat.id
+            const isOther = scene.scene_characters?.some(
+              (char) => char.character_id === selectedCharacterForChat.id
             );
             if (isPov || isOther) scenesCharacterIsIn.push(scene);
           });
@@ -202,7 +202,14 @@ export function AISection({ project, isActive }: AISectionProps) {
       })
       .catch(console.error)
       .finally(() => setIsContextLoading(false));
-  }, [isActive, selectedTool, project.id, selectedCharacterForChat]);
+  }, [
+    isActive,
+    selectedTool,
+    project.id,
+    selectedCharacterForChat,
+    manuscriptChapters,
+    outlineData,
+  ]);
 
   // Fetch world notes
   useEffect(() => {

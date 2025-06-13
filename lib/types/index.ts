@@ -126,12 +126,13 @@ export interface Character {
   // backstory, motivations, appearance to be consolidated into description or notes as per schema
   appearance?: string | null; // Keeping appearance for now, can be part of description
   notes?: string | null; // Aligning with schema (TEXT field)
-  image_url?: string | null;
+  image_url?: string | null | undefined;
   created_at: string; // TIMESTAMPTZ
   updated_at: string; // TIMESTAMPTZ
 }
 
-export type CharacterFormValues = z.infer<typeof characterBaseSchema>;
+// Use output type to get the transformed values
+export type CharacterFormValues = z.output<typeof characterBaseSchema>;
 
 // Based on supabase/migrations/20250509073406_create_scene_characters_table.sql
 export interface SceneCharacter {

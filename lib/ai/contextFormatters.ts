@@ -49,14 +49,20 @@ export function formatOutlineForAI(outlineData: { chapters: Chapter[]; character
         const povCharacter = outlineData.characters.find(c => c.id === scene.pov_character_id);
         formattedOutline += `    POV Character: ${povCharacter ? povCharacter.name : 'N/A'}\n`;
 
-        const otherCharacters = (scene.other_character_ids || [])
-          .map(id => outlineData.characters.find(c => c.id === id)?.name)
+        const otherCharacters = (scene.scene_characters || [])
+          .map((charObj: { character_id: string }) => {
+            const char = outlineData.characters.find(c => c.id === charObj.character_id);
+            return char?.name;
+          })
           .filter(Boolean)
           .join(', ');
         formattedOutline += `    Other Characters: ${otherCharacters || 'None'}\n`;
         
-        const tags = (scene.tag_ids || [])
-          .map(id => outlineData.sceneTags.find(t => t.id === id)?.name)
+        const tags = (scene.scene_applied_tags || [])
+          .map((tagObj: { tag_id: string }) => {
+            const tag = outlineData.sceneTags.find(t => t.id === tagObj.tag_id);
+            return tag?.name;
+          })
           .filter(Boolean)
           .join(', ');
         formattedOutline += `    Tags: ${tags || 'None'}\n`;

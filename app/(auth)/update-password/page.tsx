@@ -8,8 +8,9 @@ import { Heading } from "@/components/typography/Heading";
 import { Paragraph } from "@/components/typography/Paragraph";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { Suspense } from "react";
 
-export default function UpdatePasswordPage() {
+function UpdatePasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -18,7 +19,6 @@ export default function UpdatePasswordPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const [sessionChecked, setSessionChecked] = React.useState(false);
 
   React.useEffect(() => {
     // This effect handles the case where the user lands on this page
@@ -46,7 +46,6 @@ export default function UpdatePasswordPage() {
           "Authenticated. Please enter and confirm your new password."
         );
       }
-      setSessionChecked(true);
     });
 
     // Check if there's an error from the redirect (e.g. invalid token)
@@ -54,13 +53,11 @@ export default function UpdatePasswordPage() {
     const errorDescriptionParam = searchParams.get("error_description");
     if (errorParam) {
       setError(errorDescriptionParam || errorParam);
-      setSessionChecked(true);
     } else if (!supabase.auth.getSession()) {
       // If no session and no error, it might be an old link or direct navigation
       // For now, we allow proceeding, but a real app might show an error or redirect
       // if no valid password recovery state is detected.
       // setError("Invalid or expired password recovery link.");
-      setSessionChecked(true); // Assume check is done
     }
 
     return () => {
@@ -93,14 +90,6 @@ export default function UpdatePasswordPage() {
       }, 3000);
     }
   };
-
-  if (!sessionChecked && !error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-        <Paragraph>Verifying session...</Paragraph>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -164,5 +153,19 @@ export default function UpdatePasswordPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function UpdatePasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+          <Paragraph>Loading...</Paragraph>
+        </div>
+      }
+    >
+      <UpdatePasswordContent />
+    </Suspense>
   );
 }

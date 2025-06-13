@@ -200,7 +200,7 @@ export function CreateCharacterModal({
                 <Input
                   id="image_url"
                   {...field}
-                  value={field.value || ""}
+                  value={field.value ?? ""}
                   placeholder="https://example.com/image.png"
                 />
               )}

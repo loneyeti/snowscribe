@@ -173,6 +173,7 @@ export function ManuscriptSection({
     dataHandleSceneSelect,
     dataHandleBackToChapters,
     setScenesForSelectedChapter,
+    router, // Added to satisfy useEffect dependency requirements
   ]);
 
   const [manuscriptView, setManuscriptView] =
@@ -300,13 +301,14 @@ export function ManuscriptSection({
   );
 
   const handleSceneDetailsPanelCharacterLinkChange = useCallback(
-    async (characterIds: string[]) => {
+    async (characterIds: Array<{ character_id: string }>) => {
       if (!selectedScene || !selectedChapter) {
         toast.error("No scene or chapter selected.");
         return;
       }
       try {
-        await updateSceneCharacters(project.id, selectedScene.id, characterIds);
+        const idStrings = characterIds.map((c) => c.character_id);
+        await updateSceneCharacters(project.id, selectedScene.id, idStrings);
         const updatedScenes = await getScenesByChapterId(
           project.id,
           selectedChapter.id
@@ -336,13 +338,14 @@ export function ManuscriptSection({
   );
 
   const handleSceneDetailsPanelTagLinkChange = useCallback(
-    async (tagIds: string[]) => {
+    async (tagIds: Array<{ tag_id: string }>) => {
       if (!selectedScene || !selectedChapter) {
         toast.error("No scene or chapter selected.");
         return;
       }
       try {
-        await updateSceneTags(project.id, selectedScene.id, tagIds);
+        const idStrings = tagIds.map((t) => t.tag_id);
+        await updateSceneTags(project.id, selectedScene.id, idStrings);
         const updatedScenes = await getScenesByChapterId(
           project.id,
           selectedChapter.id
