@@ -1,5 +1,5 @@
 // components/dashboard/sections/CharactersSection/index.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { Project } from "@/lib/types";
 import { useCharactersData } from "@/hooks/dashboard/useCharactersData";
 import { CharacterList } from "@/components/characters/CharacterList";
@@ -29,22 +29,24 @@ export function CharactersSection({
     handleSaveCharacterEditorData,
     handleCharacterDeleted,
     handleCharacterCreated,
-    // setCharacters, // Not used directly in this component's render, but hook updates it
-    setSelectedCharacter, // Used to clear selection
+    setSelectedCharacter,
   } = useCharactersData(project.id);
 
   const [isCreateCharacterModalOpen, setIsCreateCharacterModalOpen] =
     useState(false);
+  const hasInitialFetchCompleted = useRef(false);
 
   useEffect(() => {
     if (isActive) {
-      // Fetch characters when the section becomes active
-      // Consider fetching only if characters array is empty or needs refresh
-      if (characters.length === 0 && !isLoadingCharactersData) {
+      if (
+        characters.length === 0 &&
+        !isLoadingCharactersData &&
+        !hasInitialFetchCompleted.current
+      ) {
+        hasInitialFetchCompleted.current = true;
         fetchProjectCharacters();
       }
     } else {
-      // Optionally clear selection when section becomes inactive
       setSelectedCharacter(null);
     }
   }, [
@@ -54,6 +56,10 @@ export function CharactersSection({
     isLoadingCharactersData,
     setSelectedCharacter,
   ]);
+
+  useEffect(() => {
+    hasInitialFetchCompleted.current = false;
+  }, [project.id]);
 
   if (!isActive) return null;
 

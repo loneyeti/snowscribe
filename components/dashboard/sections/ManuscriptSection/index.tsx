@@ -67,6 +67,7 @@ export function ManuscriptSection({
   const searchParams = useSearchParams();
 
   const { allProjectCharacters, allSceneTags } = useProjectData();
+  const hasInitialFetchCompleted = useRef(false);
 
   const [isHandlingDeepLink, setIsHandlingDeepLink] = useState(false);
   const processedSceneIdRef = useRef<string | null>(null);
@@ -205,11 +206,14 @@ export function ManuscriptSection({
       if (
         manuscriptView === "chapters" &&
         chapters.length === 0 &&
-        !isLoadingChapters
+        !isLoadingChapters &&
+        !hasInitialFetchCompleted.current
       ) {
+        hasInitialFetchCompleted.current = true;
         fetchProjectChapters();
       }
     } else {
+      hasInitialFetchCompleted.current = false;
       setManuscriptView("chapters");
       dataHandleBackToChapters();
     }
@@ -221,6 +225,10 @@ export function ManuscriptSection({
     isLoadingChapters,
     dataHandleBackToChapters,
   ]);
+
+  useEffect(() => {
+    hasInitialFetchCompleted.current = false;
+  }, [project.id]);
 
   const handleChapterSelect = (chapter: Chapter) => {
     dataHandleChapterSelect(chapter);

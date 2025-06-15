@@ -1,10 +1,10 @@
 // components/dashboard/sections/OutlineSection/index.tsx
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import type { Project, Scene } from "@/lib/types";
 import { useOutlineData } from "@/hooks/dashboard/useOutlineData";
-import { useManuscriptData } from "@/hooks/dashboard/useManuscriptData"; // For character management
-import { useCharactersData } from "@/hooks/dashboard/useCharactersData"; // For characters list
-import { useProjectData } from "@/contexts/ProjectDataContext"; // For allSceneTags
+import { useManuscriptData } from "@/hooks/dashboard/useManuscriptData";
+import { useCharactersData } from "@/hooks/dashboard/useCharactersData";
+import { useProjectData } from "@/contexts/ProjectDataContext";
 
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { ListContainer } from "@/components/ui/ListContainer";
@@ -28,7 +28,7 @@ import { Loader2 } from "lucide-react";
 type OutlineView = "synopsis" | "scenes";
 
 interface OutlineSectionProps {
-  project: Project; // The full initial project object
+  project: Project;
   isActive: boolean;
 }
 
@@ -37,6 +37,8 @@ export function OutlineSection({
   isActive,
 }: OutlineSectionProps) {
   const [outlineView, setOutlineView] = React.useState<OutlineView>("synopsis");
+  const hasInitialChaptersFetchCompleted = useRef(false);
+  const hasInitialCharactersFetchCompleted = useRef(false);
 
   const {
     project: currentProjectDetails,
@@ -46,8 +48,6 @@ export function OutlineSection({
     handleSceneOutlineUpdate: hookHandleSceneOutlineUpdate,
   } = useOutlineData(initialProject, initialProject.id);
 
-  // Use manuscript data hook for character management
-  // Use project data context for all scene tags and refresh trigger
   const {
     allSceneTags,
     isLoadingAllSceneTags,
@@ -55,10 +55,8 @@ export function OutlineSection({
     triggerSceneUpdate,
   } = useProjectData();
 
-  // Use manuscript data hook just for fetchProjectChapters
   const { fetchProjectChapters } = useManuscriptData(initialProject.id);
 
-  // Centralized scene update handler - now just calls update hook and triggers refresh
   const handleSceneUpdate = useCallback(
     async (chapterId: string, sceneId: string, updatedData: Partial<Scene>) => {
       const updatedScene = await hookHandleSceneOutlineUpdate(
@@ -66,16 +64,11 @@ export function OutlineSection({
         sceneId,
         updatedData
       );
-
-      if (updatedScene) {
-        // This will trigger the useEffect in useOutlineData to refetch chapters
-        triggerSceneUpdate();
-      }
+      if (updatedScene) triggerSceneUpdate();
     },
     [hookHandleSceneOutlineUpdate, triggerSceneUpdate]
   );
 
-  // Use characters data hook for character list
   const {
     characters: allCharactersForProject,
     fetchProjectCharacters: fetchAllChars,
@@ -84,25 +77,28 @@ export function OutlineSection({
 
   React.useEffect(() => {
     if (isActive) {
-      // Fetch data when section becomes active
+      // Chapters fetch with ref protection
       if (
         outlineView === "scenes" &&
         chapters.length === 0 &&
-        !isLoadingOutline
+        !isLoadingOutline &&
+        !hasInitialChaptersFetchCompleted.current
       ) {
+        hasInitialChaptersFetchCompleted.current = true;
         fetchProjectChapters();
       }
 
-      // Fetch characters when synopsis view is active and no characters are loaded
+      // Characters fetch with ref protection
       if (
         outlineView === "synopsis" &&
         allCharactersForProject.length === 0 &&
-        !isLoadingAllChars
+        !isLoadingAllChars &&
+        !hasInitialCharactersFetchCompleted.current
       ) {
+        hasInitialCharactersFetchCompleted.current = true;
         fetchAllChars();
       }
     } else {
-      // Reset view when section becomes inactive
       setOutlineView("synopsis");
     }
   }, [
@@ -116,21 +112,16 @@ export function OutlineSection({
     fetchAllChars,
   ]);
 
-  console.log("[OutlineSection] Current outlineView:", outlineView);
-  console.log("[OutlineSection] Chapters length:", chapters.length);
-  console.log("[OutlineSection] IsLoadingOutline:", isLoadingOutline);
-  console.log(
-    "[OutlineSection] allCharactersForProject length:",
-    allCharactersForProject.length
-  );
-  console.log("[OutlineSection] isLoadingAllChars:", isLoadingAllChars);
+  // Reset refs when project changes
+  React.useEffect(() => {
+    hasInitialChaptersFetchCompleted.current = false;
+    hasInitialCharactersFetchCompleted.current = false;
+  }, [initialProject.id]);
 
-  // New state for Outline Creator modal and loading
   const [isOutlineCreatorModalOpen, setIsOutlineCreatorModalOpen] =
     useState(false);
   const [isGeneratingFullOutline, setIsGeneratingFullOutline] = useState(false);
 
-  // Handler for generating full outline with AI
   const handleGenerateFullOutline = async () => {
     if (!currentProjectDetails?.one_page_synopsis?.trim()) {
       toast.error(
@@ -191,7 +182,6 @@ export function OutlineSection({
     }
   };
 
-  // Render the OutlineCreatorModal component
   const renderOutlineCreatorModal = () => (
     <OutlineCreatorModal
       isOpen={isOutlineCreatorModalOpen}
@@ -234,8 +224,6 @@ export function OutlineSection({
       </ListContainer>
     </>
   );
-
-  // Remove unused handleSceneUpdateFromOutlineList since we're using handleSceneUpdate now
 
   const mainDetailColumnContent = (
     <>
@@ -353,7 +341,6 @@ export function OutlineSection({
 
   if (!isActive) return null;
 
-  // Include the modal in the component's return
   return (
     <>
       <SecondaryViewLayout

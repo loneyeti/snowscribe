@@ -30,12 +30,11 @@ export async function getChapter(
 
 export async function createChapter(
   projectId: string, 
-  chapterData: { title: string; description?: string; order?: number }
+  chapterData: { title: string; order?: number }
 ): Promise<Chapter> {
   const user = await getAuthenticatedUser();
   const createData = {
     title: chapterData.title,
-    description: chapterData.description || '',
     order: chapterData.order,
     project_id: projectId
   };
@@ -45,7 +44,7 @@ export async function createChapter(
 export async function updateChapter(
   projectId: string,
   chapterId: string,
-  chapterData: { title?: string; description?: string; order?: number }
+  chapterData: { title?: string; order?: number }
 ): Promise<Chapter> {
   const user = await getAuthenticatedUser();
   return chapterService.updateChapter(

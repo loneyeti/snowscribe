@@ -31,7 +31,6 @@ export async function getChapter(
 
 interface CreateChapterData {
   title: string;
-  description?: string;
   order?: number;
   project_id: string;
 }
@@ -68,7 +67,6 @@ export async function createChapter(
     .insert({
       project_id: projectId,
       title: chapterData.title,
-      description: chapterData.description || '',
       order
     })
     .select('*, word_count') // Include word_count column
@@ -86,7 +84,7 @@ export async function updateChapter(
   projectId: string,
   chapterId: string,
   userId: string,
-  chapterData: { title?: string; description?: string; order?: number }
+  chapterData: { title?: string; order?: number }
 ): Promise<Chapter> {
   const supabase = await createClient();
   const ownership = await verifyProjectOwnership(supabase, projectId, userId);
