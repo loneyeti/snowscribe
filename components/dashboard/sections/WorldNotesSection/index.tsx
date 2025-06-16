@@ -13,13 +13,9 @@ import { Paragraph } from "@/components/typography/Paragraph";
 
 interface WorldNotesSectionProps {
   project: Project;
-  isActive: boolean;
 }
 
-export function WorldNotesSection({
-  project,
-  isActive,
-}: WorldNotesSectionProps) {
+export function WorldNotesSection({ project }: WorldNotesSectionProps) {
   const {
     worldNotes,
     selectedWorldNote,
@@ -30,7 +26,6 @@ export function WorldNotesSection({
     handleSaveWorldNoteEditorData,
     handleWorldNoteDeleted,
     handleWorldNoteCreated,
-    setSelectedWorldNote,
     isEditingSelectedNote,
     enableEditMode,
     disableEditMode,
@@ -40,24 +35,15 @@ export function WorldNotesSection({
     useState(false);
 
   useEffect(() => {
-    if (isActive) {
-      // Condition updated to include worldNotesFetchAttempted
-      // Fetch only if the section is active, not currently loading, and fetch hasn't been attempted yet for this project.
-      if (!isLoadingWorldNotesData && !worldNotesFetchAttempted) {
-        fetchProjectWorldNotes();
-      }
-    } else {
-      setSelectedWorldNote(null); // Clear selection when section becomes inactive
+    // Fetch only if not currently loading and fetch hasn't been attempted yet for this project.
+    if (!isLoadingWorldNotesData && !worldNotesFetchAttempted) {
+      fetchProjectWorldNotes();
     }
   }, [
-    isActive,
     isLoadingWorldNotesData,
-    worldNotesFetchAttempted, // Add new flag to dependency array
-    fetchProjectWorldNotes, // This callback depends on projectId, stable if projectId is stable
-    setSelectedWorldNote, // Setter, stable
+    worldNotesFetchAttempted,
+    fetchProjectWorldNotes,
   ]);
-
-  if (!isActive) return null;
 
   const handleOpenCreateWorldNoteModal = () => {
     setIsCreateWorldNoteModalOpen(true);

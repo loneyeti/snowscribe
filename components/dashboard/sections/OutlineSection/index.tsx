@@ -29,12 +29,10 @@ type OutlineView = "synopsis" | "scenes";
 
 interface OutlineSectionProps {
   project: Project;
-  isActive: boolean;
 }
 
 export function OutlineSection({
   project: initialProject,
-  isActive,
 }: OutlineSectionProps) {
   const [outlineView, setOutlineView] = React.useState<OutlineView>("synopsis");
   const hasInitialChaptersFetchCompleted = useRef(false);
@@ -76,33 +74,28 @@ export function OutlineSection({
   } = useCharactersData(initialProject.id);
 
   React.useEffect(() => {
-    if (isActive) {
-      // Chapters fetch with ref protection
-      if (
-        outlineView === "scenes" &&
-        chapters.length === 0 &&
-        !isLoadingOutline &&
-        !hasInitialChaptersFetchCompleted.current
-      ) {
-        hasInitialChaptersFetchCompleted.current = true;
-        fetchProjectChapters();
-      }
+    // Chapters fetch with ref protection
+    if (
+      outlineView === "scenes" &&
+      chapters.length === 0 &&
+      !isLoadingOutline &&
+      !hasInitialChaptersFetchCompleted.current
+    ) {
+      hasInitialChaptersFetchCompleted.current = true;
+      fetchProjectChapters();
+    }
 
-      // Characters fetch with ref protection
-      if (
-        outlineView === "synopsis" &&
-        allCharactersForProject.length === 0 &&
-        !isLoadingAllChars &&
-        !hasInitialCharactersFetchCompleted.current
-      ) {
-        hasInitialCharactersFetchCompleted.current = true;
-        fetchAllChars();
-      }
-    } else {
-      setOutlineView("synopsis");
+    // Characters fetch with ref protection
+    if (
+      outlineView === "synopsis" &&
+      allCharactersForProject.length === 0 &&
+      !isLoadingAllChars &&
+      !hasInitialCharactersFetchCompleted.current
+    ) {
+      hasInitialCharactersFetchCompleted.current = true;
+      fetchAllChars();
     }
   }, [
-    isActive,
     outlineView,
     chapters.length,
     isLoadingOutline,
@@ -338,8 +331,6 @@ export function OutlineSection({
       ) : null}
     </>
   );
-
-  if (!isActive) return null;
 
   return (
     <>

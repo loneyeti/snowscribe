@@ -25,38 +25,35 @@ interface ProjectDashboardClientProps {
 
 export function ProjectDashboardClient({
   project,
-  activeSection = "manuscript", // Use the prop directly, with a default
+  activeSection = "manuscript",
 }: ProjectDashboardClientProps) {
   useEffect(() => {
-    // Actions to take when the entire project context changes.
-    // Most resets are now handled by hooks re-initializing or sections based on `isActive`.
     console.log(`[ProjectDashboardClient] Project changed to: ${project.id}`);
-    // Log the active section for debugging
     console.log(`[ProjectDashboardClient] Active section is: ${activeSection}`);
   }, [project, activeSection]);
 
+  const renderActiveSection = () => {
+    switch (activeSection) {
+      case "manuscript":
+        return <ManuscriptSection project={project} />;
+      case "outline":
+        return <OutlineSection project={project} />;
+      case "characters":
+        return <CharactersSection project={project} />;
+      case "world-notes":
+        return <WorldNotesSection project={project} />;
+      case "ai":
+        return <AISection project={project} />;
+      case "export":
+        return <ExportSection project={project} />;
+      default:
+        return <ManuscriptSection project={project} />;
+    }
+  };
+
   return (
     <ProjectDataProvider projectId={project.id}>
-      <ManuscriptSection
-        project={project}
-        isActive={activeSection === "manuscript"}
-      />
-      <OutlineSection
-        project={project}
-        isActive={activeSection === "outline"}
-      />
-      <CharactersSection
-        project={project}
-        isActive={activeSection === "characters"}
-      />
-      <WorldNotesSection
-        project={project}
-        isActive={activeSection === "world-notes"}
-      />
-
-      {/* Render AISection when activeSection is "ai" */}
-      <AISection project={project} isActive={activeSection === "ai"} />
-      <ExportSection project={project} isActive={activeSection === "export"} />
+      <div className="flex-1 overflow-y-auto">{renderActiveSection()}</div>
     </ProjectDataProvider>
   );
 }

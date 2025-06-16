@@ -13,13 +13,9 @@ import { Paragraph } from "@/components/typography/Paragraph";
 
 interface CharactersSectionProps {
   project: Project;
-  isActive: boolean;
 }
 
-export function CharactersSection({
-  project,
-  isActive,
-}: CharactersSectionProps) {
+export function CharactersSection({ project }: CharactersSectionProps) {
   const {
     characters,
     selectedCharacter,
@@ -29,7 +25,6 @@ export function CharactersSection({
     handleSaveCharacterEditorData,
     handleCharacterDeleted,
     handleCharacterCreated,
-    setSelectedCharacter,
   } = useCharactersData(project.id);
 
   const [isCreateCharacterModalOpen, setIsCreateCharacterModalOpen] =
@@ -37,31 +32,19 @@ export function CharactersSection({
   const hasInitialFetchCompleted = useRef(false);
 
   useEffect(() => {
-    if (isActive) {
-      if (
-        characters.length === 0 &&
-        !isLoadingCharactersData &&
-        !hasInitialFetchCompleted.current
-      ) {
-        hasInitialFetchCompleted.current = true;
-        fetchProjectCharacters();
-      }
-    } else {
-      setSelectedCharacter(null);
+    if (
+      characters.length === 0 &&
+      !isLoadingCharactersData &&
+      !hasInitialFetchCompleted.current
+    ) {
+      hasInitialFetchCompleted.current = true;
+      fetchProjectCharacters();
     }
-  }, [
-    isActive,
-    fetchProjectCharacters,
-    characters.length,
-    isLoadingCharactersData,
-    setSelectedCharacter,
-  ]);
+  }, [fetchProjectCharacters, characters.length, isLoadingCharactersData]);
 
   useEffect(() => {
     hasInitialFetchCompleted.current = false;
   }, [project.id]);
-
-  if (!isActive) return null;
 
   const handleOpenCreateCharacterModal = () => {
     setIsCreateCharacterModalOpen(true);

@@ -35,13 +35,9 @@ type ManuscriptView = "chapters" | "scenes";
 
 interface ManuscriptSectionProps {
   project: Project;
-  isActive: boolean;
 }
 
-export function ManuscriptSection({
-  project,
-  isActive,
-}: ManuscriptSectionProps) {
+export function ManuscriptSection({ project }: ManuscriptSectionProps) {
   const {
     chapters,
     isLoadingChapters,
@@ -74,8 +70,6 @@ export function ManuscriptSection({
 
   // Handle deep linking from URL
   useEffect(() => {
-    if (!isActive) return;
-
     const chapterId = searchParams.get("chapterId");
     const sceneId = searchParams.get("sceneId");
 
@@ -166,7 +160,6 @@ export function ManuscriptSection({
       handleDeepLink();
     }
   }, [
-    isActive,
     searchParams,
     project.id,
     chapters,
@@ -174,7 +167,7 @@ export function ManuscriptSection({
     dataHandleSceneSelect,
     dataHandleBackToChapters,
     setScenesForSelectedChapter,
-    router, // Added to satisfy useEffect dependency requirements
+    router,
   ]);
 
   const [manuscriptView, setManuscriptView] =
@@ -202,28 +195,20 @@ export function ManuscriptSection({
   );
 
   useEffect(() => {
-    if (isActive) {
-      if (
-        manuscriptView === "chapters" &&
-        chapters.length === 0 &&
-        !isLoadingChapters &&
-        !hasInitialFetchCompleted.current
-      ) {
-        hasInitialFetchCompleted.current = true;
-        fetchProjectChapters();
-      }
-    } else {
-      hasInitialFetchCompleted.current = false;
-      setManuscriptView("chapters");
-      dataHandleBackToChapters();
+    if (
+      manuscriptView === "chapters" &&
+      chapters.length === 0 &&
+      !isLoadingChapters &&
+      !hasInitialFetchCompleted.current
+    ) {
+      hasInitialFetchCompleted.current = true;
+      fetchProjectChapters();
     }
   }, [
-    isActive,
     manuscriptView,
     fetchProjectChapters,
     chapters.length,
     isLoadingChapters,
-    dataHandleBackToChapters,
   ]);
 
   useEffect(() => {
@@ -381,8 +366,6 @@ export function ManuscriptSection({
       setScenesForSelectedChapter,
     ]
   );
-
-  if (!isActive) return null;
 
   if (isHandlingDeepLink) {
     return (

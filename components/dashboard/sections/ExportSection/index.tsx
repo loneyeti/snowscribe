@@ -12,10 +12,9 @@ interface ExportSectionProps {
     id: string;
     title: string;
   };
-  isActive: boolean;
 }
 
-export function ExportSection({ project, isActive }: ExportSectionProps) {
+export function ExportSection({ project }: ExportSectionProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleExport = async () => {
@@ -63,10 +62,6 @@ export function ExportSection({ project, isActive }: ExportSectionProps) {
       setIsLoading(false);
     }
   };
-
-  if (!isActive) {
-    return null;
-  }
 
   return (
     <div className="p-8 max-w-2xl mx-auto text-center">

@@ -37,10 +37,9 @@ import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteMo
 
 interface AISectionProps {
   project: Project & { genres: import("@/lib/types").Genre | null };
-  isActive: boolean;
 }
 
-export function AISection({ project, isActive }: AISectionProps) {
+export function AISection({ project }: AISectionProps) {
   const [selectedTool, setSelectedTool] = useState<AIToolName | null>(null);
   const [activeToolDefinition, setActiveToolDefinition] =
     useState<AIToolDefinition | null>(null);
@@ -96,25 +95,9 @@ export function AISection({ project, isActive }: AISectionProps) {
     [clearChat]
   );
 
-  useEffect(() => {
-    if (!isActive) {
-      setSelectedTool(null);
-      setActiveToolDefinition(null);
-      clearChat();
-      setManuscriptChapters(null);
-      setOutlineData(null);
-      // Keep charactersForChat if already loaded and user might switch back quickly
-      // setCharactersForChat(null);
-      setSelectedCharacterForChat(null);
-      setWorldNotes(null);
-      setPlotHoleContextType(null);
-      setIsContextLoading(false); // Reset loading state
-    }
-  }, [isActive, clearChat]);
-
   // Fetch manuscript chapters when needed
   useEffect(() => {
-    if (!isActive || !selectedTool) return;
+    if (!selectedTool) return;
 
     const shouldFetchManuscript =
       (selectedTool === AI_TOOL_NAMES.MANUSCRIPT_CHAT ||
@@ -129,11 +112,11 @@ export function AISection({ project, isActive }: AISectionProps) {
         .catch(console.error)
         .finally(() => setIsContextLoading(false));
     }
-  }, [isActive, selectedTool, plotHoleContextType, project.id]);
+  }, [selectedTool, plotHoleContextType, project.id]);
 
   // Fetch outline data when needed
   useEffect(() => {
-    if (!isActive || !selectedTool) return;
+    if (!selectedTool) return;
 
     const shouldFetchOutline =
       (selectedTool === AI_TOOL_NAMES.OUTLINE_CHAT ||
@@ -157,15 +140,11 @@ export function AISection({ project, isActive }: AISectionProps) {
         .catch(console.error)
         .finally(() => setIsContextLoading(false));
     }
-  }, [isActive, selectedTool, plotHoleContextType, project.id, allSceneTags]);
+  }, [selectedTool, plotHoleContextType, project.id, allSceneTags]);
 
   // Fetch characters for chat
   useEffect(() => {
-    if (
-      !isActive ||
-      selectedTool !== AI_TOOL_NAMES.CHARACTER_CHAT ||
-      charactersForChat
-    )
+    if (selectedTool !== AI_TOOL_NAMES.CHARACTER_CHAT || charactersForChat)
       return;
 
     setIsContextLoading(true);
@@ -173,12 +152,11 @@ export function AISection({ project, isActive }: AISectionProps) {
       .then(setCharactersForChat)
       .catch(console.error)
       .finally(() => setIsContextLoading(false));
-  }, [isActive, selectedTool, project.id, charactersForChat]);
+  }, [selectedTool, project.id, charactersForChat]);
 
   // Fetch character scenes
   useEffect(() => {
     if (
-      !isActive ||
       selectedTool !== AI_TOOL_NAMES.CHARACTER_CHAT ||
       !selectedCharacterForChat
     )
@@ -203,7 +181,6 @@ export function AISection({ project, isActive }: AISectionProps) {
       .catch(console.error)
       .finally(() => setIsContextLoading(false));
   }, [
-    isActive,
     selectedTool,
     project.id,
     selectedCharacterForChat,
@@ -213,11 +190,7 @@ export function AISection({ project, isActive }: AISectionProps) {
 
   // Fetch world notes
   useEffect(() => {
-    if (
-      !isActive ||
-      selectedTool !== AI_TOOL_NAMES.WORLD_BUILDING_CHAT ||
-      worldNotes
-    )
+    if (selectedTool !== AI_TOOL_NAMES.WORLD_BUILDING_CHAT || worldNotes)
       return;
 
     setIsContextLoading(true);
@@ -225,7 +198,7 @@ export function AISection({ project, isActive }: AISectionProps) {
       .then(setWorldNotes)
       .catch(console.error)
       .finally(() => setIsContextLoading(false));
-  }, [isActive, selectedTool, project.id, worldNotes]);
+  }, [selectedTool, project.id, worldNotes]);
 
   const handleSendMessageWrapper = async (userText: string) => {
     if (!selectedTool || !activeToolDefinition) {
@@ -587,10 +560,6 @@ export function AISection({ project, isActive }: AISectionProps) {
       )}
     </div>
   );
-
-  if (!isActive) {
-    return null;
-  }
 
   return (
     <>
