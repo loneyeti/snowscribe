@@ -1,7 +1,7 @@
 -- Create function for atomic credit usage updates
 CREATE OR REPLACE FUNCTION public.increment_credit_usage(
   user_id_to_update UUID,
-  credits_to_add BIGINT
+  credits_to_add numberic
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -24,8 +24,11 @@ END;
 $$;
 
 -- Grant execute permissions
+-- REVOKE dangerous permission from all authenticated users
+REVOKE EXECUTE ON FUNCTION public.increment_credit_usage(UUID, BIGINT) FROM authenticated;
+
+-- GRANT permission ONLY to the service_role, which is used in secure server environments
 GRANT EXECUTE ON FUNCTION public.increment_credit_usage(UUID, BIGINT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.increment_credit_usage(UUID, BIGINT) TO authenticated;
 
 -- Add function to supabase_realtime publication if needed
 -- ALTER PUBLICATION supabase_realtime ADD FUNCTION public.increment_credit_usage;

@@ -6,7 +6,7 @@ import { getAIModelById } from '@/lib/data/aiModels';
 // getAIVendorById is used internally by lib/data/chat.ts, so not directly needed here for the call.
 import { getSystemPromptByCategory } from '@/lib/data/aiPrompts';
 import { chat as snowganderChatService } from '@/lib/data/chat';
-// Remove updateCreditUsage import since we'll call RPC directly
+import { incrementUserCredits } from '@/lib/data/credits';
 import { createClient } from '@/lib/supabase/server';
 import type { AIModel } from '@/lib/types';
 import type { ChatResponse as SnowganderChatResponse } from 'snowgander';
@@ -125,24 +125,21 @@ export async function sendMessage(
     console.log(`[AISMessageHandler] Received response from snowganderChatService for tool ${toolName}`);
     
     // 5. Update Credit Usage (non-blocking)
-    console.log("Updating Credit Usage");
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user && aiResponse.usage && aiResponse.usage.totalCost > 0) {
-      const creditsUsed = Math.ceil(aiResponse.usage.totalCost * 1000000);
-      
-      // Call RPC directly instead of fetching API route
-      const { error: rpcError } = await supabase.rpc('increment_credit_usage', {
-        user_id_to_update: user.id,
-        credits_to_add: creditsUsed,
-      });
+    try {
+      // Use the actual cost from the AI response multiplied by 100 (1 snowgander credit = 100 app credits)
+      const creditsToCharge = aiResponse.usage?.totalCost !== undefined 
+        ? aiResponse.usage.totalCost * 100 
+        : 1;
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
 
-      if (rpcError) {
-        console.error(`[AISMessageHandler] Non-blocking credit update failed:`, rpcError);
-      } else {
-        console.log(`[AISMessageHandler] AI interaction used ${creditsUsed} credits. Updated for user ${user.id}.`);
+      if (user) {
+        incrementUserCredits(user.id, creditsToCharge).catch(err => {
+          console.error("[AISMessageHandler] Error updating credits:", err);
+        });
       }
+    } catch (authError) {
+      console.error("[AISMessageHandler] Could not get user for credit update:", authError);
     }
 
     // 6. Log AI Interaction
