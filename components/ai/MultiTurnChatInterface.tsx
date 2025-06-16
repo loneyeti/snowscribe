@@ -62,8 +62,8 @@ export function MultiTurnChatInterface({
             className={cn(
               "p-3 rounded-md max-w-full",
               msg.sender === "user"
-                ? "bg-blue-100 self-end"
-                : "bg-gray-100 self-start"
+                ? "bg-blue-100 dark:bg-blue-900 self-end"
+                : "bg-gray-100 dark:bg-gray-800 self-start"
             )}
           >
             <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -76,7 +76,7 @@ export function MultiTurnChatInterface({
 
       <form
         onSubmit={handleSubmit}
-        className="flex items-center space-x-2 p-3 border-t border-gray-300 bg-white rounded-b-md"
+        className="flex items-center space-x-2 p-3 border-t border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-b-md"
       >
         <Input
           ref={inputRef}
@@ -93,7 +93,7 @@ export function MultiTurnChatInterface({
       </form>
 
       {customActions && customActions.length > 0 && (
-        <div className="p-3 border-t border-gray-300 flex items-center justify-end space-x-2 bg-gray-50 rounded-b-lg">
+        <div className="p-3 border-t border-gray-300 dark:border-gray-700 flex items-center justify-end space-x-2 bg-gray-50 dark:bg-gray-800 rounded-b-lg">
           {customActions.map((action, index) => {
             const visible = action.isVisible
               ? action.isVisible(uiMessages)
