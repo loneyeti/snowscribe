@@ -20,24 +20,13 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    console.log("[ProjectPage] No user found by page, redirecting to /login.");
     redirect("/login");
   }
-  console.log(
-    "[ProjectPage] User authenticated by page:",
-    user ? { id: user.id, email: user.email } : null
-  );
 
   const { projectId } = await params; // Await params
-  console.log(
-    `[ProjectPage] Attempting to fetch project with ID: ${projectId}`
-  );
   const project = await getProjectById(projectId); // Use awaited projectId
 
   if (!project) {
-    console.log(
-      `[ProjectPage] getProjectById returned null for projectId: ${projectId}. Calling notFound().`
-    );
     // getProjectById will log the error if it's not a 404
     notFound();
   }

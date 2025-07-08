@@ -11,36 +11,6 @@ import MarkdownComponent from "./MarkdownComponent";
 
 import type { ChatResponse } from "snowgander";
 
-// This should match the ToolModel type from the database schema
-/*
-interface AI_Vendor {
-  id: string;
-  name: string;
-}
-*/
-
-/*
-interface AI_Model {
-  id: string;
-  name: string;
-  vendor_id: string;
-  ai_vendors: AI_Vendor;
-}
-*/
-
-/*
-interface ToolModelResponse {
-  id: string;
-  name: string;
-  model_id: string;
-  created_at: string;
-  updated_at: string;
-  prompt?: string | null;
-  system_prompt?: string | null;
-  ai_models: AI_Model;
-}
-*/
-
 type AIComponentType = "chat" | "tool";
 
 interface AISidePanelProps {
@@ -74,22 +44,8 @@ export function AISidePanel({
 
   // Function to fetch system prompt by category
   const fetchSystemPrompt = async (category: string) => {
-    console.log(
-      `[AISidePanel] fetchSystemPrompt called with category: ${category}`
-    );
     try {
-      console.log(
-        `[AISidePanel] Calling getSystemPromptByCategory with category: ${category}`
-      );
       const promptText = await getSystemPromptByCategory(category);
-      console.log(
-        `[AISidePanel] getSystemPromptByCategory returned for ${category}:`,
-        {
-          hasPrompt: !!promptText,
-          promptLength: promptText?.length || 0,
-          defaultSystemPromptLength: defaultSystemPrompt?.length || 0,
-        }
-      );
 
       if (!promptText) {
         console.warn(
@@ -108,21 +64,17 @@ export function AISidePanel({
   // Load tool model and system prompt when toolName changes
   useEffect(() => {
     const loadToolModelAndPrompt = async () => {
-      console.log("loadToolModelAndPrompt called with toolName:", toolName);
       if (!toolName) {
-        console.log("No toolName provided, setting toolModel to null");
         setToolModel(null);
         return;
       }
 
       setIsLoading(true);
       try {
-        console.log(`Fetching tool model for tool: ${toolName}`);
         const response = await getToolModelByName(toolName);
 
         // Handle both array and single object responses
         const models = Array.isArray(response) ? response : [response];
-        console.log("Processed models:", models);
 
         // Get the first model from the response array
         const model = models[0];
@@ -131,8 +83,6 @@ export function AISidePanel({
           throw new Error(`No model found for tool: ${toolName}`);
         }
 
-        console.log("Using model:", model);
-
         // Get the model ID - try ai_models.id first, then model_id, then fallback to id
         const modelId = model.model_id;
 
@@ -140,8 +90,6 @@ export function AISidePanel({
           console.warn("No model ID found in the response:", model);
           throw new Error("No valid model ID found in the response");
         }
-
-        console.log("Model ID:", modelId);
 
         // Fetch the system prompt for this tool's category (toolName)
         const systemPrompt = await fetchSystemPrompt(toolName);
@@ -152,7 +100,6 @@ export function AISidePanel({
           systemPrompt: systemPrompt,
         };
 
-        console.log("Setting toolModel state:", newToolModel);
         setToolModel(newToolModel);
       } catch (error) {
         console.error("Error loading tool model or system prompt:", error);
@@ -161,7 +108,6 @@ export function AISidePanel({
           prompt: defaultPrompt,
           systemPrompt: defaultSystemPrompt,
         };
-        console.log("Using fallback model:", fallbackModel);
         setToolModel(fallbackModel);
       } finally {
         setIsLoading(false);

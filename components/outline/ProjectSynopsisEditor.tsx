@@ -250,11 +250,6 @@ export function ProjectSynopsisEditor({
 
       userPrompt += instructionPart;
 
-      console.log(
-        "[ProjectSynopsisEditor] Constructed User Prompt for Synopsis:",
-        userPrompt
-      );
-
       const aiResponse: ChatResponse = await chat(
         modelId,
         [],

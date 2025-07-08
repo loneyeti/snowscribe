@@ -81,11 +81,6 @@ export function ChapterSceneOutlineList({
   onSceneCreated,
 }: ChapterSceneOutlineListProps) {
   const {} = useProjectData();
-  console.log("ChapterSceneOutlineList - Props Received:");
-  console.log("Chapters:", chapters);
-  console.log("Characters (allProjectCharacters):", characters);
-  console.log("SceneTags:", sceneTags);
-
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(
     new Set()
   );

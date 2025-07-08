@@ -11,13 +11,10 @@ import { getErrorMessage } from '@/lib/utils';
 export async function incrementUserCredits(userId: string, amount: number): Promise<void> {
   // We only proceed if a positive amount is provided.
   if (amount <= 0) {
-    console.log("Increment Credits: Received a negative or zero amount. Skipping.")
     return;
   }
 
   const supabase = await createClient();
-
-  console.log(`Increment Credits: Incrementing credit by: ${amount}`)
   
   const { error } = await supabase.rpc('increment_credit_usage', {
     user_id_to_update: userId,

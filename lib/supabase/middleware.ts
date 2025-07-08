@@ -35,20 +35,14 @@ export async function updateSession(request: NextRequest) {
 
   // For debugging: Log cookies and user for API requests
   if (request.nextUrl.pathname.startsWith('/api/projects')) {
-    // console.log('[Middleware API Check] Path:', request.nextUrl.pathname);
-    //const allCookies = request.cookies.getAll();
-    // console.log('[Middleware API Check] Incoming Cookies:', JSON.stringify(allCookies, null, 2));
     const { data: { user: apiUser }, error: apiUserError } = await supabase.auth.getUser();
     if (apiUserError) {
       console.error('[Middleware API Check] API User Error:', apiUserError.message);
     }
 
-    // console.log('[Middleware API Check] API User Object:', apiUser ? { id: apiUser.id, email: apiUser.email } : null);
-
     if (!apiUser && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
-      console.log(`[Middleware API Check] Redirecting API request for ${request.nextUrl.pathname} to /login`);
       return NextResponse.redirect(url);
     }
     // If apiUser exists or path is /login or /auth, proceed with normal flow for this specific log block
@@ -67,10 +61,6 @@ export async function updateSession(request: NextRequest) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    // Add a log before general redirect
-    if (!request.nextUrl.pathname.startsWith('/api/')) { // Avoid double logging for API paths handled above
-        console.log(`[Middleware General Check] Redirecting ${request.nextUrl.pathname} to /login as user is not authenticated.`);
-    }
     return NextResponse.redirect(url);
   }
 

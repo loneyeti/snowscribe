@@ -28,8 +28,7 @@ export function ProjectDashboardClient({
   activeSection = "manuscript",
 }: ProjectDashboardClientProps) {
   useEffect(() => {
-    console.log(`[ProjectDashboardClient] Project changed to: ${project.id}`);
-    console.log(`[ProjectDashboardClient] Active section is: ${activeSection}`);
+    // Project and active section tracking removed
   }, [project, activeSection]);
 
   const renderActiveSection = () => {

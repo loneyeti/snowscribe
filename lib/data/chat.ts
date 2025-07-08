@@ -61,9 +61,6 @@ export async function createChatClient(model: AIModel, modelConfig: ModelConfig,
     AIVendorFactory.setVendorConfig("anthropic", {
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
-    console.log("Anthropic API key set");
-  } else {
-    console.log("Anthropic API key not set");
   }
   
   if (process.env.GOOGLE_API_KEY) {
@@ -81,9 +78,6 @@ export async function createChatClient(model: AIModel, modelConfig: ModelConfig,
     const adapter: AIVendorAdapter = AIVendorFactory.getAdapter(
       vendorName,
       modelConfig // Pass the config for the specific model
-    );
-    console.log(
-      `Successfully got adapter for ${vendorName} / ${model.api_name}`
     );
     // Now you can use the 'adapter' instance!
     return adapter;
@@ -103,16 +97,12 @@ export async function getModelVendorNameByModel(model: AIModel): Promise<string 
 
 
 export async function chat(modelId: string, messages: ChatResponse[], prompt: string, systemPrompt: string) {
-    console.log("chatting with model", modelId);
     const model = await getAIModelById(modelId);
     if (!model) {
       throw new Error("Model not found");
     }
-    console.log("Model:", JSON.stringify(model));
     const modelConfig = createModelConfig(model); 
-    console.log("Model Config:", JSON.stringify(modelConfig));
     const vendorName = await getModelVendorNameByModel(model);
-    console.log("Vendor Name:", vendorName);
     if (!vendorName) {
       throw new Error("Vendor not found");
     }

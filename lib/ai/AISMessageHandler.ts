@@ -28,7 +28,6 @@ export async function sendMessage(
   contextData?: unknown,
   conversationHistory: SnowganderChatResponse[] = []
 ): Promise<SnowganderChatResponse> {
-  console.log(`[AISMessageHandler] sendMessage called for tool: ${toolName} in project: ${projectId}`);
 
   try {
     // 1. Fetch Tool-Specific Configuration
@@ -55,7 +54,6 @@ export async function sendMessage(
 
     const systemPromptText = await getSystemPromptByCategory(toolName);
     const finalSystemPrompt = systemPromptText || "You are a helpful AI assistant. Please provide concise and relevant information.";
-    console.log(`[AISMessageHandler] Using system prompt for ${toolName}: ${finalSystemPrompt.substring(0,100)}...`);
 
 
     // 2. Prepare Context String
@@ -105,7 +103,6 @@ export async function sendMessage(
           console.warn(`[AISMessageHandler] No specific context formatter for toolName '${toolName}'. Context data might not be used as intended.`);
       }
     }
-    console.log(`[AISMessageHandler] Formatted context for ${toolName} (first 100 chars): ${formattedContext.substring(0,100)}...`);
 
     // 3. Prepare Final User Prompt
     // The userPrompt is the direct input from the user for this turn.
@@ -115,14 +112,12 @@ export async function sendMessage(
       : userPrompt;
 
     // 4. Interact with snowganderChatService (lib/data/chat.ts)
-    console.log(`[AISMessageHandler] Calling snowganderChatService with modelId: ${aiModelId}`);
     const aiResponse = await snowganderChatService(
       aiModelId,
       conversationHistory,
       fullPromptForAI, // This is the combined context + user query for this turn
       finalSystemPrompt
     );
-    console.log(`[AISMessageHandler] Received response from snowganderChatService for tool ${toolName}`);
     
     // 5. Update Credit Usage (non-blocking)
     try {
@@ -164,8 +159,6 @@ export async function sendMessage(
 
         if (logError) {
           console.error("[AISMessageHandler] Failed to log AI interaction:", logError.message);
-        } else {
-          console.log(`[AISMessageHandler] AI interaction logged successfully for tool ${toolName}`);
         }
       } else {
         console.warn("[AISMessageHandler] Skipping AI interaction log: User or ProjectID not available.");

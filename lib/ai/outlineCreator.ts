@@ -171,5 +171,4 @@ export async function createEntitiesFromOutline(
       }
     }
   }
-  console.log("Entities created from outline successfully.");
 }
