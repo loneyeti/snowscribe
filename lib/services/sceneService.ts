@@ -4,7 +4,6 @@ import { createClient } from '../supabase/server';
 import { verifyProjectOwnership } from '../supabase/guards';
 import type { Scene } from '../types';
 import { updateSceneSchema, type UpdateSceneValues } from '../schemas/scene.schema';
-import { sceneUpdateEmitter } from "@/lib/utils/eventEmitter";
 
 async function verifyChapterBelongsToProject(supabase: Awaited<ReturnType<typeof createClient>>, projectId: string, chapterId: string) {
     const { data, error } = await supabase
@@ -62,7 +61,6 @@ export async function updateScene(projectId: string, chapterId: string, sceneId:
         throw new Error("Failed to update scene.");
     }
 
-    sceneUpdateEmitter.emit('sceneUpdated');
     return updatedScene;
 }
 
@@ -177,8 +175,6 @@ export async function deleteScene(
         console.error(`Error deleting scene ${sceneId}:`, error);
         throw new Error('Failed to delete scene');
     }
-
-    sceneUpdateEmitter.emit('sceneUpdated');
 }
 
 export async function reorderScenes(
@@ -260,6 +256,5 @@ export async function createScene(
         throw new Error('Failed to create scene');
     }
 
-    sceneUpdateEmitter.emit('sceneUpdated');
     return newScene;
 }
