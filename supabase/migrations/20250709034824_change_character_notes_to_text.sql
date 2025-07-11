@@ -1,0 +1,2 @@
+ALTER TABLE characters 
+ALTER COLUMN notes TYPE TEXT USING notes::TEXT;
