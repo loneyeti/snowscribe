@@ -1,9 +1,12 @@
+// File: components/editors/ManuscriptEditor.tsx
+
 import React, { useEffect, useMemo, useRef } from "react";
 import type { NextFont } from "next/dist/compiled/@next/font";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { debounce } from "lodash-es";
+import { countWords } from "@/lib/utils";
 
 // --- Configuration ---
 const SAVE_DEBOUNCE_WAIT_MS = 1500; // Time to wait after user stops typing
@@ -23,6 +26,7 @@ type TextSize = keyof typeof textSizeMap;
 interface ManuscriptEditorProps {
   initialText?: string;
   saveText: (text: string) => void | Promise<void>;
+  onWordCountChange: (count: number) => void;
   font: NextFont;
   textSize?: TextSize;
   placeholder?: string;
@@ -32,6 +36,7 @@ interface ManuscriptEditorProps {
 export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   initialText = "",
   saveText,
+  onWordCountChange,
   font,
   textSize = "base",
   placeholder = "Start writing...",
@@ -50,7 +55,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       (editor: Editor) => {
         // TipTap's getText() provides the clean text for your database.
         // The blockSeparator ensures paragraphs are separated by newlines.
-        const plainText = editor.getText({ blockSeparator: "\n" });
+        const plainText = editor.getText({ blockSeparator: "\n\n" });
         saveTextRef.current(plainText);
         console.log("Auto-saved:", plainText);
       },
@@ -60,6 +65,26 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       }
     );
   }, []);
+
+  // ============================ THE FIX ============================
+  // Convert the plain text from the database into an HTML string
+  // that Tiptap can understand as structured content.
+  const htmlContent = useMemo(() => {
+    if (!initialText) {
+      return ""; // Return empty string for Tiptap to handle placeholder
+    }
+    // 1. Split the text by two or more newlines to create an array of paragraphs.
+    //    Using a regex `/\n{2,}/` is more robust than `split('\n\n')`.
+    // 2. Filter out any empty strings resulting from the split.
+    // 3. Wrap each paragraph in <p> tags.
+    // 4. Join them back into a single HTML string.
+    return initialText
+      .split(/\n{2,}/)
+      .filter((p) => p.trim() !== "")
+      .map((p) => `<p>${p}</p>`)
+      .join("");
+  }, [initialText]);
+  // ========================= END OF THE FIX ========================
 
   const editor = useEditor({
     // 1. EXTENSIONS: We configure the editor's features.
@@ -82,7 +107,8 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       // 2. PLACEHOLDER: This extension handles the placeholder text reliably.
       Placeholder.configure({
         placeholder: placeholder,
-        emptyEditorClass: "is-editor-empty",
+        //emptyEditorClass: "is-editor-empty",
+        includeChildren: true,
       }),
     ],
 
@@ -101,6 +127,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           "p-4 md:p-6 lg:p-8",
           font.className,
           textSizeMap[textSize],
+          "rounded-lg",
 
           // --- Colors ---
           "bg-white dark:bg-gray-900",
@@ -116,21 +143,24 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           // --- Placeholder Styling (The Core Fix) ---
           // Tiptap adds the 'is-empty' class to the editor. We target its `::before`
           // pseudo-element to show the placeholder text.
-          "[&.is-editor-empty]:before:content-[attr(data-placeholder)]",
-          "[&.is-editor-empty]:before:float-left",
-          "[&.is-editor-empty]:before:text-gray-400 dark:[&.is-editor-empty]:before:text-gray-600",
-          "[&.is-editor-empty]:before:pointer-events-none",
-          "[&.is-editor-empty]:before:h-0",
+          "[&_p.is-empty]:first:before:content-[attr(data-placeholder)]",
+          "[&_p.is-empty]:first:before:text-gray-400 dark:[&_p.is-empty]:first:before:text-gray-600",
+          "[&_p.is-empty]:first:before:float-left",
+          "[&_p.is-empty]:first:before:pointer-events-none",
+          "[&_p.is-empty]:first:before:h-0",
+          // "[&.is-editor-empty]:before:h-0",
         ].join(" "),
       },
     },
 
     // 4. CONTENT: Set the initial content from props.
-    // TipTap automatically parses this into the correct <p> structure.
-    content: initialText,
+    // Use the processed HTML content instead of the raw initialText.
+    content: htmlContent,
 
     // 5. AUTO-SAVE: The onUpdate hook triggers our debounced save.
     onUpdate: ({ editor }) => {
+      const plainText = editor.getText({ blockSeparator: "\n\n" });
+      onWordCountChange(countWords(plainText));
       debouncedSave(editor);
     },
   });
@@ -145,7 +175,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       debouncedSave.cancel();
 
       // Trigger a final, immediate save with the latest content.
-      const plainText = editor.getText({ blockSeparator: "\n" });
+      const plainText = editor.getText({ blockSeparator: "\n\n" });
       saveTextRef.current(plainText);
       console.log("Final save on unmount.");
 

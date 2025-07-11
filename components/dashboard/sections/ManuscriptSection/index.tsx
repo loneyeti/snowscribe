@@ -78,6 +78,7 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
     handleBackToChapters: dataHandleBackToChapters,
     handleSceneSelect: dataHandleSceneSelect,
     handleSaveSceneContent,
+    handleWordCountUpdate,
     handleChapterCreated: dataHandleChapterCreated,
     handleSceneCreated: dataHandleSceneCreated,
     updateLocalSceneOrder,
@@ -543,13 +544,14 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
           </div>
           <ManuscriptEditorWithNoSSR
             key={selectedScene.id}
-            initialText={selectedScene.content || ""}
+            initialText={selectedScene.content || undefined}
             saveText={async (text: string) => {
               const updatedScene = await handleSaveSceneContent(text);
               if (updatedScene) {
                 // router.refresh();
               }
             }}
+            onWordCountChange={handleWordCountUpdate}
             font={cactusSerif}
             placeholder="Start writing your scene..."
           />

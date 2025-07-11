@@ -1,11 +1,10 @@
 // hooks/dashboard/useManuscriptData.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Chapter, Scene } from '../../lib/types';
 import { getChapters } from '../../lib/data/chapters';
 import { getScenesByChapterId, updateScene } from '../../lib/data/scenes';
 import { toast } from 'sonner';
-import { countWords } from '../../lib/utils';
 
 export function useManuscriptData(projectId: string) {
   const router = useRouter();
@@ -17,6 +16,11 @@ export function useManuscriptData(projectId: string) {
   const [isLoadingScenes, setIsLoadingScenes] = useState(false);
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
   const [currentSceneWordCount, setCurrentSceneWordCount] = useState(0);
+  const selectedSceneRef = useRef(selectedScene);
+  
+  useEffect(() => {
+    selectedSceneRef.current = selectedScene;
+  }, [selectedScene]);
 
   const fetchProjectChapters = useCallback(async () => {
     if (!projectId) return;
@@ -42,7 +46,14 @@ export function useManuscriptData(projectId: string) {
     setSelectedScene(null); // Clear previously selected scene from other chapter
     try {
       const fetchedScenes = await getScenesByChapterId(projectId, chapterId);
-      setScenesForSelectedChapter(fetchedScenes.sort((a,b) => a.order - b.order));
+      
+      // Correct word count for any blank scenes on fetch
+      const correctedScenes = fetchedScenes.map(scene => ({
+        ...scene,
+        word_count: (!scene.content || scene.content.trim() === '') ? 0 : scene.word_count,
+      }));
+
+      setScenesForSelectedChapter(correctedScenes.sort((a,b) => a.order - b.order));
     } catch (error) {
       console.error(`useManuscriptData: Failed to fetch scenes for chapter ${chapterId}:`, error);
       toast.error("Failed to load scenes for the chapter.");
@@ -70,28 +81,46 @@ export function useManuscriptData(projectId: string) {
   }, []);
 
   const handleSaveSceneContent = useCallback(async (text: string) => {
+    // We capture the scene from the closure. This is the scene this save function is "for".
     if (!selectedScene || !selectedChapter) {
-      toast.error("No scene or chapter selected to save.");
       return null;
     }
-    const wordCount = countWords(text);
-    setCurrentSceneWordCount(wordCount);
+    
+    const sceneBeingSaved = selectedScene;
 
     try {
-      // Replace the fetch call with the server action
+      // The async database call proceeds as normal.
       const updatedSceneFromServer = await updateScene(
         projectId,
         selectedChapter.id,
-        selectedScene.id,
-        { content: text } // Pass only the content to be updated
+        sceneBeingSaved.id,
+        { content: text } 
       );
 
-      setSelectedScene((prev) => prev ? { ...prev, content: text, word_count: updatedSceneFromServer.word_count } : null);
+      // This is always safe: keep the list of scenes in the sidebar fresh.
       setScenesForSelectedChapter((prevScenes) =>
         prevScenes.map((s) =>
-          s.id === selectedScene.id ? { ...s, content: text, word_count: updatedSceneFromServer.word_count } : s
+          s.id === sceneBeingSaved.id ? updatedSceneFromServer : s
         )
       );
+      
+      // --- FIX PART 2: SAFE STATE RECONCILIATION ---
+      // This is the logic from the previous fix. It prevents a stale save (from an unmounted editor)
+      // from overwriting the newly selected scene's state.
+      setSelectedScene(currentActiveScene => {
+          if (currentActiveScene && currentActiveScene.id === sceneBeingSaved.id) {
+              // The saved scene is still the active one. It's safe to update it
+              // with the authoritative data from the server.
+              return updatedSceneFromServer;
+          }
+          // This was a stale save. Don't change the active scene.
+          return currentActiveScene;
+      });
+
+      // We don't need to set the word count again here. The `setSelectedScene` call above
+      // updates the scene object, and the optimistic update has already handled the display.
+      // The UI will be consistent after the next render.
+
       return updatedSceneFromServer;
     } catch (error) {
       console.error("useManuscriptData: Failed to save scene content:", error);
@@ -105,8 +134,15 @@ export function useManuscriptData(projectId: string) {
   }, []);
 
   const handleSceneCreated = useCallback((newScene: Scene) => {
-    setScenesForSelectedChapter((prev) => [...prev, newScene].sort((a, b) => a.order - b.order));
-    setSelectedScene(newScene); // Optionally auto-select new scene
+    // Correct word count for a newly created blank scene
+    const correctedScene = {
+      ...newScene,
+      word_count: (!newScene.content || newScene.content.trim() === '') ? 0 : newScene.word_count,
+    };
+    
+    setScenesForSelectedChapter((prev) => [...prev, correctedScene].sort((a, b) => a.order - b.order));
+    setSelectedScene(correctedScene); // Optionally auto-select new scene
+    setCurrentSceneWordCount(correctedScene.word_count || 0); // Also set the editor's word count
   }, []);
   
   const refreshChapters = useCallback(() => {
@@ -116,6 +152,10 @@ export function useManuscriptData(projectId: string) {
   }, [projectId, fetchProjectChapters]);
 
   // Expose a way to update scenes locally for drag-drop, then trigger persistence
+  const handleWordCountUpdate = useCallback((count: number) => {
+    setCurrentSceneWordCount(count);
+  }, []);
+
   const updateLocalSceneOrder = useCallback((reorderedScenes: Scene[]) => {
     setScenesForSelectedChapter(reorderedScenes);
   }, []);
@@ -192,5 +232,6 @@ export function useManuscriptData(projectId: string) {
     handleSceneCreated,
     refreshChapters,
     updateLocalSceneOrder,
+    handleWordCountUpdate, // Export the word count update handler
   };
 }
