@@ -1,8 +1,14 @@
-import React, { useRef, useEffect, useCallback } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import type { NextFont } from "next/dist/compiled/@next/font";
+import { useEditor, EditorContent, Editor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import { debounce } from "lodash-es";
 
 // --- Configuration ---
-const SAVE_DEBOUNCE_MS = 1500;
+const SAVE_DEBOUNCE_WAIT_MS = 1500; // Time to wait after user stops typing
+const SAVE_DEBOUNCE_MAX_WAIT_MS = 5000; // Max time between saves, even if user types continuously
+
 const textSizeMap = {
   xs: "text-xs",
   sm: "text-sm",
@@ -22,59 +28,6 @@ interface ManuscriptEditorProps {
   placeholder?: string;
 }
 
-// --- Helper Functions ---
-const plainTextToHtml = (text: string): string => {
-  // Return <p> with zero-width space for empty initial text
-  // Helps browser apply styles/focus correctly from the start
-  if (!text) return "<p>&#8203;</p>";
-  return (
-    text
-      .split("\n")
-      // Use <br> for actual empty lines within existing text
-      .map((line) => `<p>${line || "<br>"}</p>`)
-      .join("")
-  );
-};
-
-const htmlToPlainText = (html: string): string => {
-  const tempDiv = document.createElement("div");
-  tempDiv.innerHTML = html;
-  const lines: string[] = [];
-  tempDiv.childNodes.forEach((node) => {
-    if (node.nodeName === "P") {
-      const pElement = node as HTMLParagraphElement;
-      if (
-        pElement.childNodes.length === 1 &&
-        pElement.childNodes[0].nodeName === "BR"
-      ) {
-        lines.push("");
-      } else {
-        lines.push(pElement.textContent || "");
-      }
-    } else if (node.nodeType === Node.TEXT_NODE) {
-      lines.push(node.textContent || "");
-    }
-  });
-
-  let plainText = lines.join("\n");
-  if (
-    html.endsWith("<p><br></p>") &&
-    plainText.endsWith("\n") &&
-    lines.length > 1
-  ) {
-    // Trim heuristic, see previous explanation
-  } else if (!html && plainText === "\n") {
-    plainText = "";
-  }
-
-  plainText = plainText.replace(/\n{3,}/g, "\n\n");
-
-  // Treat content that is just the initial zero-width space as empty
-  if (html.trim() === "<p>​</p>" || html.trim() === "") return "";
-
-  return plainText;
-};
-
 // --- Component ---
 export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   initialText = "",
@@ -83,112 +36,123 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   textSize = "base",
   placeholder = "Start writing...",
 }) => {
-  const contentEditableRef = useRef<HTMLDivElement>(null);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const savedSaveText = useRef(saveText);
-
+  // Store the latest saveText function in a ref to avoid re-creating the editor
+  // when the parent component re-renders.
+  const saveTextRef = useRef(saveText);
   useEffect(() => {
-    savedSaveText.current = saveText;
+    saveTextRef.current = saveText;
   }, [saveText]);
 
-  const textSizeClass = textSizeMap[textSize] || textSizeMap.base;
-
-  // Effect to initialize content and handle external changes to initialText
-  useEffect(() => {
-    if (contentEditableRef.current) {
-      const currentHtml = contentEditableRef.current.innerHTML;
-      const currentDomAsPlainText = htmlToPlainText(currentHtml);
-
-      if (initialText !== currentDomAsPlainText) {
-        const newHtml = plainTextToHtml(initialText);
-        contentEditableRef.current.innerHTML = newHtml;
+  // The debounced save function.
+  // useMemo ensures this function is created only once.
+  const debouncedSave = useMemo(() => {
+    return debounce(
+      (editor: Editor) => {
+        // TipTap's getText() provides the clean text for your database.
+        // The blockSeparator ensures paragraphs are separated by newlines.
+        const plainText = editor.getText({ blockSeparator: "\n" });
+        saveTextRef.current(plainText);
+        console.log("Auto-saved:", plainText);
+      },
+      SAVE_DEBOUNCE_WAIT_MS,
+      {
+        maxWait: SAVE_DEBOUNCE_MAX_WAIT_MS,
       }
-    }
-  }, [initialText]);
-
-  // Debounced save function
-  const debouncedSave = useCallback((text: string) => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    debounceTimeoutRef.current = setTimeout(() => {
-      savedSaveText.current(text);
-    }, SAVE_DEBOUNCE_MS);
+    );
   }, []);
 
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
+  const editor = useEditor({
+    // 1. EXTENSIONS: We configure the editor's features.
+    extensions: [
+      // StarterKit provides the basics like paragraphs, text, etc.
+      // We disable things we don't need, like bold, heading, etc.
+      StarterKit.configure({
+        heading: false,
+        bold: false,
+        italic: false,
+        strike: false,
+        code: false,
+        codeBlock: false,
+        blockquote: false,
+        horizontalRule: false,
+        bulletList: false,
+        orderedList: false,
+        // The 'paragraph' extension is crucial and enabled by default.
+      }),
+      // 2. PLACEHOLDER: This extension handles the placeholder text reliably.
+      Placeholder.configure({
+        placeholder: placeholder,
+        emptyEditorClass: "is-editor-empty",
+      }),
+    ],
 
-  // Handle input events on the contentEditable div
-  const handleInput = useCallback(
-    (event: React.FormEvent<HTMLDivElement>) => {
-      const target = event.currentTarget;
-      const currentHtml = target.innerHTML;
-      const newPlainText = htmlToPlainText(currentHtml);
+    // 3. STYLING: The editorProps is the "TipTap way" to apply classes.
+    editorProps: {
+      attributes: {
+        // We construct the class string cleanly to avoid invalid characters.
+        class: [
+          // --- Layout & Sizing ---
+          "w-full max-w-[70ch] mx-auto", // Center the editor column itself
+          "flex-1", // Allow it to grow to fill the parent's height
+          "overflow-y-auto", // Allow internal scrolling if content is long
+          "outline-none", // Remove default focus outline
 
-      debouncedSave(newPlainText);
+          // --- Padding & Font ---
+          "p-4 md:p-6 lg:p-8",
+          font.className,
+          textSizeMap[textSize],
 
-      // Scroll to cursor
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const cursorElement = range.startContainer.parentElement;
-        cursorElement?.scrollIntoView({
-          block: "nearest",
-          inline: "nearest",
-          behavior: "smooth",
-        });
-      }
+          // --- Colors ---
+          "bg-white dark:bg-gray-900",
+          "text-gray-900 dark:text-gray-100",
+
+          // --- Manuscript Styling (The Core Fix) ---
+          "leading-loose", // Set line spacing
+          // Target paragraphs inside the editor for indentation.
+          // This is more robust than using the `prose` plugin for this specific need.
+          "[&_p]:indent-8",
+          "[&_p]:my-0", // Remove extra vertical space between paragraphs
+
+          // --- Placeholder Styling (The Core Fix) ---
+          // Tiptap adds the 'is-empty' class to the editor. We target its `::before`
+          // pseudo-element to show the placeholder text.
+          "[&.is-editor-empty]:before:content-[attr(data-placeholder)]",
+          "[&.is-editor-empty]:before:float-left",
+          "[&.is-editor-empty]:before:text-gray-400 dark:[&.is-editor-empty]:before:text-gray-600",
+          "[&.is-editor-empty]:before:pointer-events-none",
+          "[&.is-editor-empty]:before:h-0",
+        ].join(" "),
+      },
     },
-    [debouncedSave]
-  );
 
-  return (
-    <div
-      ref={contentEditableRef}
-      contentEditable={true}
-      suppressContentEditableWarning={true}
-      onInput={handleInput}
-      className={`
-            max-w-[70ch] w-[70ch] min-w-[70ch] flex-1 overflow-y-auto outline-none 
-            p-4 md:p-6 lg:p-8
-            bg-white dark:bg-gray-900
-            text-gray-900 dark:text-gray-100
-            ${font.className}
-            ${textSizeClass}
-            leading-loose
-            whitespace-pre-wrap
-            break-words
-            [&>p]:indent-8
-            relative
-            transition-colors duration-200
-            rounded-lg
-            box-shadow(0 1px 3px rgba(0,0,0,0.1))
-          `}
-      aria-label={placeholder || "Text input area"}
-      spellCheck="true"
-    >
-      {/* Static text removed, content will be set by useEffect */}
-    </div>
-  );
+    // 4. CONTENT: Set the initial content from props.
+    // TipTap automatically parses this into the correct <p> structure.
+    content: initialText,
+
+    // 5. AUTO-SAVE: The onUpdate hook triggers our debounced save.
+    onUpdate: ({ editor }) => {
+      debouncedSave(editor);
+    },
+  });
+
+  // 6. SAVE ON UNMOUNT: This effect ensures work is saved when the user navigates away.
+  useEffect(() => {
+    // This is the cleanup function that runs when the component unmounts.
+    return () => {
+      if (!editor) return;
+
+      // Cancel any pending debounced save to avoid a race condition.
+      debouncedSave.cancel();
+
+      // Trigger a final, immediate save with the latest content.
+      const plainText = editor.getText({ blockSeparator: "\n" });
+      saveTextRef.current(plainText);
+      console.log("Final save on unmount.");
+
+      // Destroy the editor instance to prevent memory leaks.
+      editor.destroy();
+    };
+  }, [editor, debouncedSave]);
+
+  return <EditorContent editor={editor} />;
 };
-
-// --- Helper Type for NextFont ---
-/*
-    declare module 'next/dist/compiled/@next/font' {
-      interface NextFont {
-        className: string;
-        style: {
-          fontFamily: string;
-          fontWeight?: number | string;
-          fontStyle?: string;
-        };
-      }
-    }
-      */

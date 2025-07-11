@@ -10,7 +10,7 @@ import { ListContainer } from "@/components/ui/ListContainer";
 import { ListItem } from "@/components/ui/ListItem";
 import { ContextualHeader } from "@/components/ui/ContextualHeader";
 import { IconButton } from "@/components/ui/IconButton";
-import { ManuscriptEditor } from "@/components/editors/ManuscriptEditor";
+// import { ManuscriptEditor } from "@/components/editors/ManuscriptEditor";
 import { CreateChapterModal } from "@/components/manuscript/CreateChapterModal";
 import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal";
 import { Paragraph } from "@/components/typography/Paragraph";
@@ -30,12 +30,38 @@ import {
   updateSceneTags,
   getScenesByChapterId,
 } from "@/lib/data/scenes";
+import dynamic from "next/dynamic";
+//import { useMemo } from 'react';
 
 type ManuscriptView = "chapters" | "scenes";
 
 interface ManuscriptSectionProps {
   project: Project;
 }
+
+const EditorLoadingSkeleton = () => (
+  <div className="max-w-[70ch] w-full min-h-[50vh] flex-1 p-4 md:p-6 lg:p-8 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse">
+    <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
+    <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-full mb-2"></div>
+    <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-full mb-2"></div>
+    <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-5/6"></div>
+  </div>
+);
+
+// --- Dynamically import ManuscriptEditor ---
+const ManuscriptEditorWithNoSSR = dynamic(
+  // The path to your component
+  () =>
+    import("@/components/editors/ManuscriptEditor").then(
+      (mod) => mod.ManuscriptEditor
+    ),
+  {
+    // Important: Disable Server-Side Rendering
+    ssr: false,
+    // Optional: Show a loading component while the editor is being fetched
+    loading: () => <EditorLoadingSkeleton />,
+  }
+);
 
 export function ManuscriptSection({ project }: ManuscriptSectionProps) {
   const {
@@ -480,9 +506,9 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
   const mainDetailColumnContent = (
     <>
       {selectedScene ? (
-        <div className="flex flex-col h-full items-center relative">
-          <div className="text-center p-2">
-            <div className="flex items-center">
+        <div className="flex flex-col h-full">
+          <div className="text-center p-2 shrink-0">
+            <div className="flex items-center justify-center">
               <h1
                 className={`text-2xl ${cactusSerif.className} font-bold mr-2`}
               >
@@ -515,13 +541,13 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
               {currentSceneWordCount} words
             </span>
           </div>
-          <ManuscriptEditor
+          <ManuscriptEditorWithNoSSR
             key={selectedScene.id}
             initialText={selectedScene.content || ""}
             saveText={async (text: string) => {
               const updatedScene = await handleSaveSceneContent(text);
               if (updatedScene) {
-                router.refresh();
+                // router.refresh();
               }
             }}
             font={cactusSerif}
