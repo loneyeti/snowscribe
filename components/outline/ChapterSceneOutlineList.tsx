@@ -9,7 +9,6 @@ import type {
   PrimarySceneCategory,
 } from "@/lib/types";
 import { ALL_PRIMARY_SCENE_CATEGORIES } from "@/lib/types";
-import { ListContainer } from "@/components/ui/ListContainer";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
@@ -103,11 +102,7 @@ export function ChapterSceneOutlineList({
   >(null);
 
   useEffect(() => {
-    if (chapters && chapters.length > 0) {
-      setExpandedChapters(new Set(chapters.map((chapter) => chapter.id)));
-    } else {
-      setExpandedChapters(new Set());
-    }
+    setExpandedChapters(new Set());
   }, [chapters]);
 
   const handleGenerateSceneOutlineDescription = async (scene: Scene) => {
@@ -256,7 +251,7 @@ export function ChapterSceneOutlineList({
 
   return (
     <>
-      <ListContainer className="h-full overflow-y-auto">
+      <div className="h-full overflow-y-auto">
         <div className="space-y-6 p-4">
           {chapters.map((chapter) => (
             <div
@@ -707,7 +702,7 @@ export function ChapterSceneOutlineList({
             </div>
           ))}
         </div>
-      </ListContainer>
+      </div>
 
       {/* Modals */}
       {managingCharsForScene && isManageCharsModalOpen && (

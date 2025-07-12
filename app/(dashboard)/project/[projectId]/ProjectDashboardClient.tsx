@@ -52,7 +52,9 @@ export function ProjectDashboardClient({
 
   return (
     <ProjectDataProvider projectId={project.id}>
-      <div className="flex-1 overflow-y-auto">{renderActiveSection()}</div>
+      <div className="flex-1 overflow-y-auto h-full">
+        {renderActiveSection()}
+      </div>
     </ProjectDataProvider>
   );
 }

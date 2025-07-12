@@ -508,40 +508,38 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
     <>
       {selectedScene ? (
         <div className="flex flex-col h-full">
-          <div className="text-center p-2 shrink-0">
-            <div className="flex items-center justify-center">
-              <h1
-                className={`text-2xl ${cactusSerif.className} font-bold mr-2`}
-              >
-                {selectedScene.title || "Untitled Scene"}
-              </h1>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsAIPanelOpen(true);
-                }}
-                className="p-1 rounded-full hover:bg-muted transition-colors"
-                aria-label="Open AI Assistant"
-              >
-                <Sparkles className="h-5 w-5" />
-              </button>
-              <IconButton
-                icon={Info}
-                aria-label={
-                  isSceneMetadataPanelOpen
-                    ? "Hide scene details"
-                    : "Show scene details"
-                }
-                onClick={() => setIsSceneMetadataPanelOpen((prev) => !prev)}
-                variant="ghost"
-                size="sm"
-                className="ml-2 text-muted-foreground hover:text-primary"
-              />
-            </div>
-            <span className="text-sm italic text-gray-500">
-              {currentSceneWordCount} words
-            </span>
-          </div>
+          <ContextualHeader
+            title={selectedScene.title || "Untitled Scene"}
+            subtitle={`${currentSceneWordCount} words`}
+            centered={true}
+            className={`${cactusSerif.className} text-center`}
+            navControls={
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsAIPanelOpen(true);
+                  }}
+                  className="p-1 rounded-full hover:bg-muted transition-colors"
+                  aria-label="Open AI Assistant"
+                >
+                  <Sparkles className="h-5 w-5" />
+                </button>
+                <IconButton
+                  icon={Info}
+                  aria-label={
+                    isSceneMetadataPanelOpen
+                      ? "Hide scene details"
+                      : "Show scene details"
+                  }
+                  onClick={() => setIsSceneMetadataPanelOpen((prev) => !prev)}
+                  variant="ghost"
+                  size="sm"
+                  className="ml-2 text-muted-foreground hover:text-primary"
+                />
+              </>
+            }
+          />
           <ManuscriptEditorWithNoSSR
             key={selectedScene.id}
             initialText={selectedScene.content || undefined}

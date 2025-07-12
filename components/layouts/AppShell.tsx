@@ -75,7 +75,9 @@ export function AppShell({ children, project }: AppShellProps) {
           onProjectDetailsUpdated={handleProjectUpdate}
           onEditClick={handleOpenEditModal}
         />
-        <main className="flex-1 overflow-y-auto p-6">{childrenWithProps}</main>
+        <main className="flex-1 overflow-y-auto p-6 h-full">
+          {childrenWithProps}
+        </main>
         {isEditModalOpen && (
           <EditProjectModal
             isOpen={isEditModalOpen}

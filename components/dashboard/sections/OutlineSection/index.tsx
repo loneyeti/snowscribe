@@ -190,7 +190,7 @@ export function OutlineSection({
   const middleColumnContent = (
     <>
       <ContextualHeader
-        title="Outline Sections"
+        title="Outline"
         navControls={
           <IconButton
             icon={Sparkles}

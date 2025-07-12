@@ -127,11 +127,11 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           "p-4 md:p-6 lg:p-8",
           font.className,
           textSizeMap[textSize],
-          "rounded-lg",
+          "rounded-xl",
 
           // --- Colors ---
-          "bg-white dark:bg-gray-900",
-          "text-gray-900 dark:text-gray-100",
+          "bg-white dark:bg-slate-800",
+          "text-slate-900 dark:text-slate-200",
 
           // --- Manuscript Styling (The Core Fix) ---
           "leading-loose", // Set line spacing
