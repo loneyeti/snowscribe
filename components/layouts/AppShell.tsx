@@ -6,6 +6,7 @@ import { AppHeader } from "./AppHeader";
 import { PrimarySidebar } from "./PrimarySidebar";
 import { EditProjectModal } from "@/components/projects/EditProjectModal";
 import type { Project, Genre } from "@/lib/types";
+import { User } from "@supabase/supabase-js";
 
 interface AppShellInjectedProps {
   activeSection?: string;
@@ -15,9 +16,10 @@ interface AppShellInjectedProps {
 interface AppShellProps {
   children: React.ReactNode;
   project: Project & { genres: Genre | null; wordCount?: number };
+  user: User;
 }
 
-export function AppShell({ children, project }: AppShellProps) {
+export function AppShell({ children, project, user }: AppShellProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeSection = searchParams.get("section") || "manuscript"; // Default to 'manuscript' if not in URL
@@ -63,6 +65,7 @@ export function AppShell({ children, project }: AppShellProps) {
       <PrimarySidebar
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
+        user={user}
       />
       <div className="flex flex-col flex-1 overflow-hidden">
         <AppHeader

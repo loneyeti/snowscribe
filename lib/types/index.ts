@@ -31,17 +31,17 @@ export interface Genre {
 
 // Based on supabase/migrations/20250509072238_create_profiles_table.sql
 export interface Profile {
-  id: string; // UUID, references auth.users
-  username?: string | null;
-  full_name?: string | null;
-  avatar_url?: string | null;
-  is_site_admin?: boolean; // Added for admin flag
-  current_period_credit_usage?: number; // Added for credit tracking
-  total_credit_usage?: number; // Added for credit tracking
-  created_at: string; // TIMESTAMPTZ
-  updated_at: string; // TIMESTAMPTZ
+  id: string;
+  username: string | null;
+  full_name: string | null;
+  pen_name: string | null;
+  avatar_url: string | null;
+  is_site_admin: boolean; // This has a NOT NULL constraint in the DB
+  current_period_credit_usage: number; // This has a NOT NULL constraint
+  total_credit_usage: number; // This has a NOT NULL constraint
+  created_at: string;
+  updated_at: string;
 }
-
 // Based on supabase/migrations/20250509072629_create_chapters_table.sql
 export interface Chapter {
   id: string; // UUID

@@ -40,7 +40,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   // const initialChapters = await getChaptersByProjectId(params.projectId); // Chapters are now fetched in ProjectDashboardClient
 
   return (
-    <AppShell project={project}>
+    <AppShell project={project} user={user}>
       <ProjectDashboardClient project={project} />
     </AppShell>
   );

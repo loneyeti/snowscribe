@@ -26,7 +26,7 @@ const ListContainer = React.forwardRef<HTMLDivElement, ListContainerProps>(
       <div
         ref={ref}
         className={cn(
-          "flex flex-col min-h-full overflow-hidden bg-white/80 dark:bg-slate-800/90 backdrop-blur-sm",
+          "flex flex-col overflow-hidden bg-white/80 dark:bg-slate-800/90 backdrop-blur-sm",
           "rounded-xl shadow-sm border border-slate-200/50 dark:border-slate-700/50",
           "hover:shadow-md transition-all duration-300",
           className

@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { PrimarySidebarNavItem } from "./PrimarySidebarNavItem";
 import Link from "next/link";
+import { UserMenuButton } from "../auth/UserMenuButton";
+import { User } from "@supabase/supabase-js";
 
 // Define a type for the navigation items
 interface NavItemConfig {
@@ -27,22 +29,19 @@ const navItemConfigs: NavItemConfig[] = [
   { id: "characters", label: "Characters", icon: Users },
   { id: "world-notes", label: "World Notes", icon: Globe }, // Renamed "World" to "World Notes" for clarity, ID updated
   { id: "ai", label: "AI Assistant", icon: Sparkles }, // Renamed "AI Tools" to "AI Assistant"
-];
-
-// Separate config for items that might appear after the main nav group or at the bottom
-const bottomNavItemConfigs: NavItemConfig[] = [
   { id: "export", label: "Export", icon: FileDown },
-  // Settings will be handled separately as it's often a modal or different page, not a main section
 ];
 
 interface PrimarySidebarProps {
   activeSection: string;
   onSectionChange: (sectionId: string) => void;
+  user: User;
 }
 
 export function PrimarySidebar({
   activeSection,
   onSectionChange,
+  user,
 }: PrimarySidebarProps) {
   // Removed internal activeItem state and handleNavItemClick
 
@@ -71,19 +70,13 @@ export function PrimarySidebar({
         ))}
       </nav>
 
-      {/* Bottom icons: Export and Settings */}
+      {/* Bottom icons: User menu */}
       <div className="flex flex-col items-center space-y-2 w-full px-2 pb-4">
-        {" "}
-        {/* Increased space-y and pb */}
-        {bottomNavItemConfigs.map((config) => (
-          <PrimarySidebarNavItem
-            key={config.id}
-            icon={<config.icon size={24} aria-hidden="true" />}
-            label={config.label}
-            isActive={activeSection === config.id}
-            onClick={() => onSectionChange(config.id)}
-          />
-        ))}
+        <UserMenuButton
+          userName={user.email ?? undefined}
+          userAvatarUrl={user.user_metadata.avatar_url}
+          className="mt-4"
+        />
       </div>
     </aside>
   );

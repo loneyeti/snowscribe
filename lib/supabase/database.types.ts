@@ -299,6 +299,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_site_admin: boolean
+          pen_name: string | null
           total_credit_usage: number
           updated_at: string
           username: string | null
@@ -310,6 +311,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_site_admin?: boolean
+          pen_name?: string | null
           total_credit_usage: number
           updated_at?: string
           username?: string | null
@@ -321,6 +323,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_site_admin?: boolean
+          pen_name?: string | null
           total_credit_usage?: number
           updated_at?: string
           username?: string | null

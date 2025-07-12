@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { User, Settings, LogOut } from "lucide-react";
+import Link from "next/link";
 
 // Enhanced Avatar component with glassmorphic design
 const Avatar = ({
@@ -156,9 +157,9 @@ const UserMenuButton: React.FC<UserMenuButtonProps> = ({
           </DropdownMenuItem>
         )}
 
-        {onAccountSettings && (
-          <DropdownMenuItem
-            onClick={onAccountSettings}
+        <DropdownMenuItem asChild>
+          <Link
+            href="/profile"
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-lg",
               "hover:bg-slate-100/80 dark:hover:bg-slate-800/80",
@@ -167,9 +168,9 @@ const UserMenuButton: React.FC<UserMenuButtonProps> = ({
             )}
           >
             <Settings className="h-4 w-4 text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200 transition-colors" />
-            <span className="font-medium">Account Settings</span>
-          </DropdownMenuItem>
-        )}
+            <span className="font-medium">Profile & Settings</span>
+          </Link>
+        </DropdownMenuItem>
 
         {(onViewProfile || onAccountSettings) && (
           <DropdownMenuSeparator className="bg-slate-200/60 dark:bg-slate-700/60 my-2" />
