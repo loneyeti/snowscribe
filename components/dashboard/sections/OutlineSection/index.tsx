@@ -46,12 +46,7 @@ export function OutlineSection({
     handleSceneOutlineUpdate: hookHandleSceneOutlineUpdate,
   } = useOutlineData(initialProject, initialProject.id);
 
-  const {
-    allSceneTags,
-    isLoadingAllSceneTags,
-    refreshAllSceneTags,
-    triggerSceneUpdate,
-  } = useProjectData();
+  const { allSceneTags, triggerSceneUpdate } = useProjectData();
 
   const { fetchProjectChapters } = useManuscriptData(initialProject.id);
 
@@ -139,16 +134,7 @@ export function OutlineSection({
           { id: toastId }
         );
 
-        if (allSceneTags.length === 0 && !isLoadingAllSceneTags) {
-          await refreshAllSceneTags();
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-
-        await createEntitiesFromOutline(
-          initialProject.id,
-          parsedData,
-          allSceneTags
-        );
+        await createEntitiesFromOutline(initialProject.id, parsedData);
 
         toast.success("Full outline created successfully!", { id: toastId });
 

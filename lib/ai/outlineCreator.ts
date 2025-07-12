@@ -1,13 +1,8 @@
 "use server";
 
 import { sendMessage as AISMessageHandler } from "@/lib/ai/AISMessageHandler";
-import type { ParsedOutlineData, ParsedScene, ParsedChapter } from "@/lib/types/ai";
-import type { Character, Scene, SceneTag, Chapter as ProjectChapter } from "@/lib/types";
+import type { ParsedOutlineData } from "@/lib/types/ai";
 import { getProjectById } from "@/lib/data/projects";
-import { createCharacter } from "@/lib/data/characters";
-import { createChapter } from "@/lib/data/chapters";
-import { createScene, updateScene, updateSceneCharacters, updateSceneTags } from "@/lib/data/scenes";
-import { createSceneTag } from "@/lib/data/sceneTags";
 
 /**
  * Generates an outline from a synopsis using AI and parses the JSON response.
@@ -53,122 +48,43 @@ export async function generateAndParseOutline(projectId: string): Promise<Parsed
   }
 }
 
-// Helper function to get or create a scene tag
-async function getOrCreateTag(projectId: string, tagName: string, existingTags: SceneTag[]): Promise<SceneTag> {
-  const normalizedTagName = tagName.trim().toLowerCase();
-  const foundTag = existingTags.find(tag => tag.name.trim().toLowerCase() === normalizedTagName && (tag.project_id === projectId || tag.project_id === null));
-  if (foundTag) {
-    return foundTag;
-  }
-
-  // Create new project-specific tag using server action
-  try {
-    const newTag = await createSceneTag(projectId, tagName.trim());
-    existingTags.push(newTag);
-    return newTag;
-  } catch (error) {
-    throw new Error(`Failed to create tag "${tagName}": ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
+import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 /**
- * Creates database entities from the parsed outline data.
+ * Creates database entities from the parsed outline data by calling a single,
+ * transactional database function.
  * @param projectId The ID of the project.
  * @param parsedData The outline data parsed from AI.
- * @param existingTags All existing scene tags (global and project-specific).
  * @returns Promise resolving when complete.
+ * @throws An error if the RPC call fails, ensuring the calling function can handle it.
  */
 export async function createEntitiesFromOutline(
   projectId: string,
-  parsedData: ParsedOutlineData,
-  existingTags: SceneTag[]
+  parsedData: ParsedOutlineData
 ): Promise<void> {
-  const createdCharactersMap = new Map<string, Character>();
+  // 1. Get the current user and a Supabase client instance.
+  const user = await getAuthenticatedUser();
+  const supabase = await createClient();
 
-  // 1. Create Characters
-  for (const pChar of parsedData.characters) {
-    try {
-      const newChar = await createCharacter(projectId, {
-        name: pChar.name,
-        description: pChar.description || "",
-      });
-      createdCharactersMap.set(pChar.name, newChar);
-    } catch (error) {
-      console.warn(`Failed to create character "${pChar.name}":`, error, `Skipping this character.`);
-    }
+  // 2. Call the 'create_full_outline' database function via RPC.
+  //    This function handles all database insertions within a single transaction.
+  const { error } = await supabase.rpc('create_full_outline', {
+    p_project_id: projectId,
+    p_user_id: user.id,
+    outline_data: parsedData,
+  });
+
+  // 3. Check for errors from the RPC call.
+  //    If an error occurred, the transaction was automatically rolled back in the database.
+  if (error) {
+    console.error("Error calling create_full_outline RPC:", error);
+    // Throw a user-friendly error to be caught by the UI.
+    throw new Error(
+      `Failed to create outline in database: ${error.message}`
+    );
   }
 
-  // 2. Create Chapters and Scenes
-  for (const pChapter of parsedData.chapters.sort((a: ParsedChapter, b: ParsedChapter) => a.order - b.order)) {
-    let newChapter: ProjectChapter | null = null;
-    try {
-      newChapter = await createChapter(projectId, {
-        title: pChapter.title,
-        order: pChapter.order
-      });
-    } catch (error) {
-      console.warn(`Failed to create chapter "${pChapter.title}":`, error, `Skipping this chapter and its scenes.`);
-      continue;
-    }
-
-    if (newChapter) {
-      for (const pScene of pChapter.scenes.sort((a: ParsedScene, b: ParsedScene) => a.order - b.order)) {
-        let newScene: Scene | null = null;
-        try {
-          if (!pScene.primaryCategory) {
-            console.warn(`Scene "${pScene.title}" missing primaryCategory, defaulting to 'Transition'.`);
-            pScene.primaryCategory = "Transition";
-          }
-
-          newScene = await createScene(projectId, newChapter.id, {
-            title: pScene.title,
-            order: pScene.order,
-            primary_category: pScene.primaryCategory
-          });
-
-          if (newScene) {
-            const updatePayload: Partial<Scene> = {};
-            if (pScene.description) {
-              updatePayload.outline_description = pScene.description;
-            }
-            if (pScene.povCharacterName && createdCharactersMap.has(pScene.povCharacterName)) {
-              updatePayload.pov_character_id = createdCharactersMap.get(pScene.povCharacterName)!.id;
-            }
-            if (Object.keys(updatePayload).length > 0) {
-              const filteredPayload = Object.fromEntries(
-                Object.entries(updatePayload).filter(([, v]) => v !== null && v !== undefined)
-              );
-              newScene = await updateScene(projectId, newChapter.id, newScene.id, filteredPayload);
-            }
-
-            if (pScene.otherCharacterNames && pScene.otherCharacterNames.length > 0) {
-              const characterIdsToLink = pScene.otherCharacterNames
-                .map(name => createdCharactersMap.get(name)?.id)
-                .filter((id): id is string => !!id);
-              if (characterIdsToLink.length > 0) {
-                await updateSceneCharacters(projectId, newScene.id, characterIdsToLink);
-              }
-            }
-
-            if (pScene.tagNames && pScene.tagNames.length > 0) {
-              const tagIdsToLink: string[] = [];
-              for (const tagName of pScene.tagNames) {
-                try {
-                  const tag = await getOrCreateTag(projectId, tagName, existingTags);
-                  tagIdsToLink.push(tag.id);
-                } catch (tagError) {
-                  console.warn(`Failed to get or create tag "${tagName}":`, tagError);
-                }
-              }
-              if (tagIdsToLink.length > 0) {
-                await updateSceneTags(projectId, newScene.id, tagIdsToLink);
-              }
-            }
-          }
-        } catch (sceneError) {
-          console.warn(`Failed to process scene "${pScene.title}":`, sceneError, `Skipping this scene.`);
-        }
-      }
-    }
-  }
+  // If we reach here, the transaction was successful.
+  console.log(`Successfully created full outline for project ${projectId}`);
 }
