@@ -1,11 +1,7 @@
-// components/dashboard/sections/OutlineSection/index.tsx
-import React, { useState, useCallback, useRef } from "react";
+"use client";
+import React, { useState, useCallback } from "react";
 import type { Project, Scene } from "@/lib/types";
-import { useOutlineData } from "@/hooks/dashboard/useOutlineData";
-import { useManuscriptData } from "@/hooks/dashboard/useManuscriptData";
-import { useCharactersData } from "@/hooks/dashboard/useCharactersData";
-import { useProjectData } from "@/contexts/ProjectDataContext";
-
+import { useProjectStore } from "@/lib/stores/projectStore";
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { ListContainer } from "@/components/ui/ListContainer";
 import { ListItem } from "@/components/ui/ListItem";
@@ -15,15 +11,11 @@ import { ProjectSynopsisEditor } from "@/components/outline/ProjectSynopsisEdito
 import { CharacterCardQuickViewList } from "@/components/outline/CharacterCardQuickViewList";
 import { ChapterSceneOutlineList } from "@/components/outline/ChapterSceneOutlineList";
 import { Paragraph } from "@/components/typography/Paragraph";
-import { toast } from "sonner";
-import {
-  generateAndParseOutline,
-  createEntitiesFromOutline,
-} from "@/lib/ai/outlineCreator";
 import { OutlineCreatorModal } from "@/components/outline/OutlineCreatorModal";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 type OutlineView = "synopsis" | "scenes";
 
@@ -34,144 +26,68 @@ interface OutlineSectionProps {
 export function OutlineSection({
   project: initialProject,
 }: OutlineSectionProps) {
-  const [outlineView, setOutlineView] = React.useState<OutlineView>("synopsis");
-  const hasInitialChaptersFetchCompleted = useRef(false);
-  const hasInitialCharactersFetchCompleted = useRef(false);
-
-  const {
-    project: currentProjectDetails,
-    chapters,
-    isLoading: isLoadingOutline,
-    handleSynopsisUpdate,
-    handleSceneOutlineUpdate: hookHandleSceneOutlineUpdate,
-  } = useOutlineData(initialProject, initialProject.id);
-
-  const { allSceneTags, triggerSceneUpdate } = useProjectData();
-
-  const { fetchProjectChapters } = useManuscriptData(initialProject.id);
-
-  const handleSceneUpdate = useCallback(
-    async (chapterId: string, sceneId: string, updatedData: Partial<Scene>) => {
-      const updatedScene = await hookHandleSceneOutlineUpdate(
-        chapterId,
-        sceneId,
-        updatedData
-      );
-      if (updatedScene) triggerSceneUpdate();
-    },
-    [hookHandleSceneOutlineUpdate, triggerSceneUpdate]
-  );
-
-  const {
-    characters: allCharactersForProject,
-    fetchProjectCharacters: fetchAllChars,
-    isLoadingCharactersData: isLoadingAllChars,
-  } = useCharactersData(initialProject.id);
-
-  React.useEffect(() => {
-    // Chapters fetch with ref protection
-    if (
-      outlineView === "scenes" &&
-      chapters.length === 0 &&
-      !isLoadingOutline &&
-      !hasInitialChaptersFetchCompleted.current
-    ) {
-      hasInitialChaptersFetchCompleted.current = true;
-      fetchProjectChapters();
-    }
-
-    // Characters fetch with ref protection
-    if (
-      outlineView === "synopsis" &&
-      allCharactersForProject.length === 0 &&
-      !isLoadingAllChars &&
-      !hasInitialCharactersFetchCompleted.current
-    ) {
-      hasInitialCharactersFetchCompleted.current = true;
-      fetchAllChars();
-    }
-  }, [
-    outlineView,
-    chapters.length,
-    isLoadingOutline,
-    fetchProjectChapters,
-    allCharactersForProject.length,
-    isLoadingAllChars,
-    fetchAllChars,
-  ]);
-
-  // Reset refs when project changes
-  React.useEffect(() => {
-    hasInitialChaptersFetchCompleted.current = false;
-    hasInitialCharactersFetchCompleted.current = false;
-  }, [initialProject.id]);
-
+  const [outlineView, setOutlineView] = useState<OutlineView>("synopsis");
   const [isOutlineCreatorModalOpen, setIsOutlineCreatorModalOpen] =
     useState(false);
-  const [isGeneratingFullOutline, setIsGeneratingFullOutline] = useState(false);
 
-  const handleGenerateFullOutline = async () => {
-    if (!currentProjectDetails?.one_page_synopsis?.trim()) {
-      toast.error(
-        "A 'One Page Synopsis' is required to generate an outline. Please add one in the Synopsis tab."
-      );
-      setIsOutlineCreatorModalOpen(false);
-      return;
-    }
+  const {
+    project,
+    chapters,
+    characters,
+    sceneTags,
+    isLoading,
+    updateProjectDetails,
+    generateAIFullOutline,
+    fetchChapters,
+    updateScene,
+  } = useProjectStore();
 
-    setIsGeneratingFullOutline(true);
-    setIsOutlineCreatorModalOpen(false);
-    const toastId = toast.loading(
-      "Generating full outline with AI... This may take a few minutes."
-    );
-
-    try {
-      const parsedData = await generateAndParseOutline(initialProject.id);
-
-      if (parsedData) {
-        toast.info(
-          "AI has generated the outline structure. Now creating database entries...",
-          { id: toastId }
-        );
-
-        await createEntitiesFromOutline(initialProject.id, parsedData);
-
-        toast.success("Full outline created successfully!", { id: toastId });
-
-        fetchProjectChapters();
-        fetchAllChars();
-      } else {
-        toast.error(
-          "Failed to generate or parse outline data from AI. No changes made.",
-          {
-            id: toastId,
-          }
-        );
+  const handleSceneUpdate = useCallback(
+    async (
+      chapterId: string,
+      sceneId: string,
+      updatedData: {
+        title?: string | null;
+        content?: string | null;
+        order?: number | null;
+        outline_description?: string | null;
+        pov_character_id?: string | null;
+        tag_ids?: string[] | null;
+        primary_category?:
+          | "Action"
+          | "Dialogue"
+          | "Reflection"
+          | "Discovery"
+          | "Relationship"
+          | "Transition"
+          | "Worldbuilding"
+          | null;
+        other_character_ids?: string[] | null;
       }
-    } catch (error) {
-      console.error("Error during full outline generation process:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "An unexpected error occurred during outline generation.",
-        { id: toastId }
-      );
-    } finally {
-      setIsGeneratingFullOutline(false);
-    }
-  };
-
-  const renderOutlineCreatorModal = () => (
-    <OutlineCreatorModal
-      isOpen={isOutlineCreatorModalOpen}
-      onClose={() => setIsOutlineCreatorModalOpen(false)}
-      onConfirm={handleGenerateFullOutline}
-      isLoading={isGeneratingFullOutline}
-      hasExistingContent={
-        chapters.length > 0 || allCharactersForProject.length > 0
-      }
-    />
+    ) => {
+      await updateScene(sceneId, {
+        ...updatedData,
+        title: updatedData.title ?? undefined,
+        content: updatedData.content ?? undefined,
+        order: updatedData.order ?? undefined,
+        tag_ids: updatedData.tag_ids ?? undefined,
+        other_character_ids: updatedData.other_character_ids ?? undefined,
+      });
+    },
+    [updateScene]
   );
+
+  const handleSceneCreated = useCallback(async () => {
+    await fetchChapters();
+  }, [fetchChapters]);
+
+  if (!project) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   const middleColumnContent = (
     <>
@@ -182,7 +98,7 @@ export function OutlineSection({
             icon={Sparkles}
             aria-label="Generate Full Outline with AI"
             onClick={() => setIsOutlineCreatorModalOpen(true)}
-            disabled={isGeneratingFullOutline}
+            disabled={isLoading.generatingOutline}
             title="AI Outline Creator"
           />
         }
@@ -210,13 +126,21 @@ export function OutlineSection({
         <div className="p-1">
           <ProjectSynopsisEditor
             project={{
-              id: currentProjectDetails.id,
-              log_line: currentProjectDetails.log_line,
-              one_page_synopsis: currentProjectDetails.one_page_synopsis,
-              title: currentProjectDetails.title,
-              genre_id: currentProjectDetails.genre_id,
+              id: project.id,
+              log_line: project.log_line,
+              one_page_synopsis: project.one_page_synopsis,
+              title: project.title,
+              genre_id: project.genre_id,
             }}
-            projectGenreName={currentProjectDetails.genre}
+            projectGenreName={
+              project.genre &&
+              typeof project.genre === "object" &&
+              "name" in project.genre
+                ? (project.genre as { name: string }).name
+                : typeof project.genre === "string"
+                ? project.genre
+                : ""
+            }
             sceneOutlineDescriptions={(() => {
               let allSceneOutlineDescriptions = "";
               if (chapters && chapters.length > 0) {
@@ -224,10 +148,7 @@ export function OutlineSection({
                 chapters.forEach((chapter) => {
                   if (Array.isArray(chapter.scenes)) {
                     chapter.scenes.forEach((scene) => {
-                      if (
-                        scene.outline_description &&
-                        scene.outline_description.trim() !== ""
-                      ) {
+                      if (scene.outline_description?.trim()) {
                         const sceneTitlePrefix = scene.title
                           ? `Scene (${scene.title}): `
                           : "Scene: ";
@@ -246,26 +167,20 @@ export function OutlineSection({
               }
               return allSceneOutlineDescriptions;
             })()}
-            onSynopsisUpdate={(data) => {
-              const safeData = {
-                log_line: data.log_line ?? "",
-                one_page_synopsis: data.one_page_synopsis ?? "",
-              };
-              handleSynopsisUpdate(safeData);
-            }}
+            onSynopsisUpdate={updateProjectDetails}
           />
           <div className="p-4">
             <div className="mb-6">
               <Button
                 onClick={() => setIsOutlineCreatorModalOpen(true)}
                 disabled={
-                  isGeneratingFullOutline ||
-                  !currentProjectDetails?.one_page_synopsis?.trim()
+                  isLoading.generatingOutline ||
+                  !project.one_page_synopsis?.trim()
                 }
                 className="w-full"
                 size="lg"
               >
-                {isGeneratingFullOutline ? (
+                {isLoading.generatingOutline ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Generating Outline...
@@ -277,7 +192,7 @@ export function OutlineSection({
                   </>
                 )}
               </Button>
-              {!currentProjectDetails?.one_page_synopsis?.trim() && (
+              {!project.one_page_synopsis?.trim() && (
                 <Paragraph className="text-sm text-muted-foreground mt-2 text-center">
                   Add a one-page synopsis above to enable AI outline generation
                 </Paragraph>
@@ -286,31 +201,29 @@ export function OutlineSection({
             <h3 className="text-lg font-semibold mt-6 mb-2">
               Character Quick View
             </h3>
-            {isLoadingAllChars && allCharactersForProject.length === 0 ? (
+            {isLoading.characters && characters.length === 0 ? (
               <Paragraph className="text-sm text-muted-foreground italic">
                 Loading characters...
               </Paragraph>
             ) : (
-              <CharacterCardQuickViewList
-                characters={allCharactersForProject}
-              />
+              <CharacterCardQuickViewList characters={characters} />
             )}
           </div>
         </div>
       ) : outlineView === "scenes" ? (
         <div className="p-1 h-full">
-          {isLoadingOutline && chapters.length === 0 ? (
+          {isLoading.chapters && chapters.length === 0 ? (
             <Paragraph className="p-4 text-sm text-muted-foreground">
               Loading outline data...
             </Paragraph>
           ) : (
             <ChapterSceneOutlineList
               chapters={chapters}
-              characters={allCharactersForProject}
-              sceneTags={allSceneTags}
-              projectId={initialProject.id}
+              characters={characters}
+              sceneTags={sceneTags}
+              projectId={project.id}
               onSceneUpdate={handleSceneUpdate}
-              onSceneCreated={triggerSceneUpdate}
+              onSceneCreated={handleSceneCreated}
             />
           )}
         </div>
@@ -324,7 +237,13 @@ export function OutlineSection({
         middleColumn={middleColumnContent}
         mainDetailColumn={mainDetailColumnContent}
       />
-      {renderOutlineCreatorModal()}
+      <OutlineCreatorModal
+        isOpen={isOutlineCreatorModalOpen}
+        onClose={() => setIsOutlineCreatorModalOpen(false)}
+        onConfirm={generateAIFullOutline}
+        isLoading={isLoading.generatingOutline}
+        hasExistingContent={chapters.length > 0 || characters.length > 0}
+      />
     </>
   );
 }

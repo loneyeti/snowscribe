@@ -15,6 +15,11 @@ export async function getChapters(projectId: string): Promise<Chapter[]> {
   }
 }
 
+export async function getChaptersWithScenes(projectId: string): Promise<Chapter[]> {
+  const user = await getAuthenticatedUser();
+  return chapterService.getChaptersWithScenes(projectId, user.id);
+}
+
 export async function getChapter(
   projectId: string, 
   chapterId: string

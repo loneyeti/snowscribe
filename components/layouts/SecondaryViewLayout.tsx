@@ -12,7 +12,7 @@ export function SecondaryViewLayout({
   return (
     <div className="flex flex-col md:flex-row flex-1 h-full overflow-hidden gap-4 md:gap-6">
       {/* Middle Column (Contextual Navigation/List) */}
-      <aside className="relative w-full md:w-1/3 rounded-xl border border-border overflow-y-auto bg-gradient-to-br from-card to-card/95 backdrop-blur-sm p-4 min-h-[300px] shadow-soft">
+      <aside className="w-full md:w-1/3 rounded-xl border border-border overflow-y-auto bg-gradient-to-br from-card to-card/95 backdrop-blur-sm p-4 min-h-[300px] shadow-soft">
         {middleColumn}
       </aside>
 

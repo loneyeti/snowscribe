@@ -1,7 +1,6 @@
-// components/dashboard/sections/CharactersSection/index.tsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import type { Project } from "@/lib/types";
-import { useCharactersData } from "@/hooks/dashboard/useCharactersData";
+import { useProjectStore } from "@/lib/stores/projectStore";
 import { CharacterList } from "@/components/characters/CharacterList";
 import { CharacterCardEditor } from "@/components/editors/CharacterCardEditor";
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
@@ -19,36 +18,15 @@ export function CharactersSection({ project }: CharactersSectionProps) {
   const {
     characters,
     selectedCharacter,
-    isLoadingCharactersData,
-    fetchProjectCharacters,
-    handleCharacterSelect,
-    handleSaveCharacterEditorData,
-    handleCharacterDeleted,
-    handleCharacterCreated,
-  } = useCharactersData(project.id);
+    isLoading,
+    selectCharacter,
+    createCharacter, // Get the action from the store
+    updateCharacter,
+    deleteCharacter,
+  } = useProjectStore();
 
   const [isCreateCharacterModalOpen, setIsCreateCharacterModalOpen] =
     useState(false);
-  const hasInitialFetchCompleted = useRef(false);
-
-  useEffect(() => {
-    if (
-      characters.length === 0 &&
-      !isLoadingCharactersData &&
-      !hasInitialFetchCompleted.current
-    ) {
-      hasInitialFetchCompleted.current = true;
-      fetchProjectCharacters();
-    }
-  }, [fetchProjectCharacters, characters.length, isLoadingCharactersData]);
-
-  useEffect(() => {
-    hasInitialFetchCompleted.current = false;
-  }, [project.id]);
-
-  const handleOpenCreateCharacterModal = () => {
-    setIsCreateCharacterModalOpen(true);
-  };
 
   const middleColumn = (
     <>
@@ -58,16 +36,16 @@ export function CharactersSection({ project }: CharactersSectionProps) {
           <IconButton
             icon={PlusCircle}
             aria-label="New Character"
-            onClick={handleOpenCreateCharacterModal}
+            onClick={() => setIsCreateCharacterModalOpen(true)}
           />
         }
       />
       <CharacterList
         characters={characters}
         selectedCharacterId={selectedCharacter?.id}
-        onSelectCharacter={handleCharacterSelect}
-        onCreateNewCharacter={handleOpenCreateCharacterModal}
-        isLoading={isLoadingCharactersData && characters.length === 0} // Show loading only if list is empty and loading
+        onSelectCharacter={selectCharacter}
+        onCreateNewCharacter={() => setIsCreateCharacterModalOpen(true)}
+        isLoading={isLoading.characters && characters.length === 0}
       />
     </>
   );
@@ -76,7 +54,7 @@ export function CharactersSection({ project }: CharactersSectionProps) {
     <>
       {selectedCharacter ? (
         <CharacterCardEditor
-          key={selectedCharacter.id} // Important for re-rendering when selectedCharacter changes
+          key={selectedCharacter.id}
           initialData={{
             id: selectedCharacter.id,
             name: selectedCharacter.name,
@@ -85,13 +63,13 @@ export function CharactersSection({ project }: CharactersSectionProps) {
             image_url: selectedCharacter.image_url ?? "",
           }}
           onSave={async (data) => {
-            await handleSaveCharacterEditorData(data);
+            await updateCharacter(selectedCharacter.id, data);
           }}
           onDelete={async () => {
-            await handleCharacterDeleted(selectedCharacter.id);
+            await deleteCharacter(selectedCharacter.id);
           }}
         />
-      ) : isLoadingCharactersData && !selectedCharacter ? ( // Show loading specifically for detail pane if loading a character
+      ) : isLoading.characters ? (
         <div className="p-8 flex items-center justify-center h-full">
           <Paragraph className="text-muted-foreground">
             Loading character details...
@@ -115,13 +93,8 @@ export function CharactersSection({ project }: CharactersSectionProps) {
       />
       {isCreateCharacterModalOpen && (
         <CreateCharacterModal
-          projectId={project.id}
           isOpen={isCreateCharacterModalOpen}
           onClose={() => setIsCreateCharacterModalOpen(false)}
-          onCharacterCreated={(newCharacter) => {
-            handleCharacterCreated(newCharacter);
-            setIsCreateCharacterModalOpen(false);
-          }}
         />
       )}
     </>

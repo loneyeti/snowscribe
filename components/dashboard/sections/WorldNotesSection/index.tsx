@@ -1,7 +1,6 @@
-// components/dashboard/sections/WorldNotesSection/index.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import type { Project } from "@/lib/types";
-import { useWorldNotesData } from "@/hooks/dashboard/useWorldNotesData";
+import { useProjectStore } from "@/lib/stores/projectStore";
 import { WorldNoteList } from "@/components/world-notes/WorldNoteList";
 import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteModal";
 import { WorldNoteEditor, WorldNoteViewer } from "@/components/world-notes";
@@ -19,31 +18,17 @@ export function WorldNotesSection({ project }: WorldNotesSectionProps) {
   const {
     worldNotes,
     selectedWorldNote,
-    isLoadingWorldNotesData,
-    worldNotesFetchAttempted, // Consume the flag
-    fetchProjectWorldNotes,
-    handleWorldNoteSelect,
-    handleSaveWorldNoteEditorData,
-    handleWorldNoteDeleted,
-    handleWorldNoteCreated,
-    isEditingSelectedNote,
-    enableEditMode,
-    disableEditMode,
-  } = useWorldNotesData(project.id); // project.id as dependency for the hook instance
+    isEditingSelectedWorldNote,
+    isLoading,
+    selectWorldNote,
+    enableWorldNoteEditMode,
+    disableWorldNoteEditMode,
+    updateWorldNote,
+    deleteWorldNote,
+  } = useProjectStore();
 
   const [isCreateWorldNoteModalOpen, setIsCreateWorldNoteModalOpen] =
     useState(false);
-
-  useEffect(() => {
-    // Fetch only if not currently loading and fetch hasn't been attempted yet for this project.
-    if (!isLoadingWorldNotesData && !worldNotesFetchAttempted) {
-      fetchProjectWorldNotes();
-    }
-  }, [
-    isLoadingWorldNotesData,
-    worldNotesFetchAttempted,
-    fetchProjectWorldNotes,
-  ]);
 
   const handleOpenCreateWorldNoteModal = () => {
     setIsCreateWorldNoteModalOpen(true);
@@ -64,10 +49,9 @@ export function WorldNotesSection({ project }: WorldNotesSectionProps) {
       <WorldNoteList
         notes={worldNotes}
         selectedNoteId={selectedWorldNote?.id}
-        onSelectNote={handleWorldNoteSelect}
+        onSelectNote={selectWorldNote}
         onCreateNewNote={handleOpenCreateWorldNoteModal}
-        // Show loading only if a fetch hasn't been attempted yet AND it's currently loading
-        isLoading={isLoadingWorldNotesData && !worldNotesFetchAttempted}
+        isLoading={isLoading.worldNotes && worldNotes.length === 0}
       />
     </>
   );
@@ -75,27 +59,34 @@ export function WorldNotesSection({ project }: WorldNotesSectionProps) {
   const mainDetailColumn = (
     <>
       {selectedWorldNote ? (
-        isEditingSelectedNote ? (
+        isEditingSelectedWorldNote ? (
           <WorldNoteEditor
-            key={`${selectedWorldNote.id}-editor`} // Key ensures component re-mounts with new note data or mode change
+            key={`${selectedWorldNote.id}-editor`}
             projectId={project.id}
             note={selectedWorldNote}
-            onSave={async (updatedNote) => {
-              await handleSaveWorldNoteEditorData(updatedNote);
-              disableEditMode(); // Switch back to view mode after save
+            onSave={async (updatedNoteData) => {
+              // Ensure category and content are either string or undefined (not null)
+              const dataToSave = {
+                ...updatedNoteData,
+                category: updatedNoteData.category ?? undefined,
+                content: updatedNoteData.content ?? undefined,
+              };
+              await updateWorldNote(selectedWorldNote.id, dataToSave);
+              // The store will handle updating state, but we still need to exit edit mode.
+              disableWorldNoteEditMode();
             }}
-            onDelete={() => handleWorldNoteDeleted(selectedWorldNote.id)}
-            onCancelEdit={disableEditMode} // New prop for cancel button
+            onDelete={() => deleteWorldNote(selectedWorldNote.id)}
+            onCancelEdit={disableWorldNoteEditMode}
+            isSaving={isLoading.saving}
           />
         ) : (
           <WorldNoteViewer
             key={`${selectedWorldNote.id}-viewer`}
             note={selectedWorldNote}
-            onEditClick={enableEditMode} // Switch to edit mode
+            onEditClick={enableWorldNoteEditMode}
           />
         )
-      ) : isLoadingWorldNotesData && !worldNotesFetchAttempted ? (
-        // If loading for the first time (fetch not attempted), show loading in detail too
+      ) : isLoading.worldNotes ? (
         <div className="p-8 flex items-center justify-center h-full">
           <Paragraph className="text-muted-foreground">
             Loading notes...
@@ -122,8 +113,9 @@ export function WorldNotesSection({ project }: WorldNotesSectionProps) {
           projectId={project.id}
           isOpen={isCreateWorldNoteModalOpen}
           onClose={() => setIsCreateWorldNoteModalOpen(false)}
-          onNoteCreated={(newNote) => {
-            handleWorldNoteCreated(newNote);
+          onNoteCreated={() => {
+            // Store handles adding the note and selecting it.
+            // Just close the modal.
             setIsCreateWorldNoteModalOpen(false);
           }}
         />
