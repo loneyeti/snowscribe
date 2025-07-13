@@ -43,35 +43,19 @@ export function OutlineSection({
   } = useProjectStore();
 
   const handleSceneUpdate = useCallback(
-    async (
-      chapterId: string,
-      sceneId: string,
-      updatedData: {
-        title?: string | null;
-        content?: string | null;
-        order?: number | null;
-        outline_description?: string | null;
-        pov_character_id?: string | null;
-        tag_ids?: string[] | null;
-        primary_category?:
-          | "Action"
-          | "Dialogue"
-          | "Reflection"
-          | "Discovery"
-          | "Relationship"
-          | "Transition"
-          | "Worldbuilding"
-          | null;
-        other_character_ids?: string[] | null;
-      }
-    ) => {
-      await updateScene(sceneId, {
-        ...updatedData,
+    async (chapterId: string, sceneId: string, updatedData: Partial<Scene>) => {
+      await updateScene(chapterId, sceneId, {
         title: updatedData.title ?? undefined,
         content: updatedData.content ?? undefined,
-        order: updatedData.order ?? undefined,
-        tag_ids: updatedData.tag_ids ?? undefined,
-        other_character_ids: updatedData.other_character_ids ?? undefined,
+        order: updatedData.order,
+        outline_description: updatedData.outline_description,
+        pov_character_id: updatedData.pov_character_id,
+        primary_category: updatedData.primary_category,
+        // Transform complex properties to match the schema
+        tag_ids: updatedData.scene_applied_tags?.map((t) => t.tag_id),
+        other_character_ids: updatedData.scene_characters?.map(
+          (c) => c.character_id
+        ),
       });
     },
     [updateScene]

@@ -111,18 +111,24 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
   };
 
   const handleSaveSceneContent = async (text: string) => {
-    if (selectedScene) {
-      await updateSceneInStore(selectedScene.id, { content: text });
+    if (selectedScene && selectedChapter) {
+      await updateSceneInStore(selectedChapter.id, selectedScene.id, {
+        content: text,
+      });
     }
   };
 
   const handleSceneDetailsPanelUpdate = async (updatedData: Partial<Scene>) => {
-    if (selectedScene) {
+    if (selectedScene && selectedChapter) {
       // Filter out null values to match expected type
       const filteredData = Object.fromEntries(
         Object.entries(updatedData).filter(([_, value]) => value !== null)
       );
-      await updateSceneInStore(selectedScene.id, filteredData);
+      await updateSceneInStore(
+        selectedChapter.id,
+        selectedScene.id,
+        filteredData
+      );
     }
   };
 

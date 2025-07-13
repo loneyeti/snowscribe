@@ -17,8 +17,8 @@ export const sceneBaseSchema = z.object({
     'Relationship',
     'Transition',
     'Worldbuilding',
-  ]).nullable().optional(), // ADD THIS LINE
-  // word_count is handled by a database trigger, so not included in client-side schema for creation/update
+  ]).nullable().optional(), 
+  notes: z.string().nullable().optional(),
 });
 
 export const createSceneSchema = sceneBaseSchema.extend({

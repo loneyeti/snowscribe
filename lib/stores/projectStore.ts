@@ -4,7 +4,7 @@ import { type User } from '@supabase/supabase-js';
 import { countWords, getErrorMessage } from '@/lib/utils';
 import * as projectService from '@/lib/data/projects';
 import * as outlineCreator from '@/lib/ai/outlineCreator';
-import type { Project, Chapter, Scene, Character, WorldBuildingNote, SceneTag, CharacterFormValues, UpdateSceneValues } from '@/lib/types';
+import type { Project, Chapter, Scene, Character, WorldBuildingNote, SceneTag, CharacterFormValues, UpdateSceneValues, PrimarySceneCategory } from '@/lib/types';
 import type { UpdateProjectValues } from '@/lib/schemas/project.schema';
 import * as chapterData from '@/lib/data/chapters';
 import * as sceneData from '@/lib/data/scenes';
@@ -37,6 +37,18 @@ export interface ProjectState {
   };
 }
 
+interface ComprehensiveUpdateSceneValues {
+  title?: string | null; // UI might send null, we'll clean it up
+  content?: string | null;
+  order?: number;
+  outline_description?: string | null;
+  pov_character_id?: string | null;
+  primary_category?: PrimarySceneCategory | null; // Use the specific union type
+  notes?: string | null;
+  tag_ids?: string[];
+  other_character_ids?: string[];
+}
+
 export interface ProjectActions {
   initialize: (project: Project, user: User) => void;
   fetchChapters: () => Promise<void>;
@@ -50,8 +62,8 @@ export interface ProjectActions {
   enableWorldNoteEditMode: () => void;
   disableWorldNoteEditMode: () => void;
   createChapter: (title: string) => Promise<Chapter | undefined>;
-  createScene: (chapterId: string, title: string, primaryCategory: string) => Promise<Scene | undefined>;
-  updateScene: (sceneId: string, values: UpdateSceneValues) => Promise<void>;
+  createScene: (chapterId: string, title: string, primaryCategory: string) => Promise<Scene | undefined>; 
+  updateScene: (chapterId: string, sceneId: string, values: ComprehensiveUpdateSceneValues) => Promise<void>;
   reorderScenes: (chapterId: string, scenes: { id: string; order: number }[]) => Promise<void>;
   createCharacter: (data: CharacterFormValues) => Promise<Character | undefined>;
   updateCharacter: (characterId: string, data: Partial<CharacterFormValues>) => Promise<Character | undefined>;
@@ -207,47 +219,71 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     }
   },
 
-  updateScene: async (sceneId, values) => {
-    const { project, selectedChapter, chapters } = get();
-    if (!project || !selectedChapter) return;
+  updateScene: async (chapterId, sceneId, values) => {
+    const { project } = get();
+    if (!project || !chapterId) {
+      toast.error("Could not save scene: Missing project or chapter context.");
+      return;
+    }
+
+    set(state => ({ isLoading: { ...state.isLoading, saving: true } }));
 
     try {
-      // We will let the server update first to ensure consistency and get the final word count.
-      const updatedSceneFromServer = await sceneData.updateScene(project.id, selectedChapter.id, sceneId, values);
+      const { tag_ids, other_character_ids, ...sceneCoreData } = values;
       
-      set(state => {
-        const newChapters = state.chapters.map(c => {
-          if (c.id !== selectedChapter.id) return c;
-          
-          // Update the specific scene with the data from the server
-          const updatedScenes = c.scenes?.map(s => 
-            s.id === sceneId ? updatedSceneFromServer : s
-          ) || [];
-          
-          // Recalculate the chapter's total word count on the client side
-          const newWordCount = updatedScenes.reduce((total, scene) => {
-            // Manually count words from content to be 100% sure, as word_count field might not be on all scene objects
-            return total + countWords(scene.content);
-          }, 0);
-          
-          // Return the updated chapter with new scenes and new word count
-          return { ...c, scenes: updatedScenes, word_count: newWordCount };
-        });
+      // FIX 5: Type the promise array with a safer type than `any`
+      const updatePromises: Promise<unknown>[] = [];
 
-        const newSelectedScene = state.selectedScene?.id === sceneId 
-          ? updatedSceneFromServer 
-          : state.selectedScene;
-
-        return {
-          chapters: newChapters,
-          selectedScene: newSelectedScene,
-          isLoading: { ...state.isLoading, saving: false }
-        };
+      // FIX 3: Build an object that strictly conforms to UpdateSceneValues.
+      // The key is to handle fields that can't be null according to the schema.
+      const cleanSceneData: UpdateSceneValues = {
+        title: sceneCoreData.title ?? undefined, // Convert null to undefined
+        content: sceneCoreData.content ?? undefined,
+        order: sceneCoreData.order,
+        outline_description: sceneCoreData.outline_description,
+        pov_character_id: sceneCoreData.pov_character_id,
+        primary_category: sceneCoreData.primary_category,
+        notes: sceneCoreData.notes,
+      };
+      
+      // FIX 4: Remove 'any' and make this loop type-safe to remove undefined keys
+      Object.keys(cleanSceneData).forEach(key => {
+        const k = key as keyof UpdateSceneValues;
+        if (cleanSceneData[k] === undefined) {
+          delete cleanSceneData[k];
+        }
       });
+      
+      // Now the cleanSceneData object is guaranteed to be valid for the service function.
+      if (Object.keys(cleanSceneData).length > 0) {
+        updatePromises.push(
+          sceneData.updateScene(project.id, chapterId, sceneId, cleanSceneData)
+        );
+      }
 
-      toast.success("Saved.", { duration: 1500 });
-    } catch(e) {
-      toast.error("Failed to save scene. Your changes may be lost.");
+      if (other_character_ids !== undefined) {
+        updatePromises.push(
+          sceneData.updateSceneCharacters(project.id, sceneId, other_character_ids)
+        );
+      }
+
+      if (tag_ids !== undefined) {
+        updatePromises.push(
+          sceneData.updateSceneTags(project.id, sceneId, tag_ids)
+        );
+      }
+
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
+        await get().fetchChapters();
+        toast.success("Scene updated successfully.", { duration: 1500 });
+      } else {
+        toast.info("No changes to save.");
+      }
+
+    } catch (e) {
+      toast.error(`Failed to save scene: ${getErrorMessage(e)}`);
+    } finally {
       set(state => ({ isLoading: { ...state.isLoading, saving: false } }));
     }
   },
