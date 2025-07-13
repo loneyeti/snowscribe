@@ -10,6 +10,7 @@ import type {
   WorldBuildingNote,
   AIMessage,
 } from "@/lib/types";
+import { useProjectStore } from "@/lib/stores/projectStore";
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { AIToolSelector } from "@/components/ai/AIToolSelector";
 import {
@@ -29,10 +30,6 @@ import { Paragraph } from "@/components/typography/Paragraph";
 import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 
-import { getChaptersByProjectId } from "@/lib/data/chapters";
-import { getCharacters } from "@/lib/data/characters";
-import { useProjectData } from "@/contexts/ProjectDataContext";
-import { getWorldBuildingNotes } from "@/lib/data/worldBuildingNotes";
 import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteModal";
 
 interface AISectionProps {
@@ -54,34 +51,26 @@ export function AISection({ project }: AISectionProps) {
   } = useAIChat(project.id);
 
   // State for fetched context data
-  const [manuscriptChapters, setManuscriptChapters] = useState<
-    Chapter[] | null
-  >(null);
-  const [outlineData, setOutlineData] = useState<{
-    chapters: Chapter[];
-    characters: ProjectCharacter[];
-    sceneTags: SceneTag[];
-  } | null>(null);
-  const [charactersForChat, setCharactersForChat] = useState<
-    ProjectCharacter[] | null
-  >(null);
+  const {
+    chapters,
+    characters,
+    worldNotes,
+    sceneTags,
+    isLoading: isStoreLoading,
+  } = useProjectStore();
+
   const [selectedCharacterForChat, setSelectedCharacterForChat] =
     useState<ProjectCharacter | null>(null);
   const [allScenesForSelectedChar, setAllScenesForSelectedChar] = useState<
     Scene[] | null
   >(null);
-  const [worldNotes, setWorldNotes] = useState<WorldBuildingNote[] | null>(
-    null
-  );
+
   const [plotHoleContextType, setPlotHoleContextType] = useState<
     "manuscript" | "outline" | null
   >(null);
-  const [isContextLoading, setIsContextLoading] = useState(false);
 
   const [isCreateWorldNoteModalOpen, setIsCreateWorldNoteModalOpen] =
     useState(false);
-
-  const { allSceneTags } = useProjectData();
 
   const handleToolSelect = useCallback(
     (toolId: AIToolName) => {
@@ -95,110 +84,29 @@ export function AISection({ project }: AISectionProps) {
     [clearChat]
   );
 
-  // Fetch manuscript chapters when needed
-  useEffect(() => {
-    if (!selectedTool) return;
-
-    const shouldFetchManuscript =
-      (selectedTool === AI_TOOL_NAMES.MANUSCRIPT_CHAT ||
-        (selectedTool === AI_TOOL_NAMES.PLOT_HOLE_CHECKER &&
-          plotHoleContextType === "manuscript")) &&
-      !manuscriptChapters;
-
-    if (shouldFetchManuscript) {
-      setIsContextLoading(true);
-      getChaptersByProjectId(project.id)
-        .then(setManuscriptChapters)
-        .catch(console.error)
-        .finally(() => setIsContextLoading(false));
-    }
-  }, [selectedTool, plotHoleContextType, project.id]);
-
-  // Fetch outline data when needed
-  useEffect(() => {
-    if (!selectedTool) return;
-
-    const shouldFetchOutline =
-      (selectedTool === AI_TOOL_NAMES.OUTLINE_CHAT ||
-        (selectedTool === AI_TOOL_NAMES.PLOT_HOLE_CHECKER &&
-          plotHoleContextType === "outline")) &&
-      !outlineData;
-
-    if (shouldFetchOutline) {
-      setIsContextLoading(true);
-      Promise.all([
-        getChaptersByProjectId(project.id),
-        getCharacters(project.id),
-      ])
-        .then(([chapters, charactersList]) => {
-          setOutlineData({
-            chapters,
-            characters: charactersList,
-            sceneTags: allSceneTags,
-          });
-        })
-        .catch(console.error)
-        .finally(() => setIsContextLoading(false));
-    }
-  }, [selectedTool, plotHoleContextType, project.id, allSceneTags]);
-
-  // Fetch characters for chat
-  useEffect(() => {
-    if (selectedTool !== AI_TOOL_NAMES.CHARACTER_CHAT || charactersForChat)
-      return;
-
-    setIsContextLoading(true);
-    getCharacters(project.id)
-      .then(setCharactersForChat)
-      .catch(console.error)
-      .finally(() => setIsContextLoading(false));
-  }, [selectedTool, project.id, charactersForChat]);
-
   // Fetch character scenes
   useEffect(() => {
     if (
       selectedTool !== AI_TOOL_NAMES.CHARACTER_CHAT ||
       !selectedCharacterForChat
-    )
+    ) {
+      setAllScenesForSelectedChar(null);
       return;
-
-    setIsContextLoading(true);
-    getChaptersByProjectId(project.id)
-      .then((allChapters) => {
-        const scenesCharacterIsIn: Scene[] = [];
-        allChapters.forEach((chapter) => {
-          chapter.scenes?.forEach((scene) => {
-            const isPov =
-              scene.pov_character_id === selectedCharacterForChat.id;
-            const isOther = scene.scene_characters?.some(
-              (char) => char.character_id === selectedCharacterForChat.id
-            );
-            if (isPov || isOther) scenesCharacterIsIn.push(scene);
-          });
-        });
-        setAllScenesForSelectedChar(scenesCharacterIsIn);
-      })
-      .catch(console.error)
-      .finally(() => setIsContextLoading(false));
-  }, [
-    selectedTool,
-    project.id,
-    selectedCharacterForChat,
-    manuscriptChapters,
-    outlineData,
-  ]);
-
-  // Fetch world notes
-  useEffect(() => {
-    if (selectedTool !== AI_TOOL_NAMES.WORLD_BUILDING_CHAT || worldNotes)
-      return;
-
-    setIsContextLoading(true);
-    getWorldBuildingNotes(project.id)
-      .then(setWorldNotes)
-      .catch(console.error)
-      .finally(() => setIsContextLoading(false));
-  }, [selectedTool, project.id, worldNotes]);
+    }
+    const scenesCharacterIsIn: Scene[] = [];
+    chapters.forEach((chapter) => {
+      chapter.scenes?.forEach((scene) => {
+        const isPov = scene.pov_character_id === selectedCharacterForChat.id;
+        const isOther = scene.scene_characters?.some(
+          (char) => char.character_id === selectedCharacterForChat.id
+        );
+        if (isPov || isOther) {
+          scenesCharacterIsIn.push(scene);
+        }
+      });
+    });
+    setAllScenesForSelectedChar(scenesCharacterIsIn);
+  }, [selectedTool, selectedCharacterForChat, chapters]);
 
   const handleSendMessageWrapper = async (userText: string) => {
     if (!selectedTool || !activeToolDefinition) {
@@ -211,18 +119,22 @@ export function AISection({ project }: AISectionProps) {
 
     switch (selectedTool) {
       case AI_TOOL_NAMES.MANUSCRIPT_CHAT:
-        if (!manuscriptChapters) {
+        if (isStoreLoading.chapters) {
           toast.error("Manuscript data not loaded.");
           return;
         }
-        contextForAI = { chapters: manuscriptChapters };
+        contextForAI = { chapters };
         break;
       case AI_TOOL_NAMES.OUTLINE_CHAT:
-        if (!outlineData) {
+        if (
+          isStoreLoading.chapters ||
+          isStoreLoading.characters ||
+          isStoreLoading.sceneTags
+        ) {
           toast.error("Outline data not loaded.");
           return;
         }
-        contextForAI = outlineData;
+        contextForAI = { chapters, characters, sceneTags };
         break;
       case AI_TOOL_NAMES.CHARACTER_CHAT:
         if (!selectedCharacterForChat) {
@@ -230,7 +142,7 @@ export function AISection({ project }: AISectionProps) {
           return;
         }
         // Check if the scene context is still loading or hasn't been fetched
-        if (isContextLoading || allScenesForSelectedChar === null) {
+        if (allScenesForSelectedChar === null) {
           toast.info(
             `Scene context for ${selectedCharacterForChat.name} is loading. Please wait.`
           );
@@ -243,7 +155,7 @@ export function AISection({ project }: AISectionProps) {
         toolNameToUseInAIService = AI_TOOL_NAMES.CHARACTER_CHAT;
         break;
       case AI_TOOL_NAMES.WORLD_BUILDING_CHAT:
-        if (!worldNotes) {
+        if (isStoreLoading.worldNotes) {
           toast.error("World notes not loaded.");
           return;
         }
@@ -257,18 +169,22 @@ export function AISection({ project }: AISectionProps) {
           return;
         }
         if (plotHoleContextType === "manuscript") {
-          if (!manuscriptChapters) {
+          if (isStoreLoading.chapters) {
             toast.error("Manuscript data not loaded for Plot Hole Checker.");
             return;
           }
-          contextForAI = { chapters: manuscriptChapters };
+          contextForAI = { chapters };
           toolNameToUseInAIService = AI_TOOL_NAMES.PLOT_HOLE_CHECKER_MANUSCRIPT;
         } else {
-          if (!outlineData) {
+          if (
+            isStoreLoading.chapters ||
+            isStoreLoading.characters ||
+            isStoreLoading.sceneTags
+          ) {
             toast.error("Outline data not loaded for Plot Hole Checker.");
             return;
           }
-          contextForAI = outlineData;
+          contextForAI = { chapters, characters, sceneTags };
           toolNameToUseInAIService = AI_TOOL_NAMES.PLOT_HOLE_CHECKER_OUTLINE;
         }
         break;
@@ -291,8 +207,11 @@ export function AISection({ project }: AISectionProps) {
       return;
     }
     if (
-      (plotHoleContextType === "manuscript" && !manuscriptChapters) ||
-      (plotHoleContextType === "outline" && !outlineData)
+      (plotHoleContextType === "manuscript" && isStoreLoading.chapters) ||
+      (plotHoleContextType === "outline" &&
+        (isStoreLoading.chapters ||
+          isStoreLoading.characters ||
+          isStoreLoading.sceneTags))
     ) {
       toast.info("Context data is still loading. Please wait and try again.");
       return;
@@ -335,16 +254,6 @@ export function AISection({ project }: AISectionProps) {
     }
   };
 
-  const handleWorldNoteCreated = (newNote: WorldBuildingNote) => {
-    setWorldNotes((prev) =>
-      prev
-        ? [...prev, newNote].sort((a, b) => a.title.localeCompare(b.title))
-        : [newNote]
-    );
-    toast.success(`Note "${newNote.title}" created from chat!`);
-    setIsCreateWorldNoteModalOpen(false);
-  };
-
   const worldBuildingChatActions: CustomAction[] = [
     {
       label: "Create World Note From Last AI Response",
@@ -383,7 +292,7 @@ export function AISection({ project }: AISectionProps) {
             </Paragraph>
           </div>
 
-          {isContextLoading &&
+          {isStoreLoading.chapters &&
             selectedTool !== AI_TOOL_NAMES.WRITING_COACH &&
             selectedTool !== AI_TOOL_NAMES.CHARACTER_NAME_GENERATOR && (
               <Paragraph>Loading context data...</Paragraph>
@@ -391,8 +300,7 @@ export function AISection({ project }: AISectionProps) {
 
           {/* Manuscript Chat */}
           {selectedTool === AI_TOOL_NAMES.MANUSCRIPT_CHAT &&
-            manuscriptChapters &&
-            !isContextLoading && (
+            !isStoreLoading.chapters && (
               <MultiTurnChatInterface
                 uiMessages={uiMessages}
                 isLoading={isChatLoading}
@@ -404,8 +312,9 @@ export function AISection({ project }: AISectionProps) {
 
           {/* Outline Chat */}
           {selectedTool === AI_TOOL_NAMES.OUTLINE_CHAT &&
-            outlineData &&
-            !isContextLoading && (
+            !isStoreLoading.chapters &&
+            !isStoreLoading.characters &&
+            !isStoreLoading.sceneTags && (
               <MultiTurnChatInterface
                 uiMessages={uiMessages}
                 isLoading={isChatLoading}
@@ -417,17 +326,17 @@ export function AISection({ project }: AISectionProps) {
 
           {/* Character Chat */}
           {selectedTool === AI_TOOL_NAMES.CHARACTER_CHAT &&
-            !isContextLoading && (
+            !isStoreLoading.characters && (
               <div className="flex flex-col flex-grow">
                 {!selectedCharacterForChat &&
-                  charactersForChat &&
-                  charactersForChat.length > 0 && (
+                  characters &&
+                  characters.length > 0 && (
                     <div className="mb-4">
                       <Paragraph className="mb-2">
                         Select a character to chat with:
                       </Paragraph>
                       <div className="flex flex-wrap gap-2">
-                        {charactersForChat.map((char) => (
+                        {characters.map((char) => (
                           <Button
                             key={char.id}
                             variant="outline"
@@ -440,18 +349,19 @@ export function AISection({ project }: AISectionProps) {
                     </div>
                   )}
                 {!selectedCharacterForChat &&
-                  charactersForChat &&
-                  charactersForChat.length === 0 && (
+                  characters &&
+                  characters.length === 0 && (
                     <Paragraph>
                       No characters found. Create characters in the Characters
                       section.
                     </Paragraph>
                   )}
-                {!selectedCharacterForChat && !charactersForChat && (
+                {!selectedCharacterForChat && !characters && (
                   <Paragraph>Loading characters...</Paragraph>
                 )}
                 {selectedCharacterForChat &&
-                  (isContextLoading || allScenesForSelectedChar === null) && (
+                  (isStoreLoading.chapters ||
+                    allScenesForSelectedChar === null) && (
                     <Paragraph className="text-center p-4">
                       Loading all scene context for{" "}
                       {selectedCharacterForChat.name}...
@@ -459,7 +369,7 @@ export function AISection({ project }: AISectionProps) {
                   )}
 
                 {selectedCharacterForChat &&
-                  !isContextLoading &&
+                  !isStoreLoading.chapters &&
                   allScenesForSelectedChar !== null && (
                     <MultiTurnChatInterface
                       uiMessages={uiMessages}
@@ -474,8 +384,7 @@ export function AISection({ project }: AISectionProps) {
 
           {/* World Building Chat */}
           {selectedTool === AI_TOOL_NAMES.WORLD_BUILDING_CHAT &&
-            worldNotes &&
-            !isContextLoading && (
+            !isStoreLoading.worldNotes && (
               <MultiTurnChatInterface
                 uiMessages={uiMessages}
                 isLoading={isChatLoading}
@@ -531,9 +440,7 @@ export function AISection({ project }: AISectionProps) {
                 </Button>
                 <Button
                   onClick={handlePlotHoleCheckTrigger}
-                  disabled={
-                    !plotHoleContextType || isContextLoading || isChatLoading
-                  }
+                  disabled={!plotHoleContextType || isChatLoading}
                 >
                   {isChatLoading ? "Analyzing..." : "Check for Plot Holes"}
                 </Button>
@@ -543,17 +450,15 @@ export function AISection({ project }: AISectionProps) {
                   </Paragraph>
                 )}
               </div>
-              {plotHoleContextType &&
-                !isContextLoading &&
-                (manuscriptChapters || outlineData) && (
-                  <MultiTurnChatInterface
-                    uiMessages={uiMessages}
-                    isLoading={isChatLoading}
-                    error={chatError}
-                    onSendMessage={handleSendMessageWrapper}
-                    className="flex-grow"
-                  />
-                )}
+              {plotHoleContextType && !isStoreLoading.chapters && (
+                <MultiTurnChatInterface
+                  uiMessages={uiMessages}
+                  isLoading={isChatLoading}
+                  error={chatError}
+                  onSendMessage={handleSendMessageWrapper}
+                  className="flex-grow"
+                />
+              )}
             </div>
           )}
         </>
@@ -569,10 +474,8 @@ export function AISection({ project }: AISectionProps) {
       />
       {isCreateWorldNoteModalOpen && (
         <CreateWorldNoteModal
-          projectId={project.id}
           isOpen={isCreateWorldNoteModalOpen}
           onClose={() => setIsCreateWorldNoteModalOpen(false)}
-          onNoteCreated={handleWorldNoteCreated}
         />
       )}
     </>

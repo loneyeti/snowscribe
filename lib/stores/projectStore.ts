@@ -93,7 +93,7 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     if (!projectId) return;
     set(state => ({ isLoading: { ...state.isLoading, chapters: true } }));
     try {
-      const chapters = await chapterData.getChapters(projectId);
+      const chapters = await chapterData.getChaptersWithScenes(projectId);
       set({ chapters: chapters.sort((a,b) => a.order - b.order), isLoading: { ...get().isLoading, chapters: false } });
     } catch (e) { toast.error(`Failed to load chapters: ${e instanceof Error ? e.message : String(e)}`); set(state => ({ isLoading: { ...state.isLoading, chapters: false } })); }
   },
@@ -129,18 +129,7 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
   },
 
   selectChapter: async (chapter) => {
-    set({ selectedChapter: chapter, selectedScene: null, isLoading: { ...get().isLoading, scenes: !!chapter } });
-    const projectId = get().project?.id;
-    if (chapter && projectId) {
-      try {
-        const scenes = await sceneData.getScenesByChapterId(projectId, chapter.id);
-        const sortedScenes = scenes.sort((a, b) => a.order - b.order);
-        set(state => ({
-          chapters: state.chapters.map(c => c.id === chapter.id ? { ...c, scenes: sortedScenes } : c),
-          isLoading: { ...state.isLoading, scenes: false }
-        }));
-      } catch (e) { toast.error(`Failed to load scenes: ${e instanceof Error ? e.message : String(e)}`); set(state => ({ isLoading: { ...state.isLoading, scenes: false } })); }
-    }
+    set({ selectedChapter: chapter, selectedScene: null });
   },
   
   selectScene: (scene) => set({ selectedScene: scene }),
