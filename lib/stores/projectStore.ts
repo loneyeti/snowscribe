@@ -51,6 +51,7 @@ interface ComprehensiveUpdateSceneValues {
 
 export interface ProjectActions {
   initialize: (project: Project, user: User) => void;
+  initializeAll: (initialState: Partial<ProjectState>, user: User) => void;
   fetchChapters: () => Promise<void>;
   fetchCharacters: () => Promise<void>;
   fetchWorldNotes: () => Promise<void>;
@@ -73,9 +74,10 @@ export interface ProjectActions {
   deleteWorldNote: (noteId: string) => Promise<void>;
   updateProjectDetails: (details: Partial<UpdateProjectValues>) => Promise<void>;
   generateAIFullOutline: () => Promise<void>;
+  deepLinkToScene: (chapterId: string, sceneId: string) => Promise<void>;
 }
 
-export const useProjectStore = create<ProjectState & ProjectActions>((set, get) => ({
+export const useProjectStore = create<ProjectState & ProjectActions>()((set, get) => ({
   project: null,
   user: null,
   chapters: [],
@@ -93,11 +95,30 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
   },
 
   initialize: (project, user) => {
+    /*
     set({ project, user, isLoading: { ...get().isLoading, project: false } });
     get().fetchChapters();
     get().fetchCharacters();
     get().fetchWorldNotes();
     get().fetchSceneTags();
+    */
+  },
+
+    initializeAll: (initialState, user) => {
+    set({
+      ...initialState, // Spread all the pre-fetched data into the store
+      user,
+      isLoading: { // Set all loading states to false
+        project: false,
+        chapters: false,
+        scenes: false,
+        characters: false,
+        worldNotes: false,
+        sceneTags: false,
+        saving: false,
+        generatingOutline: false,
+      },
+    });
   },
 
   fetchChapters: async () => {
@@ -191,7 +212,10 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     try {
       const newChapter = await chapterData.createChapter(projectId, { title });
       toast.success("Chapter created!");
-      await get().fetchChapters(); // Re-fetch to ensure order is correct
+      set(state => ({
+        // Add the new chapter to the end and re-sort by the 'order' property
+        chapters: [...state.chapters, newChapter].sort((a, b) => a.order - b.order),
+      }));
       return newChapter;
     } catch (e) {
       toast.error("Failed to create chapter.");
@@ -205,12 +229,32 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     set(state => ({ isLoading: { ...state.isLoading, saving: true } }));
     try {
       const newScene = await sceneData.createScene(projectId, chapterId, { title, primary_category: primaryCategory });
-      set({ selectedScene: newScene });
       toast.success("Scene created!");
       // Re-fetch scenes for the current chapter to update the list
-      if (get().selectedChapter) {
-        await get().selectChapter(get().chapters.find(c => c.id === chapterId) || null);
-      }
+      set(state => {
+        // Find the chapter to update
+        const chapterToUpdate = state.chapters.find(c => c.id === chapterId);
+        if (!chapterToUpdate) return {}; // Safety check
+
+        // Calculate the new word count for the chapter
+        const newChapterWordCount = (chapterToUpdate.word_count || 0) + (newScene.word_count || 0);
+
+        return {
+          // Update the chapters array
+          chapters: state.chapters.map(ch =>
+            ch.id === chapterId
+              ? {
+                  ...ch,
+                  word_count: newChapterWordCount, // 👈 Update word count
+                  // Add the new scene to the chapter's scenes array and re-sort
+                  scenes: [...(ch.scenes || []), newScene].sort((a, b) => a.order - b.order)
+                }
+              : ch
+          ),
+          // Also set the new scene as the selected one for immediate viewing
+          selectedScene: newScene,
+        };
+      });
       return newScene;
     } catch (e) {
       toast.error("Failed to create scene.");
@@ -219,6 +263,9 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     }
   },
 
+// In lib/stores/projectStore.ts
+// Replace your entire updateScene function with this one.
+
   updateScene: async (chapterId, sceneId, values) => {
     const { project } = get();
     if (!project || !chapterId) {
@@ -226,62 +273,103 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
       return;
     }
 
+    // 1. Save the original state for potential rollback on error.
+    const originalChapters = get().chapters;
+
+    // 2. Optimistic UI: Update the local state immediately for a snappy user experience.
+    set(state => {
+      const newChapters = state.chapters.map(chapter => {
+        if (chapter.id === chapterId) {
+          return {
+            ...chapter,
+            scenes: (chapter.scenes || []).map(scene =>
+              scene.id === sceneId ? { ...scene, ...values } : scene
+            ),
+          };
+        }
+        return chapter;
+      });
+      return { chapters: newChapters };
+    });
+
     set(state => ({ isLoading: { ...state.isLoading, saving: true } }));
 
     try {
+      // 3. SERVER UPDATE PREPARATION:
       const { tag_ids, other_character_ids, ...sceneCoreData } = values;
-      
-      // FIX 5: Type the promise array with a safer type than `any`
-      const updatePromises: Promise<unknown>[] = [];
 
-      // FIX 3: Build an object that strictly conforms to UpdateSceneValues.
-      // The key is to handle fields that can't be null according to the schema.
-      const cleanSceneData: UpdateSceneValues = {
-        title: sceneCoreData.title ?? undefined, // Convert null to undefined
-        content: sceneCoreData.content ?? undefined,
+      // FIX: Sanitize the data to match the UpdateSceneValues type.
+      // This converts any `null` values (which are not allowed for some fields
+      // like `title`) into `undefined`, which tells Zod to ignore them.
+      const dataForUpdate: UpdateSceneValues = {
         order: sceneCoreData.order,
+        title: sceneCoreData.title ?? undefined, // Converts null to undefined
+        content: sceneCoreData.content ?? undefined,
         outline_description: sceneCoreData.outline_description,
-        pov_character_id: sceneCoreData.pov_character_id,
-        primary_category: sceneCoreData.primary_category,
+        pov_character_id: sceneCoreData.pov_character_id, // This field allows null, so no change needed
+        primary_category: sceneCoreData.primary_category, // This field allows null
         notes: sceneCoreData.notes,
       };
-      
-      // FIX 4: Remove 'any' and make this loop type-safe to remove undefined keys
-      Object.keys(cleanSceneData).forEach(key => {
+
+      // Now, remove any keys that are strictly undefined. This cleans the object
+      // so we only send the fields that actually have a value to update.
+      Object.keys(dataForUpdate).forEach(key => {
         const k = key as keyof UpdateSceneValues;
-        if (cleanSceneData[k] === undefined) {
-          delete cleanSceneData[k];
+        if (dataForUpdate[k] === undefined) {
+          delete dataForUpdate[k];
         }
       });
       
-      // Now the cleanSceneData object is guaranteed to be valid for the service function.
-      if (Object.keys(cleanSceneData).length > 0) {
+      const updatePromises: Promise<unknown>[] = [];
+
+      if (Object.keys(dataForUpdate).length > 0) {
         updatePromises.push(
-          sceneData.updateScene(project.id, chapterId, sceneId, cleanSceneData)
+          sceneData.updateScene(project.id, chapterId, sceneId, dataForUpdate)
         );
       }
-
       if (other_character_ids !== undefined) {
         updatePromises.push(
           sceneData.updateSceneCharacters(project.id, sceneId, other_character_ids)
         );
       }
-
       if (tag_ids !== undefined) {
         updatePromises.push(
           sceneData.updateSceneTags(project.id, sceneId, tag_ids)
         );
       }
 
-      if (updatePromises.length > 0) {
-        await Promise.all(updatePromises);
-        await get().fetchChapters();
-        toast.success("Scene updated successfully.", { duration: 1500 });
-      } else {
+      if (updatePromises.length === 0) {
         toast.info("No changes to save.");
+        // Exit early if there's nothing to do, but make sure to turn off loading.
+        set(state => ({ isLoading: { ...state.isLoading, saving: false } }));
+        return; 
       }
+      
+      await Promise.all(updatePromises);
+
+      // 4. RECONCILIATION: Fetch ONLY the updated chapter to get the final, accurate state.
+      const fullyUpdatedChapter = await chapterData.getChapterWithScenesById(project.id, chapterId);
+      
+      if (fullyUpdatedChapter) {
+        set(state => ({
+          chapters: state.chapters.map(c => c.id === chapterId ? fullyUpdatedChapter : c),
+          // Also update the selected scene if it's the one we just edited
+          selectedScene: state.selectedScene?.id === sceneId 
+            ? fullyUpdatedChapter.scenes?.find(s => s.id === sceneId) || state.selectedScene 
+            : state.selectedScene,
+        }));
+      } else {
+        // Fallback if the single chapter fetch fails, which is unlikely but safe.
+        // In this edge case, we'll refetch all chapters to ensure consistency.
+        const allChapters = await chapterData.getChaptersWithScenes(project.id);
+        set({ chapters: allChapters });
+      }
+      
+      toast.success("Scene updated successfully.", { duration: 1500 });
 
     } catch (e) {
+      // 5. ERROR HANDLING: If any server call fails, revert the UI to its original state.
+      set({ chapters: originalChapters });
       toast.error(`Failed to save scene: ${getErrorMessage(e)}`);
     } finally {
       set(state => ({ isLoading: { ...state.isLoading, saving: false } }));
@@ -305,8 +393,10 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     try {
       const newCharacter = await characterData.createCharacter(projectId, data);
       toast.success("Character created!");
-      await get().fetchCharacters(); // Re-fetch all characters
-      set({ selectedCharacter: get().characters.find(c => c.id === newCharacter.id) });
+      set(state => ({
+        characters: [...state.characters, newCharacter].sort((a,b) => a.name.localeCompare(b.name)),
+        selectedCharacter: newCharacter,
+      }));
       return newCharacter;
     } catch(e) {
       toast.error("Failed to create character.");
@@ -321,10 +411,10 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     try {
       const updatedCharacter = await characterData.updateCharacter(projectId, characterId, data);
       toast.success("Character updated!");
-      await get().fetchCharacters(); // Re-fetch all characters
-      if (get().selectedCharacter?.id === characterId) {
-        set({ selectedCharacter: get().characters.find(c => c.id === characterId) });
-      }
+      set(state => ({
+        characters: state.characters.map(c => c.id === characterId ? updatedCharacter : c),
+        selectedCharacter: state.selectedCharacter?.id === characterId ? updatedCharacter : state.selectedCharacter,
+      }));
       return updatedCharacter;
     } catch(e) { toast.error("Failed to update character."); }
     finally { set(state => ({ isLoading: { ...state.isLoading, saving: false } })); }
@@ -336,10 +426,10 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     try {
       await characterData.deleteCharacter(projectId, characterId);
       toast.success("Character deleted.");
-      if (get().selectedCharacter?.id === characterId) {
-        set({ selectedCharacter: null });
-      }
-      await get().fetchCharacters(); // Re-fetch all characters
+      set(state => ({
+        characters: state.characters.filter(c => c.id !== characterId),
+        selectedCharacter: state.selectedCharacter?.id === characterId ? null : state.selectedCharacter,
+      }));
     } catch(e) { toast.error("Failed to delete character."); }
     finally { set(state => ({ isLoading: { ...state.isLoading, saving: false } })); }
   },
@@ -350,8 +440,10 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     try {
       const newNote = await worldNoteData.createWorldBuildingNote(projectId, noteData);
       toast.success("World note created!");
-      await get().fetchWorldNotes();
-      set({ selectedWorldNote: get().worldNotes.find(n => n.id === newNote.id) });
+      set(state => ({
+        worldNotes: [...state.worldNotes, newNote].sort((a,b) => a.title.localeCompare(b.title)),
+        selectedWorldNote: newNote,
+      }));
       return newNote;
     } catch(e) {
       toast.error("Failed to create world note.");
@@ -366,10 +458,10 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     try {
       const updatedNote = await worldNoteData.updateWorldBuildingNote(projectId, noteId, noteData);
       toast.success("World note updated!");
-      await get().fetchWorldNotes();
-      if (get().selectedWorldNote?.id === noteId) {
-        set({ selectedWorldNote: get().worldNotes.find(n => n.id === noteId) });
-      }
+      set(state => ({
+        worldNotes: state.worldNotes.map(n => n.id === noteId ? updatedNote : n),
+        selectedWorldNote: state.selectedWorldNote?.id === noteId ? updatedNote : state.selectedWorldNote,
+      }));
       return updatedNote;
     } catch(e) { toast.error("Failed to update world note."); }
     finally { set(state => ({ isLoading: { ...state.isLoading, saving: false } })); }
@@ -381,10 +473,10 @@ export const useProjectStore = create<ProjectState & ProjectActions>((set, get) 
     try {
       await worldNoteData.deleteWorldBuildingNote(projectId, noteId);
       toast.success("World note deleted.");
-      if (get().selectedWorldNote?.id === noteId) {
-        set({ selectedWorldNote: null });
-      }
-      await get().fetchWorldNotes();
+      set(state => ({
+        worldNotes: state.worldNotes.filter(n => n.id !== noteId),
+        selectedWorldNote: state.selectedWorldNote?.id === noteId ? null : state.selectedWorldNote,
+      }));
     } catch(e) { toast.error("Failed to delete world note."); }
     finally { set(state => ({ isLoading: { ...state.isLoading, saving: false } })); }
   },
@@ -439,6 +531,40 @@ generateAIFullOutline: async () => {
     toast.error(`Outline Generation Failed: ${getErrorMessage(e)}`, { id: toastId });
   } finally {
     set(state => ({ isLoading: { ...state.isLoading, generatingOutline: false } }));
+  }
+},
+
+deepLinkToScene: async (chapterId, sceneId) => {
+  const { project, chapters, selectChapter, selectScene, fetchChapters } = get();
+  if (!project) return;
+
+  const toastId = toast.loading("Navigating to scene...");
+  try {
+    // Fetch chapters if they aren't loaded
+    let allChapters = chapters;
+    if (allChapters.length === 0) {
+      await fetchChapters();
+      allChapters = get().chapters; // Get the updated chapters
+    }
+
+    const targetChapter = allChapters.find(c => c.id === chapterId);
+    if (!targetChapter) throw new Error("Chapter specified in URL not found.");
+    
+    // selectChapter now fetches scenes implicitly
+    await selectChapter(targetChapter);
+    
+    // Find and select the scene
+    const targetScene = targetChapter.scenes?.find(s => s.id === sceneId);
+    if (!targetScene) throw new Error("Scene specified in URL not found.");
+
+    selectScene(targetScene);
+    
+    toast.success("Navigated to scene successfully!", { id: toastId });
+
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "Could not navigate to the specified scene.", { id: toastId });
+    selectChapter(null); // Reset state on failure
+    selectScene(null);
   }
 },
 }));

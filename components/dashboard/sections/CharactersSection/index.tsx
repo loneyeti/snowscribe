@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { Project } from "@/lib/types";
+import { useShallow } from "zustand/react/shallow";
 import { useProjectStore } from "@/lib/stores/projectStore";
 import { CharacterList } from "@/components/characters/CharacterList";
 import { CharacterCardEditor } from "@/components/editors/CharacterCardEditor";
@@ -15,15 +16,17 @@ interface CharactersSectionProps {
 }
 
 export function CharactersSection({ project }: CharactersSectionProps) {
-  const {
-    characters,
-    selectedCharacter,
-    isLoading,
-    selectCharacter,
-    createCharacter, // Get the action from the store
-    updateCharacter,
-    deleteCharacter,
-  } = useProjectStore();
+  const { characters, selectedCharacter, isLoading } = useProjectStore(
+    useShallow((state) => ({
+      characters: state.characters,
+      selectedCharacter: state.selectedCharacter,
+      isLoading: state.isLoading,
+    }))
+  );
+
+  const selectCharacter = useProjectStore((state) => state.selectCharacter);
+  const updateCharacter = useProjectStore((state) => state.updateCharacter);
+  const deleteCharacter = useProjectStore((state) => state.deleteCharacter);
 
   const [isCreateCharacterModalOpen, setIsCreateCharacterModalOpen] =
     useState(false);

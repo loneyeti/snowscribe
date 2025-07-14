@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { Project } from "@/lib/types";
+import { useShallow } from "zustand/react/shallow";
 import { useProjectStore } from "@/lib/stores/projectStore";
 import { WorldNoteList } from "@/components/world-notes/WorldNoteList";
 import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteModal";
@@ -20,13 +21,24 @@ export function WorldNotesSection({ project }: WorldNotesSectionProps) {
     selectedWorldNote,
     isEditingSelectedWorldNote,
     isLoading,
-    selectWorldNote,
-    enableWorldNoteEditMode,
-    disableWorldNoteEditMode,
-    updateWorldNote,
-    deleteWorldNote,
-  } = useProjectStore();
+  } = useProjectStore(
+    useShallow((state) => ({
+      worldNotes: state.worldNotes,
+      selectedWorldNote: state.selectedWorldNote,
+      isEditingSelectedWorldNote: state.isEditingSelectedWorldNote,
+      isLoading: state.isLoading,
+    }))
+  );
 
+  const selectWorldNote = useProjectStore((state) => state.selectWorldNote);
+  const enableWorldNoteEditMode = useProjectStore(
+    (state) => state.enableWorldNoteEditMode
+  );
+  const disableWorldNoteEditMode = useProjectStore(
+    (state) => state.disableWorldNoteEditMode
+  );
+  const updateWorldNote = useProjectStore((state) => state.updateWorldNote);
+  const deleteWorldNote = useProjectStore((state) => state.deleteWorldNote);
   const [isCreateWorldNoteModalOpen, setIsCreateWorldNoteModalOpen] =
     useState(false);
 
@@ -110,14 +122,15 @@ export function WorldNotesSection({ project }: WorldNotesSectionProps) {
       />
       {isCreateWorldNoteModalOpen && (
         <CreateWorldNoteModal
-          projectId={project.id}
+          //projectId={project.id}
           isOpen={isCreateWorldNoteModalOpen}
           onClose={() => setIsCreateWorldNoteModalOpen(false)}
+          /*
           onNoteCreated={() => {
             // Store handles adding the note and selecting it.
             // Just close the modal.
             setIsCreateWorldNoteModalOpen(false);
-          }}
+          }} */
         />
       )}
     </>

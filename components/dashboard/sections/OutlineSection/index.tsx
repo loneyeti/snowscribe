@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useCallback } from "react";
 import type { Project, Scene } from "@/lib/types";
+import { useShallow } from "zustand/react/shallow";
 import { useProjectStore } from "@/lib/stores/projectStore";
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { ListContainer } from "@/components/ui/ListContainer";
@@ -30,17 +31,26 @@ export function OutlineSection({
   const [isOutlineCreatorModalOpen, setIsOutlineCreatorModalOpen] =
     useState(false);
 
-  const {
-    project,
-    chapters,
-    characters,
-    sceneTags,
-    isLoading,
-    updateProjectDetails,
-    generateAIFullOutline,
-    fetchChapters,
-    updateScene,
-  } = useProjectStore();
+  const { project, chapters, characters, sceneTags, isLoading } =
+    useProjectStore(
+      useShallow((state) => ({
+        project: state.project,
+        chapters: state.chapters,
+        characters: state.characters,
+        sceneTags: state.sceneTags,
+        isLoading: state.isLoading,
+      }))
+    );
+
+  // 2. Select all actions individually
+  const updateProjectDetails = useProjectStore(
+    (state) => state.updateProjectDetails
+  );
+  const generateAIFullOutline = useProjectStore(
+    (state) => state.generateAIFullOutline
+  );
+  const fetchChapters = useProjectStore((state) => state.fetchChapters);
+  const updateScene = useProjectStore((state) => state.updateScene);
 
   const handleSceneUpdate = useCallback(
     async (chapterId: string, sceneId: string, updatedData: Partial<Scene>) => {

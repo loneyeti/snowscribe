@@ -3,13 +3,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import type {
   Project,
-  Chapter,
   Character as ProjectCharacter,
   Scene,
-  SceneTag,
-  WorldBuildingNote,
   AIMessage,
 } from "@/lib/types";
+import { useShallow } from "zustand/react/shallow";
 import { useProjectStore } from "@/lib/stores/projectStore";
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { AIToolSelector } from "@/components/ai/AIToolSelector";
@@ -51,13 +49,16 @@ export function AISection({ project }: AISectionProps) {
   } = useAIChat(project.id);
 
   // State for fetched context data
-  const {
-    chapters,
-    characters,
-    worldNotes,
-    sceneTags,
-    isLoading: isStoreLoading,
-  } = useProjectStore();
+  const { chapters, characters, worldNotes, sceneTags, isStoreLoading } =
+    useProjectStore(
+      useShallow((state) => ({
+        chapters: state.chapters,
+        characters: state.characters,
+        worldNotes: state.worldNotes,
+        sceneTags: state.sceneTags,
+        isStoreLoading: state.isLoading, // Using alias from original code
+      }))
+    );
 
   const [selectedCharacterForChat, setSelectedCharacterForChat] =
     useState<ProjectCharacter | null>(null);

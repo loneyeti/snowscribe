@@ -2,12 +2,7 @@ import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { extractJsonFromString } from "@/lib/utils";
 
-import type {
-  Scene,
-  Character,
-  SceneTag,
-  PrimarySceneCategory,
-} from "@/lib/types";
+import type { Scene, Character, PrimarySceneCategory } from "@/lib/types";
 import { ALL_PRIMARY_SCENE_CATEGORIES } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -22,6 +17,7 @@ import { X, Edit3, Save, Sparkles, Loader2 } from "lucide-react";
 import { sendMessage } from "@/lib/ai/AISMessageHandler";
 import { AI_TOOL_NAMES } from "@/lib/ai/constants";
 import { toast } from "sonner";
+import { useShallow } from "zustand/react/shallow";
 import { useProjectStore } from "@/lib/stores/projectStore";
 
 export interface SceneMetadataPanelProps {
@@ -54,11 +50,12 @@ export function SceneMetadataPanel({
   onTagLinkChange,
   className,
 }: SceneMetadataPanelProps) {
-  const {
-    project,
-    characters: allProjectCharacters,
-    sceneTags: allProjectSceneTags,
-  } = useProjectStore();
+  const { allProjectCharacters, allProjectSceneTags } = useProjectStore(
+    useShallow((state) => ({
+      allProjectCharacters: state.characters,
+      allProjectSceneTags: state.sceneTags,
+    }))
+  );
 
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [currentDescription, setCurrentDescription] = useState(

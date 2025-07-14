@@ -33,6 +33,13 @@ export async function getChapter(
   }
 }
 
+// Add this new function to lib/data/chapters.ts
+
+export async function getChapterWithScenesById(projectId: string, chapterId: string): Promise<Chapter | null> {
+  const user = await getAuthenticatedUser();
+  return chapterService.getChapterWithScenesById(projectId, chapterId, user.id);
+}
+
 export async function createChapter(
   projectId: string, 
   chapterData: { title: string; order?: number }

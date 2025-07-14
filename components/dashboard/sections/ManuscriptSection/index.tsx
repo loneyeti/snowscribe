@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import type { Project, Scene, Chapter } from "@/lib/types";
 import { useProjectStore } from "@/lib/stores/projectStore";
-import { useSceneDragDrop } from "@/hooks/dashboard/useSceneDragDrop";
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { ListContainer } from "@/components/ui/ListContainer";
 import { ListItem } from "@/components/ui/ListItem";
@@ -19,6 +18,7 @@ import { toast } from "sonner";
 import { updateSceneCharacters, updateSceneTags } from "@/lib/data/scenes";
 import dynamic from "next/dynamic";
 import { countWords } from "@/lib/utils";
+import { useShallow } from "zustand/react/shallow";
 
 type ManuscriptView = "chapters" | "scenes";
 
@@ -47,20 +47,21 @@ const ManuscriptEditorWithNoSSR = dynamic(
 );
 
 export function ManuscriptSection({ project }: ManuscriptSectionProps) {
-  const {
-    chapters,
-    characters: allProjectCharacters,
-    sceneTags: allSceneTags,
-    isLoading,
-    selectedChapter,
-    selectedScene,
-    selectChapter,
-    selectScene,
-    createChapter,
-    createScene,
-    updateScene: updateSceneInStore,
-    reorderScenes,
-  } = useProjectStore();
+  const { chapters, isLoading, selectedChapter, selectedScene } =
+    useProjectStore(
+      useShallow((state) => ({
+        chapters: state.chapters,
+        isLoading: state.isLoading,
+        selectedChapter: state.selectedChapter,
+        selectedScene: state.selectedScene,
+      }))
+    );
+
+  // 2. Select actions individually (this part remains the same and is correct)
+  const updateSceneInStore = useProjectStore((state) => state.updateScene);
+  const reorderScenes = useProjectStore((state) => state.reorderScenes);
+  const selectChapter = useProjectStore((state) => state.selectChapter);
+  const selectScene = useProjectStore((state) => state.selectScene);
 
   const [manuscriptView, setManuscriptView] =
     useState<ManuscriptView>("chapters");
@@ -71,6 +72,8 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
   const [isSceneMetadataPanelOpen, setIsSceneMetadataPanelOpen] =
     useState(false);
   const [currentSceneWordCount, setCurrentSceneWordCount] = useState(0);
+  const [draggedSceneId, setDraggedSceneId] = useState<string | null>(null);
+  const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedScene) {
@@ -81,23 +84,77 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
   const scenesForSelectedChapter =
     chapters.find((c) => c.id === selectedChapter?.id)?.scenes || [];
 
-  const {
-    draggedSceneId,
-    dragOverSceneId,
-    handleDragStart,
-    handleDragOver,
-    handleDragEnter,
-    handleDragLeave,
-    handleDrop,
-  } = useSceneDragDrop(
-    project.id,
-    selectedChapter?.id ?? null,
-    scenesForSelectedChapter,
-    (reordered) =>
-      reorderScenes(
-        selectedChapter!.id,
-        reordered.map((s, i) => ({ id: s.id, order: i }))
-      )
+  const handleDragStart = useCallback(
+    (event: React.DragEvent<HTMLDivElement>, sceneId: string) => {
+      setDraggedSceneId(sceneId);
+      event.dataTransfer.setData("text/plain", sceneId);
+      event.dataTransfer.effectAllowed = "move";
+    },
+    []
+  );
+
+  const handleDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+    },
+    []
+  );
+
+  const handleDragEnter = useCallback(
+    (event: React.DragEvent<HTMLDivElement>, sceneId: string) => {
+      event.preventDefault();
+      if (sceneId !== draggedSceneId) {
+        setDragOverSceneId(sceneId);
+      }
+    },
+    [draggedSceneId]
+  );
+
+  const handleDragLeave = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setDragOverSceneId(null);
+    },
+    []
+  );
+
+  const handleDrop = useCallback(
+    async (event: React.DragEvent<HTMLDivElement>, targetSceneId: string) => {
+      event.preventDefault();
+      const sourceSceneId = event.dataTransfer.getData("text/plain");
+
+      setDraggedSceneId(null);
+      setDragOverSceneId(null);
+
+      if (
+        !selectedChapter ||
+        !sourceSceneId ||
+        sourceSceneId === targetSceneId
+      ) {
+        return;
+      }
+
+      const scenes =
+        chapters.find((c) => c.id === selectedChapter.id)?.scenes || [];
+      const sourceIndex = scenes.findIndex((s) => s.id === sourceSceneId);
+      const targetIndex = scenes.findIndex((s) => s.id === targetSceneId);
+
+      if (sourceIndex !== -1 && targetIndex !== -1) {
+        const reorderedScenes = [...scenes];
+        const [draggedItem] = reorderedScenes.splice(sourceIndex, 1);
+        reorderedScenes.splice(targetIndex, 0, draggedItem);
+
+        const scenesWithNewOrder = reorderedScenes.map((scene, index) => ({
+          id: scene.id,
+          order: index,
+        }));
+
+        // Call the store action. It handles the optimistic update and API call.
+        reorderScenes(selectedChapter.id, scenesWithNewOrder);
+      }
+    },
+    [selectedChapter, chapters, reorderScenes]
   );
 
   const handleChapterSelect = (chapter: Chapter) => {
