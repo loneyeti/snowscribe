@@ -25,19 +25,19 @@ export function ProjectDashboardClient({
   const renderActiveSection = () => {
     switch (activeSection) {
       case "manuscript":
-        return <ManuscriptSection project={project} />;
+        return <ManuscriptSection />;
       case "outline":
-        return <OutlineSection project={project} />;
+        return <OutlineSection />;
       case "characters":
-        return <CharactersSection project={project} />;
+        return <CharactersSection />;
       case "world-notes":
-        return <WorldNotesSection project={project} />;
+        return <WorldNotesSection />;
       case "ai":
-        return <AISection project={project} />;
+        return <AISection />;
       case "export":
-        return <ExportSection project={project} />;
+        return <ExportSection />;
       default:
-        return <ManuscriptSection project={project} />;
+        return <ManuscriptSection />;
     }
   };
 

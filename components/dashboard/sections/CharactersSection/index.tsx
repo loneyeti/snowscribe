@@ -11,11 +11,7 @@ import { PlusCircle } from "lucide-react";
 import { CreateCharacterModal } from "@/components/characters/CreateCharacterModal";
 import { Paragraph } from "@/components/typography/Paragraph";
 
-interface CharactersSectionProps {
-  project: Project;
-}
-
-export function CharactersSection({ project }: CharactersSectionProps) {
+export function CharactersSection() {
   const { characters, selectedCharacter, isLoading } = useProjectStore(
     useShallow((state) => ({
       characters: state.characters,

@@ -6,18 +6,17 @@ import { exportProjectAsDocx } from "@/lib/data/projects";
 import { Heading } from "@/components/typography/Heading";
 import { Paragraph } from "@/components/typography/Paragraph";
 import { FileDown, Loader2 } from "lucide-react";
+import { useProjectStore } from "@/lib/stores/projectStore";
 
-interface ExportSectionProps {
-  project: {
-    id: string;
-    title: string;
-  };
-}
-
-export function ExportSection({ project }: ExportSectionProps) {
+export function ExportSection() {
+  const project = useProjectStore((state) => state.project);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleExport = async () => {
+    if (!project) {
+      toast.error("Project data is not available for export.");
+      return;
+    }
     setIsLoading(true);
     const toastId = toast.loading(
       "Generating your manuscript export. This may take a moment..."
@@ -62,6 +61,14 @@ export function ExportSection({ project }: ExportSectionProps) {
       setIsLoading(false);
     }
   };
+
+  if (!project) {
+    return (
+      <div className="p-8 max-w-2xl mx-auto text-center">
+        <Paragraph>Loading project details...</Paragraph>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-2xl mx-auto text-center">

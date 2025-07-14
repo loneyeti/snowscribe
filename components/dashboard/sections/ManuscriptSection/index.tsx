@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import type { Project, Scene, Chapter } from "@/lib/types";
+import type { Scene, Chapter } from "@/lib/types";
 import { useProjectStore } from "@/lib/stores/projectStore";
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
 import { ListContainer } from "@/components/ui/ListContainer";
@@ -22,10 +22,6 @@ import { useShallow } from "zustand/react/shallow";
 
 type ManuscriptView = "chapters" | "scenes";
 
-interface ManuscriptSectionProps {
-  project: Project;
-}
-
 const EditorLoadingSkeleton = () => (
   <div className="max-w-[70ch] w-full min-h-[50vh] flex-1 p-4 md:p-6 lg:p-8 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse">
     <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
@@ -46,10 +42,11 @@ const ManuscriptEditorWithNoSSR = dynamic(
   }
 );
 
-export function ManuscriptSection({ project }: ManuscriptSectionProps) {
-  const { chapters, isLoading, selectedChapter, selectedScene } =
+export function ManuscriptSection() {
+  const { project, chapters, isLoading, selectedChapter, selectedScene } =
     useProjectStore(
       useShallow((state) => ({
+        project: state.project,
         chapters: state.chapters,
         isLoading: state.isLoading,
         selectedChapter: state.selectedChapter,
@@ -191,7 +188,7 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
 
   const handleSceneDetailsPanelCharacterLinkChange = useCallback(
     async (characterIds: Array<{ character_id: string }>) => {
-      if (!selectedScene || !selectedChapter) return;
+      if (!selectedScene || !selectedChapter || !project) return;
       try {
         await updateSceneCharacters(
           project.id,
@@ -204,12 +201,12 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
         toast.error("Failed to update scene characters.");
       }
     },
-    [project.id, selectedChapter, selectedScene, selectChapter]
+    [project, selectedChapter, selectedScene, selectChapter]
   );
 
   const handleSceneDetailsPanelTagLinkChange = useCallback(
     async (tagIds: Array<{ tag_id: string }>) => {
-      if (!selectedScene || !selectedChapter) return;
+      if (!selectedScene || !selectedChapter || !project) return;
       try {
         await updateSceneTags(
           project.id,
@@ -222,8 +219,12 @@ export function ManuscriptSection({ project }: ManuscriptSectionProps) {
         toast.error("Failed to update scene tags.");
       }
     },
-    [project.id, selectedChapter, selectedScene, selectChapter]
+    [project, selectedChapter, selectedScene, selectChapter]
   );
+
+  if (!project) {
+    return <div>Loading project...</div>;
+  }
 
   const middleColumnContent = (
     <>

@@ -20,13 +20,7 @@ import { toast } from "sonner";
 
 type OutlineView = "synopsis" | "scenes";
 
-interface OutlineSectionProps {
-  project: Project;
-}
-
-export function OutlineSection({
-  project: initialProject,
-}: OutlineSectionProps) {
+export function OutlineSection() {
   const [outlineView, setOutlineView] = useState<OutlineView>("synopsis");
   const [isOutlineCreatorModalOpen, setIsOutlineCreatorModalOpen] =
     useState(false);

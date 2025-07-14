@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import type {
-  Project,
   Character as ProjectCharacter,
   Scene,
   AIMessage,
@@ -30,35 +29,31 @@ import { toast } from "sonner";
 
 import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteModal";
 
-interface AISectionProps {
-  project: Project & { genres: import("@/lib/types").Genre | null };
-}
+export function AISection() {
+  // State for fetched context data
+  const {
+    project,
+    chapters,
+    characters,
+    worldNotes,
+    sceneTags,
+    isStoreLoading,
+  } = useProjectStore(
+    useShallow((state) => ({
+      project: state.project,
+      chapters: state.chapters,
+      characters: state.characters,
+      worldNotes: state.worldNotes,
+      sceneTags: state.sceneTags,
+      isStoreLoading: state.isLoading, // Using alias from original code
+    }))
+  );
 
-export function AISection({ project }: AISectionProps) {
+  const projectId = project?.id || "placeholder-project-id";
+
   const [selectedTool, setSelectedTool] = useState<AIToolName | null>(null);
   const [activeToolDefinition, setActiveToolDefinition] =
     useState<AIToolDefinition | null>(null);
-
-  const {
-    uiMessages,
-    isLoading: isChatLoading,
-    error: chatError,
-    sendUserMessage,
-    clearChat,
-    setUiMessages,
-  } = useAIChat(project.id);
-
-  // State for fetched context data
-  const { chapters, characters, worldNotes, sceneTags, isStoreLoading } =
-    useProjectStore(
-      useShallow((state) => ({
-        chapters: state.chapters,
-        characters: state.characters,
-        worldNotes: state.worldNotes,
-        sceneTags: state.sceneTags,
-        isStoreLoading: state.isLoading, // Using alias from original code
-      }))
-    );
 
   const [selectedCharacterForChat, setSelectedCharacterForChat] =
     useState<ProjectCharacter | null>(null);
@@ -72,6 +67,15 @@ export function AISection({ project }: AISectionProps) {
 
   const [isCreateWorldNoteModalOpen, setIsCreateWorldNoteModalOpen] =
     useState(false);
+
+  const {
+    uiMessages,
+    isLoading: isChatLoading,
+    error: chatError,
+    sendUserMessage,
+    clearChat,
+    setUiMessages,
+  } = useAIChat(projectId);
 
   const handleToolSelect = useCallback(
     (toolId: AIToolName) => {
@@ -199,6 +203,14 @@ export function AISection({ project }: AISectionProps) {
     }
     await sendUserMessage(userText, toolNameToUseInAIService, contextForAI);
   };
+
+  if (!project) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Paragraph>Loading project...</Paragraph>
+      </div>
+    );
+  }
 
   const handlePlotHoleCheckTrigger = async () => {
     if (!plotHoleContextType) {

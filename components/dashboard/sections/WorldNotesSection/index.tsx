@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import type { Project } from "@/lib/types";
 import { useShallow } from "zustand/react/shallow";
 import { useProjectStore } from "@/lib/stores/projectStore";
 import { WorldNoteList } from "@/components/world-notes/WorldNoteList";
@@ -11,18 +10,16 @@ import { IconButton } from "@/components/ui/IconButton";
 import { PlusCircle } from "lucide-react";
 import { Paragraph } from "@/components/typography/Paragraph";
 
-interface WorldNotesSectionProps {
-  project: Project;
-}
-
-export function WorldNotesSection({ project }: WorldNotesSectionProps) {
+export function WorldNotesSection() {
   const {
+    project,
     worldNotes,
     selectedWorldNote,
     isEditingSelectedWorldNote,
     isLoading,
   } = useProjectStore(
     useShallow((state) => ({
+      project: state.project,
       worldNotes: state.worldNotes,
       selectedWorldNote: state.selectedWorldNote,
       isEditingSelectedWorldNote: state.isEditingSelectedWorldNote,
@@ -45,6 +42,10 @@ export function WorldNotesSection({ project }: WorldNotesSectionProps) {
   const handleOpenCreateWorldNoteModal = () => {
     setIsCreateWorldNoteModalOpen(true);
   };
+
+  if (!project) {
+    return <div>Loading project...</div>;
+  }
 
   const middleColumn = (
     <>
