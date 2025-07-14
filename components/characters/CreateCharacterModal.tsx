@@ -1,40 +1,29 @@
 "use client";
-
 import React, { useState } from "react";
-import {
-  useForm,
-  Controller,
-  ControllerRenderProps,
-  // FieldValues, // No longer needed as CharacterFormValues is more specific
-} from "react-hook-form";
+import { useForm, Controller, ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-// import { z } from "zod"; // Unused
-import { type Character, type CharacterFormValues } from "@/lib/types";
-import { characterBaseSchema } from "@/lib/schemas/character.schema"; // Use base for form values
+import { type CharacterFormValues } from "@/lib/types";
+import { characterBaseSchema } from "@/lib/schemas/character.schema";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Modal } from "@/components/ui/Modal";
-import { createCharacter } from "@/lib/data/characters";
-import { toast } from "sonner";
+import { useProjectStore } from "@/lib/stores/projectStore"; // Import the store
 
 interface CreateCharacterModalProps {
-  projectId: string;
   isOpen: boolean;
   onClose: () => void;
-  onCharacterCreated: (newCharacter: Character) => void;
 }
 
-// Schema for the form itself, project_id will be passed separately
 const formSchema = characterBaseSchema;
 
 export function CreateCharacterModal({
-  projectId,
   isOpen,
   onClose,
-  onCharacterCreated,
 }: CreateCharacterModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Get the createCharacter action directly from the store
+  const createCharacter = useProjectStore((state) => state.createCharacter);
 
   const {
     control,
@@ -53,20 +42,16 @@ export function CreateCharacterModal({
 
   const onSubmit = async (data: CharacterFormValues) => {
     setIsSubmitting(true);
-    try {
-      const newCharacter = await createCharacter(projectId, data);
-      toast.success(`Character "${newCharacter.name}" created successfully.`);
-      onCharacterCreated(newCharacter);
+    // The store action already knows the projectId
+    const newCharacter = await createCharacter(data);
+
+    // The store action now handles the toast messages
+    if (newCharacter) {
       reset();
-      onClose();
-    } catch (error) {
-      console.error("Failed to create character:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create character."
-      );
-    } finally {
-      setIsSubmitting(false);
+      onClose(); // Close the modal on success
     }
+
+    setIsSubmitting(false);
   };
 
   if (!isOpen) {
@@ -201,7 +186,7 @@ export function CreateCharacterModal({
                   id="image_url"
                   {...field}
                   value={field.value ?? ""}
-                  placeholder="https://example.com/image.png"
+                  placeholder="https://..."
                 />
               )}
             />

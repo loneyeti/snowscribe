@@ -35,8 +35,6 @@ import type { TextBlock, ChatResponse } from "snowgander";
 import { ManageSceneCharactersModal } from "@/components/modals/ManageSceneCharactersModal";
 import { ManageSceneTagsModal } from "@/components/modals/ManageSceneTagsModal";
 import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal";
-// Scene updates are handled through onSceneUpdate prop
-import { useProjectData } from "@/contexts/ProjectDataContext";
 
 interface ChapterSceneOutlineListProps {
   chapters: Chapter[];
@@ -79,7 +77,7 @@ export function ChapterSceneOutlineList({
   onSceneUpdate,
   onSceneCreated,
 }: ChapterSceneOutlineListProps) {
-  const {} = useProjectData();
+  // const {} = useProjectData();
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(
     new Set()
   );

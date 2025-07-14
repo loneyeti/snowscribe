@@ -1,17 +1,10 @@
-// app/(dashboard)/project/[projectId]/ProjectDashboardClient.tsx
 "use client";
-
 import React, { useEffect } from "react";
 import type { Project } from "@/lib/types";
-
-// Import Section Components
 import { ManuscriptSection } from "@/components/dashboard/sections/ManuscriptSection";
 import { CharactersSection } from "@/components/dashboard/sections/CharactersSection";
 import { WorldNotesSection } from "@/components/dashboard/sections/WorldNotesSection";
 import { OutlineSection } from "@/components/dashboard/sections/OutlineSection";
-
-// Import Context Provider
-import { ProjectDataProvider } from "@/contexts/ProjectDataContext";
 import { AISection } from "@/components/dashboard/sections/AISection";
 import { ExportSection } from "@/components/dashboard/sections/ExportSection";
 
@@ -27,34 +20,28 @@ export function ProjectDashboardClient({
   project,
   activeSection = "manuscript",
 }: ProjectDashboardClientProps) {
-  useEffect(() => {
-    // Project and active section tracking removed
-  }, [project, activeSection]);
+  useEffect(() => {}, [project, activeSection]);
 
   const renderActiveSection = () => {
     switch (activeSection) {
       case "manuscript":
-        return <ManuscriptSection project={project} />;
+        return <ManuscriptSection />;
       case "outline":
-        return <OutlineSection project={project} />;
+        return <OutlineSection />;
       case "characters":
-        return <CharactersSection project={project} />;
+        return <CharactersSection />;
       case "world-notes":
-        return <WorldNotesSection project={project} />;
+        return <WorldNotesSection />;
       case "ai":
-        return <AISection project={project} />;
+        return <AISection />;
       case "export":
-        return <ExportSection project={project} />;
+        return <ExportSection />;
       default:
-        return <ManuscriptSection project={project} />;
+        return <ManuscriptSection />;
     }
   };
 
   return (
-    <ProjectDataProvider projectId={project.id}>
-      <div className="flex-1 overflow-y-auto h-full">
-        {renderActiveSection()}
-      </div>
-    </ProjectDataProvider>
+    <div className="flex-1 overflow-y-auto h-full">{renderActiveSection()}</div>
   );
 }

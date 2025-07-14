@@ -29,6 +29,48 @@ export async function getChapter(
   return chapter;
 }
 
+export async function getChapterWithScenesById(
+  projectId: string,
+  chapterId: string,
+  userId: string
+): Promise<Chapter | null> {
+  const supabase = await createClient();
+  const ownership = await verifyProjectOwnership(supabase, projectId, userId);
+  if (ownership.error) throw new Error(ownership.error.message);
+
+  // First, get the chapter itself
+  const { data: chapter, error: chapterError } = await supabase
+    .from('chapters')
+    .select('*, word_count')
+    .eq('id', chapterId)
+    .single();
+
+  if (chapterError) {
+    console.error(`Error fetching single chapter ${chapterId}:`, chapterError);
+    if (chapterError.code === 'PGRST116') return null; // Not found is okay
+    throw new Error('Failed to fetch chapter.');
+  }
+  if (!chapter) return null;
+
+  // Then, get all its scenes
+  const { data: scenes, error: scenesError } = await supabase
+    .from('scenes')
+    .select('*, scene_characters(character_id), scene_applied_tags(tag_id)')
+    .eq('chapter_id', chapter.id)
+    .order('order', { ascending: true });
+    
+  if (scenesError) {
+    console.error(`Error fetching scenes for chapter ${chapterId}:`, scenesError);
+    throw new Error('Failed to fetch scenes for the chapter.');
+  }
+
+  // Combine them and return
+  return {
+    ...chapter,
+    scenes: scenes || []
+  };
+}
+
 interface CreateChapterData {
   title: string;
   order?: number;

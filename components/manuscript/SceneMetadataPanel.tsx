@@ -2,12 +2,7 @@ import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { extractJsonFromString } from "@/lib/utils";
 
-import type {
-  Scene,
-  Character,
-  SceneTag,
-  PrimarySceneCategory,
-} from "@/lib/types";
+import type { Scene, Character, PrimarySceneCategory } from "@/lib/types";
 import { ALL_PRIMARY_SCENE_CATEGORIES } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -22,16 +17,14 @@ import { X, Edit3, Save, Sparkles, Loader2 } from "lucide-react";
 import { sendMessage } from "@/lib/ai/AISMessageHandler";
 import { AI_TOOL_NAMES } from "@/lib/ai/constants";
 import { toast } from "sonner";
-import { useProjectData } from "@/contexts/ProjectDataContext";
+import { useShallow } from "zustand/react/shallow";
+import { useProjectStore } from "@/lib/stores/projectStore";
 
 export interface SceneMetadataPanelProps {
   isOpen: boolean;
   onClose: () => void;
   scene: Scene;
   projectId: string;
-  chapterId: string;
-  allProjectCharacters: Character[];
-  allProjectSceneTags: SceneTag[];
   onSceneUpdate: (
     updatedData: Partial<
       Pick<
@@ -52,14 +45,18 @@ export function SceneMetadataPanel({
   onClose,
   scene,
   projectId,
-  // chapterId is not used in this component, so remove it to fix eslint error
-  allProjectCharacters,
-  allProjectSceneTags,
   onSceneUpdate,
   onCharacterLinkChange,
   onTagLinkChange,
   className,
-}: Omit<SceneMetadataPanelProps, "chapterId">) {
+}: SceneMetadataPanelProps) {
+  const { allProjectCharacters, allProjectSceneTags } = useProjectStore(
+    useShallow((state) => ({
+      allProjectCharacters: state.characters,
+      allProjectSceneTags: state.sceneTags,
+    }))
+  );
+
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [currentDescription, setCurrentDescription] = useState(
     scene.outline_description || ""
@@ -83,6 +80,11 @@ export function SceneMetadataPanel({
   const [isSuggestingTags, setIsSuggestingTags] = useState(false);
   const [isSuggestingCategory, setIsSuggestingCategory] = useState(false);
 
+  // Type the parameters in the component
+  const povCharacterName = allProjectCharacters.find(
+    (c: Character) => c.id === scene.pov_character_id
+  )?.name;
+
   const PREDEFINED_GLOBAL_TAG_NAMES = [
     "Opening Hook",
     "Inciting Incident",
@@ -104,12 +106,9 @@ export function SceneMetadataPanel({
     setCurrentPovCharId(scene.pov_character_id || null);
   }, [scene]);
 
-  const { triggerSceneUpdate } = useProjectData();
-
   const handleSaveDescription = async () => {
     await onSceneUpdate({ outline_description: currentDescription });
     setIsEditingDescription(false);
-    triggerSceneUpdate();
   };
 
   const handleGenerateDescription = async () => {
@@ -185,13 +184,11 @@ export function SceneMetadataPanel({
   const handleSaveCategory = async () => {
     await onSceneUpdate({ primary_category: currentCategory });
     setIsEditingCategory(false);
-    triggerSceneUpdate();
   };
 
   const handleSavePov = async () => {
     await onSceneUpdate({ pov_character_id: currentPovCharId });
     setIsEditingPov(false);
-    triggerSceneUpdate();
   };
 
   const handleSuggestCharacters = async () => {
@@ -490,10 +487,6 @@ export function SceneMetadataPanel({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  const povCharacterName = allProjectCharacters.find(
-    (c) => c.id === scene.pov_character_id
-  )?.name;
 
   return (
     <>

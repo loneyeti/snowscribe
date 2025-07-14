@@ -1,9 +1,8 @@
+// components/world-notes/CreateWorldNoteModal.tsx
 "use client";
-
 import React, { useState } from "react";
 import { useForm, Controller, ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type WorldBuildingNote } from "@/lib/types";
 import {
   worldBuildingNoteBaseSchema,
   type WorldBuildingNoteFormValues,
@@ -12,26 +11,21 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Modal } from "@/components/ui/Modal";
-import { createWorldBuildingNote } from "@/lib/data/worldBuildingNotes";
-import { toast } from "sonner";
+import { useProjectStore } from "@/lib/stores/projectStore"; // Import store
 
 interface CreateWorldNoteModalProps {
-  projectId: string;
   isOpen: boolean;
   onClose: () => void;
-  onNoteCreated: (newNote: WorldBuildingNote) => void;
 }
 
-// Schema for the form itself
 const formSchema = worldBuildingNoteBaseSchema;
 
 export function CreateWorldNoteModal({
-  projectId,
   isOpen,
   onClose,
-  onNoteCreated,
 }: CreateWorldNoteModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const createWorldNote = useProjectStore((state) => state.createWorldNote); // Get action
 
   const {
     control,
@@ -40,29 +34,22 @@ export function CreateWorldNoteModal({
     formState: { errors },
   } = useForm<WorldBuildingNoteFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      content: "",
-      category: "",
-    },
+    defaultValues: { title: "", content: "", category: "" },
   });
 
   const onSubmit = async (data: WorldBuildingNoteFormValues) => {
     setIsSubmitting(true);
-    try {
-      const newNote = await createWorldBuildingNote(projectId, data);
-      toast.success(`Note "${newNote.title}" created successfully.`);
-      onNoteCreated(newNote);
+    const transformedData = {
+      ...data,
+      category: data.category ?? undefined,
+      content: data.content ?? undefined,
+    };
+    const newNote = await createWorldNote(transformedData); // Call store action
+    if (newNote) {
       reset();
       onClose();
-    } catch (error) {
-      console.error("Failed to create world note:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create world note."
-      );
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   };
 
   if (!isOpen) {
@@ -92,9 +79,10 @@ export function CreateWorldNoteModal({
       onClose={onClose}
       title="Create New World Note"
       footerContent={modalFooterContent}
-      size="lg" // Larger modal for content textarea
+      size="lg"
     >
       <form onSubmit={handleSubmit(onSubmit)} id="createWorldNoteForm">
+        {/* Form fields remain the same */}
         <div className="space-y-4">
           <div>
             <label
@@ -121,7 +109,6 @@ export function CreateWorldNoteModal({
               </p>
             )}
           </div>
-
           <div>
             <label
               htmlFor="category"
@@ -154,7 +141,6 @@ export function CreateWorldNoteModal({
               </p>
             )}
           </div>
-
           <div>
             <label
               htmlFor="content"
@@ -177,7 +163,7 @@ export function CreateWorldNoteModal({
                   id="content"
                   {...field}
                   value={field.value || ""}
-                  rows={10} // Increased rows for more content
+                  rows={10}
                   placeholder="Detailed notes about this aspect of your world..."
                 />
               )}
