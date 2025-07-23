@@ -16,6 +16,7 @@ import { useProjectStore } from "@/lib/stores/projectStore"; // Import store
 interface CreateWorldNoteModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialContent?: string;
 }
 
 const formSchema = worldBuildingNoteBaseSchema;
@@ -23,6 +24,7 @@ const formSchema = worldBuildingNoteBaseSchema;
 export function CreateWorldNoteModal({
   isOpen,
   onClose,
+  initialContent,
 }: CreateWorldNoteModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const createWorldNote = useProjectStore((state) => state.createWorldNote); // Get action
@@ -34,7 +36,7 @@ export function CreateWorldNoteModal({
     formState: { errors },
   } = useForm<WorldBuildingNoteFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { title: "", content: "", category: "" },
+    defaultValues: { title: "", content: initialContent || "", category: "" },
   });
 
   const onSubmit = async (data: WorldBuildingNoteFormValues) => {

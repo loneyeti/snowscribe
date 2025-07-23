@@ -23,6 +23,8 @@ interface MultiTurnChatInterfaceProps {
   onSendMessage: (prompt: string) => Promise<void> | void;
   className?: string;
   customActions?: CustomAction[];
+  renderMessageActions?: (message: AIMessage) => React.ReactNode;
+  headerContent?: React.ReactNode;
 }
 
 export function MultiTurnChatInterface({
@@ -32,6 +34,8 @@ export function MultiTurnChatInterface({
   onSendMessage,
   className,
   customActions,
+  renderMessageActions,
+  headerContent,
 }: MultiTurnChatInterfaceProps) {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +56,11 @@ export function MultiTurnChatInterface({
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
+      {headerContent && (
+        <div className="p-3 border-b border-gray-300 dark:border-gray-700">
+          {headerContent}
+        </div>
+      )}
       <ScrollArea
         ref={scrollRef}
         className="flex-grow p-4 space-y-4 overflow-y-auto"
@@ -60,15 +69,27 @@ export function MultiTurnChatInterface({
           <div
             key={msg.id}
             className={cn(
-              "p-3 rounded-md max-w-full",
-              msg.sender === "user"
-                ? "bg-blue-100 dark:bg-blue-900 self-end"
-                : "bg-gray-100 dark:bg-gray-800 self-start"
+              "flex items-end gap-2",
+              msg.sender === "user" ? "justify-end" : "justify-start"
             )}
           >
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <MarkdownComponent markdown={msg.text} />
+            <div
+              key={msg.id}
+              className={cn(
+                "p-3 rounded-md max-w-full",
+                msg.sender === "user"
+                  ? "bg-blue-100 dark:bg-blue-900 self-end"
+                  : "bg-gray-100 dark:bg-gray-800 self-start",
+                "max-w-[90%]" // ensure space for action button
+              )}
+            >
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <MarkdownComponent markdown={msg.text} />
+              </div>
             </div>
+            {msg.sender === "ai" && renderMessageActions && (
+              <div className="flex-shrink-0">{renderMessageActions(msg)}</div>
+            )}
           </div>
         ))}
         {error && <div className="text-red-600">{error}</div>}
