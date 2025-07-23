@@ -94,14 +94,8 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
     worldNotes: true, sceneTags: true, saving: false, generatingOutline: false,
   },
 
-  initialize: (project, user) => {
-    /*
-    set({ project, user, isLoading: { ...get().isLoading, project: false } });
-    get().fetchChapters();
-    get().fetchCharacters();
-    get().fetchWorldNotes();
-    get().fetchSceneTags();
-    */
+  initialize: (_project, _user) => {
+
   },
 
     initializeAll: (initialState, user) => {
@@ -263,9 +257,6 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
     }
   },
 
-// In lib/stores/projectStore.ts
-// Replace your entire updateScene function with this one.
-
   updateScene: async (chapterId, sceneId, values) => {
     const { project } = get();
     if (!project || !chapterId) {
@@ -406,18 +397,59 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
   },
   
   updateCharacter: async (characterId, data) => {
-    const projectId = get().project?.id; if (!projectId) return;
+    const projectId = get().project?.id;
+    if (!projectId) {
+      toast.error("Could not update character: Project context is missing.");
+      return;
+    }
+
+    // 1. Get a snapshot of the current state for potential rollback.
+    const originalCharacters = get().characters;
+    const originalSelectedCharacter = get().selectedCharacter;
+
+    // 2. Optimistically update the UI.
+    // This happens instantly, preventing any flicker.
+    set(state => ({
+      characters: state.characters.map(c =>
+        c.id === characterId ? { ...c, ...data } : c
+      ),
+      selectedCharacter: state.selectedCharacter?.id === characterId
+        ? { ...state.selectedCharacter, ...data }
+        : state.selectedCharacter,
+    }));
+
+    // 3. Set loading state.
     set(state => ({ isLoading: { ...state.isLoading, saving: true } }));
+
     try {
-      const updatedCharacter = await characterData.updateCharacter(projectId, characterId, data);
-      toast.success("Character updated!");
+      // 4. Make the API call.
+      const updatedCharacter = await characterData.updateCharacter(
+        projectId,
+        characterId,
+        data
+      );
+
+      // 5. Reconcile the store with the definitive server response.
+      // This ensures our UI has the absolute latest data (e.g., updated_at timestamp).
       set(state => ({
-        characters: state.characters.map(c => c.id === characterId ? updatedCharacter : c),
-        selectedCharacter: state.selectedCharacter?.id === characterId ? updatedCharacter : state.selectedCharacter,
+        characters: state.characters.map(c =>
+          c.id === characterId ? updatedCharacter : c
+        ),
+        selectedCharacter: state.selectedCharacter?.id === characterId
+          ? updatedCharacter
+          : state.selectedCharacter,
       }));
+
+      toast.success("Character updated!");
       return updatedCharacter;
-    } catch(e) { toast.error("Failed to update character."); }
-    finally { set(state => ({ isLoading: { ...state.isLoading, saving: false } })); }
+    } catch (e) {
+      // 6. Rollback on failure.
+      toast.error("Failed to update character. Reverting changes.");
+      set({ characters: originalCharacters, selectedCharacter: originalSelectedCharacter });
+    } finally {
+      // 7. Finalize by turning off the loading state.
+      set(state => ({ isLoading: { ...state.isLoading, saving: false } }));
+    }
   },
 
   deleteCharacter: async (characterId) => {
@@ -453,18 +485,58 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
   },
 
   updateWorldNote: async (noteId, noteData) => {
-    const projectId = get().project?.id; if (!projectId) return;
+    const projectId = get().project?.id;
+    if (!projectId) {
+      toast.error("Could not update world note: Project context is missing.");
+      return;
+    }
+
+    // 1. Get snapshot for rollback.
+    const originalNotes = get().worldNotes;
+    const originalSelectedNote = get().selectedWorldNote;
+
+    // 2. Optimistic update.
+    set(state => ({
+      worldNotes: state.worldNotes.map(n =>
+        n.id === noteId ? { ...n, ...noteData } : n
+      ),
+      selectedWorldNote: state.selectedWorldNote?.id === noteId
+        ? { ...state.selectedWorldNote, ...noteData }
+        : state.selectedWorldNote,
+      isEditingSelectedWorldNote: false, // Also disable edit mode optimistically
+    }));
+
+    // 3. Set loading state.
     set(state => ({ isLoading: { ...state.isLoading, saving: true } }));
+
     try {
-      const updatedNote = await worldNoteData.updateWorldBuildingNote(projectId, noteId, noteData);
-      toast.success("World note updated!");
+      // 4. API Call.
+      const updatedNote = await worldNoteData.updateWorldBuildingNote(
+        projectId,
+        noteId,
+        noteData
+      );
+
+      // 5. Reconcile with server response.
       set(state => ({
-        worldNotes: state.worldNotes.map(n => n.id === noteId ? updatedNote : n),
-        selectedWorldNote: state.selectedWorldNote?.id === noteId ? updatedNote : state.selectedWorldNote,
+        worldNotes: state.worldNotes.map(n =>
+          n.id === noteId ? updatedNote : n
+        ),
+        selectedWorldNote: state.selectedWorldNote?.id === noteId
+          ? updatedNote
+          : state.selectedWorldNote,
       }));
+
+      toast.success("World note updated!");
       return updatedNote;
-    } catch(e) { toast.error("Failed to update world note."); }
-    finally { set(state => ({ isLoading: { ...state.isLoading, saving: false } })); }
+    } catch (e) {
+      // 6. Rollback on failure.
+      toast.error("Failed to update world note. Reverting changes.");
+      set({ worldNotes: originalNotes, selectedWorldNote: originalSelectedNote, isEditingSelectedWorldNote: true }); // Re-enable edit mode on failure
+    } finally {
+      // 7. Finalize loading state.
+      set(state => ({ isLoading: { ...state.isLoading, saving: false } }));
+    }
   },
 
   deleteWorldNote: async (noteId) => {
@@ -481,28 +553,44 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
     finally { set(state => ({ isLoading: { ...state.isLoading, saving: false } })); }
   },
 
-// Add this action inside the create() function object
-updateProjectDetails: async (details) => {
-  const { project } = get();
-  if (!project) return;
+  updateProjectDetails: async (details) => {
+    const { project } = get();
+    if (!project) {
+      toast.error("Could not update project details: No project loaded.");
+      return;
+    }
 
-  set(state => ({ isLoading: { ...state.isLoading, saving: true } }));
-  try {
-    const updatedProject = await projectService.updateProject(project.id, details);
-    
-    // Update both the main project object and the genre information
+    // 1. Get a snapshot of the current state for potential rollback.
+    const originalProject = get().project;
+
+    // 2. Optimistically update the UI. This happens instantly.
     set(state => ({
-      project: { ...state.project, ...updatedProject },
-      isLoading: { ...state.isLoading, saving: false }
+      project: state.project ? { ...state.project, ...details } : null,
     }));
-    toast.success("Project details updated.");
-  } catch (e) {
-    toast.error(`Failed to update project details: ${getErrorMessage(e)}`);
-    set(state => ({ isLoading: { ...state.isLoading, saving: false } }));
-  }
-},
 
-// Add this action inside the create() function object
+    // 3. Set the loading state to indicate a background process.
+    set(state => ({ isLoading: { ...state.isLoading, saving: true } }));
+
+    try {
+      // 4. Make the asynchronous API call.
+      const updatedProject = await projectService.updateProject(project.id, details);
+      
+      // 5. Reconcile the store with the definitive server response on success.
+      set(state => ({
+        project: { ...state.project, ...updatedProject },
+      }));
+
+      toast.success("Project details updated.");
+    } catch (e) {
+      // 6. On failure, show an error and roll back to the original state.
+      toast.error(`Failed to update project details: ${getErrorMessage(e)}`);
+      set({ project: originalProject });
+    } finally {
+      // 7. Always turn off the loading state, regardless of success or failure.
+      set(state => ({ isLoading: { ...state.isLoading, saving: false } }));
+    }
+  },
+
 generateAIFullOutline: async () => {
   const { project } = get();
   if (!project || !project.one_page_synopsis) {

@@ -1,6 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
-import type { Project } from "@/lib/types";
+import React from "react";
 import { ManuscriptSection } from "@/components/dashboard/sections/ManuscriptSection";
 import { CharactersSection } from "@/components/dashboard/sections/CharactersSection";
 import { WorldNotesSection } from "@/components/dashboard/sections/WorldNotesSection";
@@ -9,18 +8,18 @@ import { AISection } from "@/components/dashboard/sections/AISection";
 import { ExportSection } from "@/components/dashboard/sections/ExportSection";
 
 interface ProjectDashboardClientProps {
+  /*
   project: Project & {
     genres: import("@/lib/types").Genre | null;
     wordCount?: number;
-  };
+  }; */
   activeSection?: string;
 }
 
 export function ProjectDashboardClient({
-  project,
   activeSection = "manuscript",
 }: ProjectDashboardClientProps) {
-  useEffect(() => {}, [project, activeSection]);
+  //useEffect(() => {}, [project, activeSection]);
 
   const renderActiveSection = () => {
     switch (activeSection) {
