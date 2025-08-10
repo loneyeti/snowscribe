@@ -1,6 +1,6 @@
 "use server";
 import type { Profile } from '../types';
-import * as profileService from '../services/profileService';
+import * as profileService from '@/lib/services/profileUserService';
 import { getAuthenticatedUser } from '../auth';
 import type { UpdateProfileValues } from '../schemas/profile.schema';
 

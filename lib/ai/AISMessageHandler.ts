@@ -6,8 +6,8 @@ import { getAIModelById } from '@/lib/data/aiModels';
 // getAIVendorById is used internally by lib/data/chat.ts, so not directly needed here for the call.
 import { getSystemPromptByCategory } from '@/lib/data/aiPrompts';
 import { chat as snowganderChatService } from '@/lib/data/chat';
-import { creditService } from '@/lib/services/credit.service';
-import { profileService } from '@/lib/services/profile.service';
+import { creditService } from '@/lib/services/creditService';
+import { profileService } from '@/lib/services/profileAdminService';
 import { createClient } from '@/lib/supabase/server';
 import type { AIModel } from '@/lib/types';
 import type { ChatResponse as SnowganderChatResponse } from 'snowgander';

@@ -1,5 +1,5 @@
 import { getErrorMessage } from '@/lib/utils';
-import { creditService } from '@/lib/services/credit.service';
+import { creditService } from '@/lib/services/creditService';
 
 /**
  * Deducts credits from a user's balance for usage (e.g., AI calls).
