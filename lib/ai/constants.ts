@@ -7,11 +7,10 @@ export const AI_TOOL_NAMES = {
   CHARACTER_CHAT: 'character_chat',
   CHARACTER_NAME_GENERATOR: 'character_name_generator',
   WORLD_BUILDING_CHAT: 'world_building_chat',
+  WORLD_NOTE_SUGGESTER: "world_note_suggester",
   WRITING_COACH: 'writing_coach',
-  // Specific tool names for AISMessageHandler if prompts/logic differ significantly
   PLOT_HOLE_CHECKER_MANUSCRIPT: 'plot_hole_checker_manuscript',
   PLOT_HOLE_CHECKER_OUTLINE: 'plot_hole_checker_outline',
-  // New tools for scene metadata analysis
   SCENE_CHARACTER_ANALYZER: 'scene_character_analyzer',
   SCENE_TAG_SUGGESTER: 'scene_tag_suggester',
   SCENE_CATEGORY_SUGGESTER: 'scene_category_suggester',

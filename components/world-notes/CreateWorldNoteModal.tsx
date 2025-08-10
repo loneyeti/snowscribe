@@ -1,6 +1,6 @@
 // components/world-notes/CreateWorldNoteModal.tsx
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm, Controller, ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -17,6 +17,9 @@ interface CreateWorldNoteModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialContent?: string;
+  initialTitle?: string;
+  initialCategory?: string;
+  isSuggesting?: boolean;
 }
 
 const formSchema = worldBuildingNoteBaseSchema;
@@ -25,9 +28,12 @@ export function CreateWorldNoteModal({
   isOpen,
   onClose,
   initialContent,
+  initialTitle,
+  initialCategory,
+  isSuggesting,
 }: CreateWorldNoteModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const createWorldNote = useProjectStore((state) => state.createWorldNote); // Get action
+  const createWorldNote = useProjectStore((state) => state.createWorldNote);
 
   const {
     control,
@@ -36,8 +42,22 @@ export function CreateWorldNoteModal({
     formState: { errors },
   } = useForm<WorldBuildingNoteFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { title: "", content: initialContent || "", category: "" },
+    defaultValues: {
+      title: initialTitle || "",
+      content: initialContent || "",
+      category: initialCategory || "",
+    },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        title: initialTitle || "",
+        content: initialContent || "",
+        category: initialCategory || "",
+      });
+    }
+  }, [isOpen, initialContent, initialTitle, initialCategory, reset]);
 
   const onSubmit = async (data: WorldBuildingNoteFormValues) => {
     setIsSubmitting(true);
@@ -103,7 +123,16 @@ export function CreateWorldNoteModal({
                   WorldBuildingNoteFormValues,
                   "title"
                 >;
-              }) => <Input id="title" {...field} />}
+              }) => (
+                <Input
+                  id="title"
+                  {...field}
+                  disabled={isSuggesting}
+                  placeholder={
+                    isSuggesting ? "AI is suggesting a title..." : "Note Title"
+                  }
+                />
+              )}
             />
             {errors.title && (
               <p className="text-xs text-red-600 mt-1">
@@ -133,7 +162,12 @@ export function CreateWorldNoteModal({
                   id="category"
                   {...field}
                   value={field.value || ""}
-                  placeholder="e.g., Locations, Magic Systems, Technology"
+                  disabled={isSuggesting} // ADD THIS LINE
+                  placeholder={
+                    isSuggesting
+                      ? "AI is suggesting a category..."
+                      : "e.g., Locations, Magic Systems, Technology"
+                  }
                 />
               )}
             />

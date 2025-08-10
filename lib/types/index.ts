@@ -29,18 +29,29 @@ export interface Genre {
   created_at: string; // TIMESTAMPTZ
 }
 
-// Based on supabase/migrations/20250509072238_create_profiles_table.sql
+/**
+ * Profile reflects the current profiles table schema.
+ * See migrations 20250809163450_implement_credit_system.sql for credit-related fields.
+ */
 export interface Profile {
   id: string;
   username: string | null;
   full_name: string | null;
   pen_name: string | null;
   avatar_url: string | null;
-  is_site_admin: boolean; // This has a NOT NULL constraint in the DB
-  current_period_credit_usage: number; // This has a NOT NULL constraint
-  total_credit_usage: number; // This has a NOT NULL constraint
+  is_site_admin: boolean; // NOT NULL
   created_at: string;
   updated_at: string;
+
+  // Credit system and subscription fields
+  credit_balance: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  stripe_price_id: string | null;
+  stripe_subscription_status: string | null;
+  stripe_current_period_end: string | null;
+  has_unlimited_credits: boolean;
+  onboarding_completed: boolean;
 }
 // Based on supabase/migrations/20250509072629_create_chapters_table.sql
 export interface Chapter {

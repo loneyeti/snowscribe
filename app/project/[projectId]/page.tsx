@@ -54,7 +54,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     <>
       <ProjectStoreInitializer initialState={initialStoreState} user={user} />
       <AppShell project={project} user={user}>
-        <ProjectDashboardClient project={project} />
+        <ProjectDashboardClient />
       </AppShell>
     </>
   );

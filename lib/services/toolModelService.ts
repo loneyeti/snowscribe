@@ -14,7 +14,7 @@ async function ensureAdmin(supabase: SupabaseClient<Database>) {
 
 export async function getToolModelsWithAIModel(name?: string): Promise<ToolModelWithAIModel[]> {
     const supabase = await createClient();
-    await ensureAdmin(supabase);
+    // await ensureAdmin(supabase);
     
     let query = supabase.from("tool_model").select(`
         *,

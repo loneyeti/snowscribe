@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { User, Settings, LogOut } from "lucide-react";
 import Link from "next/link";
+import { signOut } from "@/lib/data/auth";
 
 // Enhanced Avatar component with glassmorphic design
 const Avatar = ({
@@ -80,6 +81,10 @@ const UserMenuButton: React.FC<UserMenuButtonProps> = ({
   className,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -176,24 +181,23 @@ const UserMenuButton: React.FC<UserMenuButtonProps> = ({
           <DropdownMenuSeparator className="bg-slate-200/60 dark:bg-slate-700/60 my-2" />
         )}
 
-        <form action="/auth/logout" method="post">
-          <DropdownMenuItem asChild>
-            <button
-              type="submit"
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg",
-                "hover:bg-red-50/80 dark:hover:bg-red-900/20",
-                "transition-all duration-150 ease-out",
-                "cursor-pointer group text-left"
-              )}
-            >
-              <LogOut className="h-4 w-4 text-slate-500 group-hover:text-red-600 dark:text-slate-400 dark:group-hover:text-red-400 transition-colors" />
-              <span className="font-medium group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                Sign Out
-              </span>
-            </button>
-          </DropdownMenuItem>
-        </form>
+        <DropdownMenuItem asChild>
+          <button
+            onClick={handleSignOut}
+            type="submit"
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg",
+              "hover:bg-red-50/80 dark:hover:bg-red-900/20",
+              "transition-all duration-150 ease-out",
+              "cursor-pointer group text-left"
+            )}
+          >
+            <LogOut className="h-4 w-4 text-slate-500 group-hover:text-red-600 dark:text-slate-400 dark:group-hover:text-red-400 transition-colors" />
+            <span className="font-medium group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+              Sign Out
+            </span>
+          </button>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

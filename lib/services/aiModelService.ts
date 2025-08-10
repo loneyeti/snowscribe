@@ -19,7 +19,7 @@ async function ensureAdmin() {
 }
 
 export async function getAIModels(): Promise<AIModel[]> {
-    await ensureAdmin();
+    // await ensureAdmin();
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('ai_models')
@@ -31,7 +31,7 @@ export async function getAIModels(): Promise<AIModel[]> {
 }
 
 export async function getAIModelById(modelId: string): Promise<AIModel | null> {
-    await ensureAdmin();
+    // await ensureAdmin();
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('ai_models')

@@ -1,29 +1,24 @@
-import { createClient } from '@/lib/supabase/server';
 import { getErrorMessage } from '@/lib/utils';
+import { creditService } from '@/lib/services/credit.service';
 
 /**
- * Increments the credit usage for a specific user.
- * This function should only be called from a trusted server-side environment.
- * It calls a SECURITY DEFINER function in the database.
- * @param userId The ID of the user whose credits are being updated.
- * @param amount The number of credits to add to the user's usage.
+ * Deducts credits from a user's balance for usage (e.g., AI calls).
+ * Uses the atomic handle_credit_transaction RPC via a service-role client.
+ * @param userId The ID of the user/profile (profiles.id == auth.users.id).
+ * @param amount The number of credits to deduct from the user's balance (must be positive).
  */
 export async function incrementUserCredits(userId: string, amount: number): Promise<void> {
-  // We only proceed if a positive amount is provided.
+  // Keep the function name for backward compatibility with existing callers.
+  // Behavior: deduct credits from balance by the specified positive amount.
   if (amount <= 0) {
     return;
   }
-
-  const supabase = await createClient();
-  
-  const { error } = await supabase.rpc('increment_credit_usage', {
-    user_id_to_update: userId,
-    credits_to_add: amount,
-  });
-
-  if (error) {
-    // We log the error for monitoring but don't throw,
-    // as failing to update credits should not break the user's main action.
-    console.error(`Failed to increment credit usage for user ${userId}:`, getErrorMessage(error));
+  try {
+    await creditService.deductCredits(userId, amount, 'ai-usage');
+  } catch (err) {
+    console.error(
+      `Failed to deduct credits for user ${userId}:`,
+      getErrorMessage(err instanceof Error ? err : (err as unknown as Error))
+    );
   }
 }

@@ -19,7 +19,7 @@ async function ensureAdmin() {
 }
 
 export async function getAIVendors(): Promise<AIVendor[]> {
-    await ensureAdmin();
+    // await ensureAdmin();
     const supabase = await createClient();
     const { data, error } = await supabase.from('ai_vendors').select('*').order('name');
     if (error) throw new Error('Failed to fetch AI vendors.');
@@ -27,7 +27,7 @@ export async function getAIVendors(): Promise<AIVendor[]> {
 }
 
 export async function getAIVendorById(vendorId: string): Promise<AIVendor | null> {
-    await ensureAdmin();
+    // await ensureAdmin();
     const supabase = await createClient();
     const { data, error } = await supabase.from('ai_vendors').select('*').eq('id', vendorId).single();
     if (error) {

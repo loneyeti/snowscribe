@@ -6,7 +6,8 @@ import { getAIModelById } from '@/lib/data/aiModels';
 // getAIVendorById is used internally by lib/data/chat.ts, so not directly needed here for the call.
 import { getSystemPromptByCategory } from '@/lib/data/aiPrompts';
 import { chat as snowganderChatService } from '@/lib/data/chat';
-import { incrementUserCredits } from '@/lib/data/credits';
+import { creditService } from '@/lib/services/credit.service';
+import { profileService } from '@/lib/services/profile.service';
 import { createClient } from '@/lib/supabase/server';
 import type { AIModel } from '@/lib/types';
 import type { ChatResponse as SnowganderChatResponse } from 'snowgander';
@@ -30,6 +31,36 @@ export async function sendMessage(
 ): Promise<SnowganderChatResponse> {
 
   try {
+    // 0. Pre-flight credit check and auth
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { 
+        role: 'assistant', 
+        content: [{ 
+          type: 'error', 
+          publicMessage: 'Unauthorized.', 
+          privateMessage: 'No authenticated user found' 
+        }] 
+      };
+    }
+
+    // Check if user has enough credits (minimum 1 credit check to prevent spam)
+    try {
+      await profileService.checkCreditBalance(user.id, 1);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown credit check error';
+      return {
+        role: 'assistant',
+        content: [{ 
+          type: 'error', 
+          publicMessage: errorMessage,
+          privateMessage: errorMessage 
+        }]
+      };
+    }
+
     // 1. Fetch Tool-Specific Configuration
     const toolModelEntry = await getToolModelByName(toolName);
     if (!toolModelEntry || !toolModelEntry.model_id) {
@@ -119,22 +150,16 @@ export async function sendMessage(
       finalSystemPrompt
     );
     
-    // 5. Update Credit Usage (non-blocking)
-    try {
-      // Use the actual cost from the AI response multiplied by 100 (1 snowgander credit = 100 app credits)
-      const creditsToCharge = aiResponse.usage?.totalCost !== undefined 
-        ? aiResponse.usage.totalCost * 100 
-        : 1;
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user) {
-        incrementUserCredits(user.id, creditsToCharge).catch(err => {
-          console.error("[AISMessageHandler] Error updating credits:", err);
-        });
-      }
-    } catch (authError) {
-      console.error("[AISMessageHandler] Could not get user for credit update:", authError);
+    console.log("About to deduct credits")
+    console.log(`snowgander reports this query costs: ${aiResponse.usage?.totalCost}`)
+    // 5. Deduct credits based on actual usage (non-blocking for UX)
+    if (aiResponse.usage?.totalCost && aiResponse.usage.totalCost > 0) {
+      const dollarCost = aiResponse.usage.totalCost;
+      const creditCost = dollarCost / 0.01; // Using fixed 1 credit = 1 cent ratio
+      
+      creditService.deductCredits(user.id, creditCost, `ai-tool-${toolName}`)
+          .then(() => console.log(`Successfully deducted ${creditCost} credits for user ${user.id}`))
+          .catch(err => console.error(`CRITICAL: Failed to deduct credits for user ${user.id}`, err));
     }
 
     // 6. Log AI Interaction

@@ -415,6 +415,21 @@ You are a specialized assistant for generating character names that fit specific
 Your goal is to help writers find names that enhance their characters and fit seamlessly into their story worlds while respecting real-world cultural contexts.', 
   'character_name_generator', NULL, NULL);
 
+INSERT INTO public.ai_prompts (name, prompt_text, category, user_id, project_id) VALUES (
+  'World Note Suggester',
+  'You are an expert editor and archivist. Your task is to analyze a piece of text from a user''s world-building notes and provide a concise, descriptive title and a suitable category.
+
+The response MUST be a valid JSON object with the following structure:
+{
+  "title": "A short, descriptive title (5-10 words max)",
+  "category": "A single, relevant category (e.g., ''Character'', ''Location'', ''Magic System'', ''History'', ''Culture'', ''Technology'')"
+}
+
+Do not include any other text, explanations, or markdown formatting in your response. Only the JSON object.',
+  'world_note_suggester',
+  NULL, NULL
+);
+
 -- Map the 'character_name_generator' tool to Claude 3.7 Sonnet
 INSERT INTO public.tool_model (name, model_id)
 SELECT 'character_name_generator', id FROM public.ai_models WHERE name = 'Claude 3.7 Sonnet' LIMIT 1;
