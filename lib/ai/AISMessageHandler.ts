@@ -12,6 +12,10 @@ import { createClient } from '@/lib/supabase/server';
 import type { AIModel } from '@/lib/types';
 import type { ChatResponse as SnowganderChatResponse } from 'snowgander';
 import type { Chapter, Character, Scene, SceneTag, WorldBuildingNote } from '@/lib/types';
+import type { 
+  LogLineGeneratorContext, 
+  SynopsisGeneratorContext 
+} from '@/lib/ai/contextFormatters';
 
 /**
  * Sends a message to the AI service using a specified tool configuration.
@@ -129,6 +133,12 @@ export async function sendMessage(
         case 'writing_coach': 
           // No specific project context needed for a general writing coach
           formattedContext = ""; 
+          break;
+        case 'log_line_generator':
+          formattedContext = (await import('@/lib/ai/contextFormatters')).formatLogLineGeneratorContext(contextData as LogLineGeneratorContext);
+          break;
+        case 'synopsis_generator':
+          formattedContext = (await import('@/lib/ai/contextFormatters')).formatSynopsisGeneratorContext(contextData as SynopsisGeneratorContext);
           break;
         default:
           console.warn(`[AISMessageHandler] No specific context formatter for toolName '${toolName}'. Context data might not be used as intended.`);

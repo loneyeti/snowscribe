@@ -3,6 +3,7 @@
 import React from "react";
 import { WordCountProgressIndicator } from "@/components/ui/WordCountProgressIndicator";
 import { UserMenuButton } from "@/components/auth/UserMenuButton";
+import { CreditsBadge } from "@/components/ui/CreditsBadge";
 import { cactusSerif } from "@/lib/fonts";
 import { Pencil } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
@@ -87,8 +88,12 @@ export function AppHeader({
           </p>
         </div>
 
-        {/* Right side: Word Count Progress Indicator and User Menu */}
+        {/* Right side: Credits + Word Count + User */}
         <div className="flex items-center gap-4 flex-shrink-0">
+          {/* Credits badge */}
+          <CreditsBadge className="hidden sm:inline-flex" />
+
+          {/* Word count */}
           <div className="hidden sm:block w-48 lg:w-56">
             <WordCountProgressIndicator
               currentWords={currentWords}
@@ -113,12 +118,15 @@ export function AppHeader({
         </div>
       </div>
 
-      {/* Mobile word count - shown on small screens */}
-      <div className="sm:hidden mt-4 pt-4 border-t border-slate-200/40 dark:border-slate-700/40">
-        <WordCountProgressIndicator
-          currentWords={currentWords}
-          targetWords={targetWords}
-        />
+      {/* Mobile row */}
+      <div className="sm:hidden mt-4 pt-4 border-t border-slate-200/40 dark:border-slate-700/40 flex items-center justify-between">
+        <CreditsBadge />
+        <div className="w-40">
+          <WordCountProgressIndicator
+            currentWords={currentWords}
+            targetWords={targetWords}
+          />
+        </div>
       </div>
     </header>
   );

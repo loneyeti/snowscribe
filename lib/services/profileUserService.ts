@@ -3,11 +3,11 @@ import { createClient } from '../supabase/server';
 import type { Profile } from '../types';
 import { updateProfileSchema, type UpdateProfileValues } from '../schemas/profile.schema';
 
-export async function getProfileForUser(userId: string): Promise<Pick<Profile, 'id' | 'is_site_admin' | 'full_name' | 'pen_name'> | null> {
+export async function getProfileForUser(userId: string): Promise<Pick<Profile, 'id' | 'is_site_admin' | 'full_name' | 'pen_name' | 'credit_balance' | 'has_unlimited_credits'> | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('profiles')
-        .select('id, is_site_admin, full_name, pen_name')
+        .select('id, is_site_admin, full_name, pen_name, credit_balance, has_unlimited_credits')
         .eq('id', userId)
         .single();
 

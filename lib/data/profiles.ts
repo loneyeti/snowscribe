@@ -19,3 +19,19 @@ export async function updateClientProfile(data: UpdateProfileValues): Promise<Pr
   const user = await getAuthenticatedUser();
   return profileService.updateProfile(user.id, data);
 }
+
+export async function getClientCreditInfo(): Promise<{ balance: number; hasUnlimited: boolean } | null> {
+  try {
+    const user = await getAuthenticatedUser();
+    const profile = await profileService.getProfileForUser(user.id);
+    if (!profile) return null;
+
+    return {
+      balance: profile.credit_balance ?? 0,
+      hasUnlimited: profile.has_unlimited_credits ?? false,
+    };
+  } catch (error) {
+    console.error("Could not fetch client credit info:", error);
+    return null;
+  }
+}

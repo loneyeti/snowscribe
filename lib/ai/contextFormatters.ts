@@ -168,3 +168,41 @@ export function formatSceneForAI(scene: Scene): string {
   
   return formattedScene.trim();
 }
+
+// --- For Log Line Generation ---
+export interface LogLineGeneratorContext {
+  synopsis: string;
+  title?: string | null;
+  genreName?: string | null;
+}
+
+export function formatLogLineGeneratorContext(context: LogLineGeneratorContext): string {
+  const titlePart = context.title ? `Project Title: ${context.title}` : "";
+  const genrePart = context.genreName ? `Genre: ${context.genreName}` : "";
+  const synopsisPart = `Synopsis:\n${context.synopsis}`;
+  
+  return [titlePart, genrePart, synopsisPart].filter(Boolean).join('\n\n');
+}
+
+// --- For Synopsis Generation ---
+export interface SynopsisGeneratorContext {
+    title?: string | null;
+    genreName?: string | null;
+    logLine?: string | null;
+    sceneOutlineDescriptions?: string;
+}
+
+export function formatSynopsisGeneratorContext(context: SynopsisGeneratorContext): string {
+    const contextParts = [];
+    if (context.title) contextParts.push(`Project Title: ${context.title}`);
+    if (context.genreName) contextParts.push(`Genre: ${context.genreName}`);
+    if (context.logLine) contextParts.push(`Log Line: ${context.logLine}`);
+
+    let contextString = contextParts.join('\n');
+
+    if (context.sceneOutlineDescriptions && context.sceneOutlineDescriptions.trim()) {
+        contextString += "\n\n---\n\nExisting Scene Outline Descriptions:\n" + context.sceneOutlineDescriptions.trim();
+    }
+    
+    return contextString;
+}
