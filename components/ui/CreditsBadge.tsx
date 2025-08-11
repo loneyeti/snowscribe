@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/Tooltip";
 import { getClientCreditInfo } from "@/lib/data/profiles";
 import {
-  Coins,
+  Zap,
   Infinity as InfinityIcon,
   Loader2,
   RefreshCcw,
@@ -75,7 +75,7 @@ export function CreditsBadge({
       ) : hasUnlimited ? (
         <InfinityIcon className="h-4 w-4 text-emerald-500" />
       ) : (
-        <Coins
+        <Zap
           className={cn("h-4 w-4", isLow ? "text-amber-500" : "text-primary")}
         />
       )}
@@ -84,7 +84,7 @@ export function CreditsBadge({
           ? "Loading..."
           : hasUnlimited
           ? "Unlimited"
-          : `${Math.max(0, Math.floor(balance))} credits`}
+          : `${Math.max(0, Math.floor(balance))}`}
       </span>
       {showRefresh && !isLoading && (
         <Button
@@ -105,7 +105,7 @@ export function CreditsBadge({
     ? "We couldn't load your credits. Try refreshing."
     : hasUnlimited
     ? "Your account has unlimited credits."
-    : "Credits are used when you run AI tools. As configured, ~1 credit ≈ $0.01 of AI usage.";
+    : "AI Credits Remaining";
 
   return (
     <TooltipProvider>
