@@ -1,20 +1,27 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { toast } from "sonner";
-import type { Scene } from "@/lib/types";
 import { createSceneSchema } from "@/lib/schemas/scene.schema";
-import { createScene } from "@/lib/data/scenes";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+// This schema validates only the fields managed by the form
+const formSchema = createSceneSchema.pick({
+  title: true,
+  primary_category: true,
+});
+type SceneFormValues = z.infer<typeof formSchema>;
 
 interface CreateSceneModalProps {
   projectId: string;
   chapterId: string;
   isOpen: boolean;
   onClose: () => void;
-  onSceneCreated: (newScene: Scene) => void;
+  onSceneCreated: (data: SceneFormValues) => void;
 }
 
 export function CreateSceneModal({
@@ -24,62 +31,40 @@ export function CreateSceneModal({
   onClose,
   onSceneCreated,
 }: CreateSceneModalProps) {
-  const [title, setTitle] = useState("");
-  const [primaryCategory, setPrimaryCategory] = useState<"" | string>("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<SceneFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      primary_category: undefined,
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    // Note: Scene schema might require 'order'. For now, assuming API handles it or it's optional.
-    // If 'order' is required by createSceneSchema, it needs to be added here. (It's optional in base)
-    const validationResult = createSceneSchema.safeParse({
-      title: title, // Title is required by schema
-      chapter_id: chapterId,
-      project_id: projectId, // project_id is required by createSceneSchema
-      primary_category: primaryCategory || undefined,
-    });
-
-    if (!validationResult.success) {
-      const firstError =
-        validationResult.error.errors[0]?.message || "Invalid input.";
-      setError(firstError);
-      toast.error(firstError);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const { ...sceneData } = validationResult.data;
-      const newScene = await createScene(projectId, chapterId, sceneData);
-      toast.success("Scene created successfully!");
-      onSceneCreated(newScene);
-      setTitle(""); // Reset form
-      setPrimaryCategory(""); // Reset primary category
-      onClose();
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An unknown error occurred.";
-      console.error("Failed to create scene:", err);
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+  const onSubmit = (data: SceneFormValues) => {
+    onSceneCreated(data);
+    reset();
   };
 
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create New Scene">
+    <Modal
+      isOpen={isOpen}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      title="Create New Scene"
+    >
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Enter a title for your new scene.
         </p>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label
               htmlFor="sceneTitle"
@@ -90,12 +75,15 @@ export function CreateSceneModal({
             <Input
               id="sceneTitle"
               type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              {...register("title")}
               placeholder="e.g., The Discovery"
-              required // Title is required by schema
               className="w-full"
             />
+            {errors.title && (
+              <p className="text-sm text-red-600 mt-1">
+                {errors.title.message}
+              </p>
+            )}
           </div>
           <div>
             <label
@@ -106,11 +94,9 @@ export function CreateSceneModal({
             </label>
             <select
               id="primaryCategory"
-              value={primaryCategory}
-              onChange={(e) => setPrimaryCategory(e.target.value)}
-              required
+              {...register("primary_category")}
               className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
               <option value="" disabled>
                 Select a primary category
@@ -129,19 +115,26 @@ export function CreateSceneModal({
                 </option>
               ))}
             </select>
+            {errors.primary_category && (
+              <p className="text-sm text-red-600 mt-1">
+                {errors.primary_category.message}
+              </p>
+            )}
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end space-x-3 pt-2">
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
+              onClick={() => {
+                reset();
+                onClose();
+              }}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Creating..." : "Create Scene"}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Scene"}
             </Button>
           </div>
         </form>

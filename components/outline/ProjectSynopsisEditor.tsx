@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { updateProject } from "@/lib/data/projects";
 import { Loader2, Sparkles } from "lucide-react";
 import { sendMessage } from "@/lib/ai/AISMessageHandler";
-import type { TextBlock, ChatResponse } from "snowgander";
+import type { TextBlock } from "snowgander";
 
 interface ProjectSynopsisEditorProps {
   project: Pick<

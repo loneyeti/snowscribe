@@ -43,22 +43,33 @@ const ManuscriptEditorWithNoSSR = dynamic(
 );
 
 export function ManuscriptSection() {
-  const { project, chapters, isLoading, selectedChapter, selectedScene } =
-    useProjectStore(
-      useShallow((state) => ({
-        project: state.project,
-        chapters: state.chapters,
-        isLoading: state.isLoading,
-        selectedChapter: state.selectedChapter,
-        selectedScene: state.selectedScene,
-      }))
-    );
-
-  // 2. Select actions individually (this part remains the same and is correct)
-  const updateSceneInStore = useProjectStore((state) => state.updateScene);
-  const reorderScenes = useProjectStore((state) => state.reorderScenes);
-  const selectChapter = useProjectStore((state) => state.selectChapter);
-  const selectScene = useProjectStore((state) => state.selectScene);
+  const {
+    project,
+    chapters,
+    isLoading,
+    selectedChapter,
+    selectedScene,
+    createChapter,
+    createScene,
+    updateScene: updateSceneInStore,
+    reorderScenes,
+    selectChapter,
+    selectScene,
+  } = useProjectStore(
+    useShallow((state) => ({
+      project: state.project,
+      chapters: state.chapters,
+      isLoading: state.isLoading,
+      selectedChapter: state.selectedChapter,
+      selectedScene: state.selectedScene,
+      createChapter: state.createChapter,
+      createScene: state.createScene,
+      updateScene: state.updateScene,
+      reorderScenes: state.reorderScenes,
+      selectChapter: state.selectChapter,
+      selectScene: state.selectScene,
+    }))
+  );
 
   const [manuscriptView, setManuscriptView] =
     useState<ManuscriptView>("chapters");
@@ -379,19 +390,33 @@ export function ManuscriptSection() {
       />
       {isCreateChapterModalOpen && (
         <CreateChapterModal
-          projectId={project.id}
           isOpen={isCreateChapterModalOpen}
           onClose={() => setIsCreateChapterModalOpen(false)}
-          onChapterCreated={() => setIsCreateChapterModalOpen(false)}
+          onChapterCreated={(data) => {
+            // Close the modal immediately
+            setIsCreateChapterModalOpen(false);
+
+            // Call the create action without awaiting it.
+            // The store will update the UI when this is done.
+            createChapter(data.title);
+          }}
         />
       )}
       {isCreateSceneModalOpen && selectedChapter && (
         <CreateSceneModal
-          projectId={project.id}
-          chapterId={selectedChapter.id}
           isOpen={isCreateSceneModalOpen}
           onClose={() => setIsCreateSceneModalOpen(false)}
-          onSceneCreated={() => setIsCreateSceneModalOpen(false)}
+          onSceneCreated={(data) => {
+            // Close the modal immediately
+            setIsCreateSceneModalOpen(false);
+
+            // Call the create action without awaiting it.
+            createScene(
+              selectedChapter.id,
+              data.title,
+              data.primary_category as string
+            );
+          }}
         />
       )}
       {selectedScene && selectedChapter && (
