@@ -6,9 +6,13 @@ import { useAIChat } from "@/hooks/ai/useAIChat";
 import { Button } from "@/components/ui/Button";
 import { Paragraph } from "@/components/typography/Paragraph";
 import { MultiTurnChatInterface } from "@/components/ai/MultiTurnChatInterface";
-import { AI_TOOL_NAMES } from "@/lib/ai/constants";
+import { AI_TOOL_NAMES, AI_PAGE_TOOLS } from "@/lib/ai/constants";
 import { toast } from "sonner";
-import type { Character, Scene } from "@/lib/types";
+import type { Character, Scene, AIMessage } from "@/lib/types";
+import { useCreateWorldNoteFromChat } from "@/hooks/ai/useCreateWorldNoteFromChat";
+import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteModal";
+import { PlusSquare } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
 
 export function CharacterChat() {
   const { project, chapters, characters, isStoreLoading } = useProjectStore(
@@ -33,6 +37,14 @@ export function CharacterChat() {
     clearChat,
     setUiMessages,
   } = useAIChat(projectId);
+
+  const {
+    isModalOpen,
+    isSuggesting,
+    initialNoteData,
+    openCreateNoteModal,
+    closeCreateNoteModal,
+  } = useCreateWorldNoteFromChat({ projectId });
 
   // Effect to find all scenes a selected character is in
   useEffect(() => {
@@ -127,6 +139,26 @@ export function CharacterChat() {
     );
   }
 
+  const renderMessageActions = (message: AIMessage) => {
+    if (message.sender !== "ai" || !message.text) return null;
+
+    const toolDef = AI_PAGE_TOOLS.find(
+      (t) => t.id === AI_TOOL_NAMES.CHARACTER_CHAT
+    );
+    const toolName = toolDef ? toolDef.name : "Character Chat";
+
+    return (
+      <IconButton
+        icon={PlusSquare}
+        onClick={() => openCreateNoteModal(message.text, toolName)}
+        aria-label="Create world note from this response"
+        title="Create world note"
+        variant="ghost"
+        size="sm"
+      />
+    );
+  };
+
   // Chat Interface UI
   return (
     <div className="flex flex-col h-full">
@@ -157,8 +189,17 @@ export function CharacterChat() {
               </Button>
             </div>
           }
+          renderMessageActions={renderMessageActions}
         />
       )}
+      <CreateWorldNoteModal
+        isOpen={isModalOpen}
+        onClose={closeCreateNoteModal}
+        initialContent={initialNoteData.content}
+        initialTitle={initialNoteData.title}
+        initialCategory={initialNoteData.category}
+        isSuggesting={isSuggesting}
+      />
     </div>
   );
 }

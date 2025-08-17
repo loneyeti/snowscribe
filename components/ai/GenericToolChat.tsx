@@ -8,6 +8,11 @@ import { MultiTurnChatInterface } from "@/components/ai/MultiTurnChatInterface";
 import { Paragraph } from "@/components/typography/Paragraph";
 import { toast } from "sonner";
 import { AIToolDefinition, AI_TOOL_NAMES } from "@/lib/ai/constants";
+import { useCreateWorldNoteFromChat } from "@/hooks/ai/useCreateWorldNoteFromChat";
+import { CreateWorldNoteModal } from "@/components/world-notes/CreateWorldNoteModal";
+import { PlusSquare } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
+import type { AIMessage } from "@/lib/types";
 
 interface GenericToolChatProps {
   tool: AIToolDefinition;
@@ -38,6 +43,14 @@ export function GenericToolChat({ tool, projectId }: GenericToolChatProps) {
   useEffect(() => {
     clearChat();
   }, [tool, clearChat]);
+
+  const {
+    isModalOpen,
+    isSuggesting,
+    initialNoteData,
+    openCreateNoteModal,
+    closeCreateNoteModal,
+  } = useCreateWorldNoteFromChat({ projectId });
 
   // 4. Define the message sending logic
   const handleSendMessage = useCallback(
@@ -102,13 +115,41 @@ export function GenericToolChat({ tool, projectId }: GenericToolChatProps) {
     );
   }
 
+  const renderMessageActions = (message: AIMessage) => {
+    if (message.sender !== "ai" || !message.text) {
+      return null;
+    }
+
+    return (
+      <IconButton
+        icon={PlusSquare}
+        onClick={() => openCreateNoteModal(message.text, tool.name)}
+        aria-label="Create world note from this response"
+        title="Create world note"
+        variant="ghost"
+        size="sm"
+      />
+    );
+  };
+
   return (
-    <MultiTurnChatInterface
-      uiMessages={uiMessages}
-      isLoading={isChatLoading}
-      error={chatError}
-      onSendMessage={handleSendMessage}
-      className="flex-grow"
-    />
+    <>
+      <MultiTurnChatInterface
+        uiMessages={uiMessages}
+        isLoading={isChatLoading}
+        error={chatError}
+        onSendMessage={handleSendMessage}
+        className="flex-grow"
+        renderMessageActions={renderMessageActions}
+      />
+      <CreateWorldNoteModal
+        isOpen={isModalOpen}
+        onClose={closeCreateNoteModal}
+        initialContent={initialNoteData.content}
+        initialTitle={initialNoteData.title}
+        initialCategory={initialNoteData.category}
+        isSuggesting={isSuggesting}
+      />
+    </>
   );
 }

@@ -10,6 +10,18 @@ interface NoteSuggestions {
   category: string;
 }
 
+interface NoteTitleSuggestion {
+  title: string;
+}
+
+function isNoteTitleSuggestion(obj: unknown): obj is NoteTitleSuggestion {
+    if (typeof obj !== 'object' || obj === null) {
+        return false;
+    }
+    const potentialSuggestion = obj as Record<string, unknown>;
+    return typeof potentialSuggestion.title === 'string';
+}
+
 /**
  * A type guard to safely check if an object matches the NoteSuggestions interface.
  * @param obj The object to check, typed as `unknown` for type safety.
@@ -73,6 +85,51 @@ export async function getNoteSuggestions(
     return {
       title: "",
       category: "",
+    };
+  }
+}
+
+export async function generateNoteTitleForContent(
+  projectId: string,
+  content: string,
+  category: string
+): Promise<NoteTitleSuggestion> {
+  const userPrompt = `The category for this world note is "${category}". Based on this category and the content below, please generate a concise and relevant title.\n\n---\n\n${content}\n\n---\n\nPlease return ONLY a JSON object with a "title" key. For example: { "title": "Generated Title" }`;
+  
+  try {
+    const response: SnowganderChatResponse = await AISMessageHandler(
+      projectId,
+      AI_TOOL_NAMES.WORLD_NOTE_SUGGESTER,
+      userPrompt,
+      null
+    );
+
+    if (response.content && response.content[0]?.type === "text") {
+      const responseText = (response.content[0] as { text: string }).text;
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("AI response did not contain a valid JSON object.");
+      }
+
+      const parsedJson = JSON.parse(jsonMatch[0]);
+      if (isNoteTitleSuggestion(parsedJson)) {
+        return parsedJson;
+      } else {
+          if (isNoteSuggestions(parsedJson)) {
+              return { title: parsedJson.title };
+          }
+        throw new Error("AI response JSON has an incorrect structure.");
+      }
+    } else {
+      const errorMsg =
+        (response.content?.[0] as { publicMessage?: string })?.publicMessage ||
+        "The AI service returned an unexpected response.";
+      throw new Error(errorMsg);
+    }
+  } catch (error) {
+    console.error("Failed to get note title suggestion:", error);
+    return {
+      title: "", // Return a default empty title on failure
     };
   }
 }

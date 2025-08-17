@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useProjectStore } from "@/lib/stores/projectStore";
 import { useAIChat } from "@/hooks/ai/useAIChat";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { PlusSquare } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import type { AIMessage } from "@/lib/types";
-import { getNoteSuggestions } from "@/lib/data/ai";
+import { useCreateWorldNoteFromChat } from "@/hooks/ai/useCreateWorldNoteFromChat";
 
 export function WorldBuildingChat() {
   const { project, worldNotes, isStoreLoading, createWorldNote } =
@@ -28,11 +28,13 @@ export function WorldBuildingChat() {
   const { uiMessages, isLoading, error, sendUserMessage } =
     useAIChat(projectId);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [initialNoteContent, setInitialNoteContent] = useState<string>("");
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const [suggestedTitle, setSuggestedTitle] = useState("");
-  const [suggestedCategory, setSuggestedCategory] = useState("");
+  const {
+    isModalOpen,
+    isSuggesting,
+    initialNoteData,
+    openCreateNoteModal,
+    closeCreateNoteModal,
+  } = useCreateWorldNoteFromChat({ projectId });
 
   const handleSendMessage = async (userText: string) => {
     if (isStoreLoading.worldNotes) {
@@ -45,42 +47,6 @@ export function WorldBuildingChat() {
       AI_TOOL_NAMES.WORLD_BUILDING_CHAT,
       contextForAI
     );
-  };
-
-  const openCreateNoteModal = async (content: string) => {
-    setInitialNoteContent(content);
-    setIsModalOpen(true);
-    setIsSuggesting(true);
-
-    toast.info("Getting AI suggestions for title and category...");
-
-    try {
-      const suggestions = await getNoteSuggestions(projectId, content);
-      if (suggestions.title || suggestions.category) {
-        setSuggestedTitle(suggestions.title);
-        setSuggestedCategory(suggestions.category);
-        toast.success("AI suggestions loaded!");
-      } else {
-        toast.error(
-          "Could not get AI suggestions. Please fill in the details manually."
-        );
-      }
-    } catch (error) {
-      console.error("Failed to get AI suggestions:", error);
-      toast.error("An error occurred while getting AI suggestions.");
-      setSuggestedTitle("");
-      setSuggestedCategory("");
-    } finally {
-      setIsSuggesting(false);
-    }
-  };
-
-  // Add this new handler function inside the component
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setInitialNoteContent("");
-    setSuggestedTitle("");
-    setSuggestedCategory("");
   };
 
   const renderMessageActions = (message: AIMessage) => {
@@ -115,10 +81,10 @@ export function WorldBuildingChat() {
 
       <CreateWorldNoteModal
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        initialContent={initialNoteContent}
-        initialTitle={suggestedTitle}
-        initialCategory={suggestedCategory}
+        onClose={closeCreateNoteModal}
+        initialContent={initialNoteData.content}
+        initialTitle={initialNoteData.title}
+        initialCategory={initialNoteData.category}
         isSuggesting={isSuggesting}
       />
     </>
