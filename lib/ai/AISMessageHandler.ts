@@ -14,7 +14,8 @@ import type { ChatResponse as SnowganderChatResponse } from 'snowgander';
 import type { Chapter, Character, Scene, SceneTag, WorldBuildingNote } from '@/lib/types';
 import type { 
   LogLineGeneratorContext, 
-  SynopsisGeneratorContext 
+  SynopsisGeneratorContext,
+  SynopsisFromManuscriptContext
 } from '@/lib/ai/contextFormatters';
 
 /**
@@ -139,6 +140,9 @@ export async function sendMessage(
           break;
         case 'synopsis_generator':
           formattedContext = (await import('@/lib/ai/contextFormatters')).formatSynopsisGeneratorContext(contextData as SynopsisGeneratorContext);
+          break;
+        case 'synopsis_generator_manuscript':
+          formattedContext = (await import('@/lib/ai/contextFormatters')).formatSynopsisFromManuscriptContext(contextData as SynopsisFromManuscriptContext);
           break;
         default:
           console.warn(`[AISMessageHandler] No specific context formatter for toolName '${toolName}'. Context data might not be used as intended.`);

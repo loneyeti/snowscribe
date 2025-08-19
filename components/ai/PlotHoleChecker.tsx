@@ -10,6 +10,7 @@ import { AI_TOOL_NAMES } from "@/lib/ai/constants";
 import { toast } from "sonner";
 import type { AIMessage } from "@/lib/types";
 import type { ChatResponse as SnowganderChatResponse } from "snowgander";
+import { appEvents } from "@/lib/utils/eventEmitter";
 
 interface PlotHoleCheckerProps {
   projectId: string;
@@ -74,6 +75,13 @@ export function PlotHoleChecker({ projectId }: PlotHoleCheckerProps) {
         userPrompt,
         contextForAI
       );
+
+      // 2. ADD THIS LOGIC BLOCK
+      // If the response from the AI is not an error, it means credits were likely used.
+      if (response.content?.[0]?.type !== "error") {
+        appEvents.emit("creditsUpdated");
+      }
+      // END OF ADDED BLOCK
 
       if (response.content && response.content[0]?.type === "text") {
         const newMessages: AIMessage[] = response.content.map(

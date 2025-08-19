@@ -206,3 +206,28 @@ export function formatSynopsisGeneratorContext(context: SynopsisGeneratorContext
     
     return contextString;
 }
+
+// --- For Synopsis Generation from Manuscript ---
+export interface SynopsisFromManuscriptContext {
+    title?: string | null;
+    genreName?: string | null;
+    logLine?: string | null;
+    chapters: Chapter[];
+}
+
+export function formatSynopsisFromManuscriptContext(context: SynopsisFromManuscriptContext): string {
+    const contextParts = [];
+    if (context.title) contextParts.push(`Project Title: ${context.title}`);
+    if (context.genreName) contextParts.push(`Genre: ${context.genreName}`);
+    if (context.logLine) contextParts.push(`Log Line: ${context.logLine}`);
+    
+    let contextString = contextParts.join('\n');
+
+    const manuscriptText = formatManuscriptForAI(context.chapters);
+
+    if (manuscriptText && manuscriptText.trim() && manuscriptText !== "No manuscript content available.") {
+        contextString += "\n\n---\n\nFull Manuscript Text:\n" + manuscriptText;
+    }
+
+    return contextString;
+}

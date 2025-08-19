@@ -2,6 +2,7 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { getNoteSuggestions, generateNoteTitleForContent } from "@/lib/data/ai";
+import { appEvents } from "@/lib/utils/eventEmitter";
 
 interface UseCreateWorldNoteFromChatProps {
   projectId: string;
@@ -38,6 +39,7 @@ export function useCreateWorldNoteFromChat({ projectId }: UseCreateWorldNoteFrom
             category
           );
           if (suggestion.title) {
+            appEvents.emit('creditsUpdated'); // ADD THIS LINE
             setInitialNoteData((prev) => ({ ...prev, title: suggestion.title }));
             toast.success("AI suggestions loaded!");
           } else {
@@ -48,6 +50,7 @@ export function useCreateWorldNoteFromChat({ projectId }: UseCreateWorldNoteFrom
           setInitialNoteData({ content, category: "", title: "" });
           const suggestions = await getNoteSuggestions(projectId, content);
           if (suggestions.title || suggestions.category) {
+            appEvents.emit('creditsUpdated'); // ADD THIS LINE
             setInitialNoteData((prev) => ({
               ...prev,
               title: suggestions.title,

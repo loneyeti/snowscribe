@@ -1,20 +1,35 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import type { Project } from "@/lib/types";
+import type { Project, Chapter } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "sonner";
 import { updateProject } from "@/lib/data/projects";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, ChevronDown } from "lucide-react";
 import { sendMessage } from "@/lib/ai/AISMessageHandler";
 import type { TextBlock } from "snowgander";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/DropdownMenu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/Tooltip";
+import { appEvents } from "@/lib/utils/eventEmitter";
 
 interface ProjectSynopsisEditorProps {
   project: Pick<
     Project,
     "id" | "log_line" | "one_page_synopsis" | "title" | "genre_id"
   >;
+  chapters: Chapter[]; // Add this line
   projectGenreName?: string | null;
   sceneOutlineDescriptions?: string;
   onSynopsisUpdate: (updatedData: {
@@ -25,6 +40,7 @@ interface ProjectSynopsisEditorProps {
 
 export function ProjectSynopsisEditor({
   project,
+  chapters, // Add this line
   projectGenreName,
   sceneOutlineDescriptions,
   onSynopsisUpdate,
@@ -36,6 +52,14 @@ export function ProjectSynopsisEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingLogLine, setIsGeneratingLogLine] = useState(false);
   const [isGeneratingSynopsis, setIsGeneratingSynopsis] = useState(false);
+
+  type SynopsisSource = "outline" | "manuscript";
+  const [synopsisSource, setSynopsisSource] =
+    useState<SynopsisSource>("outline");
+
+  const hasManuscriptContent = chapters.some((c) =>
+    c.scenes?.some((s) => s.content && s.content.trim() !== "")
+  );
 
   useEffect(() => {
     setLogLine(project.log_line || "");
@@ -87,6 +111,12 @@ export function ProjectSynopsisEditor({
         contextData
       );
 
+      // ADD THIS BLOCK
+      if (aiResponse.content?.[0]?.type !== "error") {
+        appEvents.emit("creditsUpdated");
+      }
+      // END ADDED BLOCK
+
       if (aiResponse && aiResponse.content && aiResponse.content.length > 0) {
         const firstErrorBlock = aiResponse.content.find(
           (block) => block.type === "error"
@@ -122,29 +152,53 @@ export function ProjectSynopsisEditor({
   };
 
   const handleGenerateSynopsis = async () => {
-    if (
-      !project.title &&
-      !projectGenreName &&
-      !logLine.trim() &&
-      !sceneOutlineDescriptions?.trim()
-    ) {
-      toast.error(
-        "Synopsis generation requires project title, genre, log line, or scene descriptions."
-      );
-      return;
+    if (synopsisSource === "outline") {
+      if (
+        !project.title &&
+        !projectGenreName &&
+        !logLine.trim() &&
+        !sceneOutlineDescriptions?.trim()
+      ) {
+        toast.error(
+          "Synopsis generation from outline requires project title, genre, log line, or scene descriptions."
+        );
+        return;
+      }
+    } else if (synopsisSource === "manuscript") {
+      if (!hasManuscriptContent) {
+        toast.error(
+          "Your manuscript has no content to generate a synopsis from."
+        );
+        return;
+      }
     }
-    setIsGeneratingSynopsis(true);
-    try {
-      const toolName = "synopsis_generator";
-      const userPrompt =
-        "Generate a one-page synopsis based on the provided project context.";
-      const contextData = {
-        title: project.title,
-        genreName: projectGenreName,
-        logLine: logLine.trim(),
-        sceneOutlineDescriptions: sceneOutlineDescriptions,
-      };
 
+    setIsGeneratingSynopsis(true);
+
+    const toolName =
+      synopsisSource === "outline"
+        ? "synopsis_generator"
+        : "synopsis_generator_manuscript";
+
+    const userPrompt =
+      "Generate a one-page synopsis based on the provided project context.";
+
+    const contextData =
+      synopsisSource === "outline"
+        ? {
+            title: project.title,
+            genreName: projectGenreName,
+            logLine: logLine.trim(),
+            sceneOutlineDescriptions: sceneOutlineDescriptions,
+          }
+        : {
+            title: project.title,
+            genreName: projectGenreName,
+            logLine: logLine.trim(),
+            chapters: chapters,
+          };
+
+    try {
       const aiResponse = await sendMessage(
         project.id,
         toolName,
@@ -152,26 +206,20 @@ export function ProjectSynopsisEditor({
         contextData
       );
 
-      if (aiResponse && aiResponse.content && aiResponse.content.length > 0) {
-        const firstErrorBlock = aiResponse.content.find(
-          (block) => block.type === "error"
-        );
-        if (firstErrorBlock && "publicMessage" in firstErrorBlock) {
-          throw new Error(firstErrorBlock.publicMessage as string);
-        }
+      // ADD THIS BLOCK
+      if (aiResponse.content?.[0]?.type !== "error") {
+        appEvents.emit("creditsUpdated");
+      }
+      // END ADDED BLOCK
 
-        const firstTextBlock = aiResponse.content.find(
-          (block) => block.type === "text"
-        ) as TextBlock | undefined;
-
-        if (firstTextBlock?.text) {
-          setOnePageSynopsis(firstTextBlock.text.trim());
-          toast.success("One-page synopsis generated!");
-        } else {
-          throw new Error("AI response did not contain any text.");
-        }
+      if (aiResponse?.content?.[0]?.type === "text") {
+        setOnePageSynopsis((aiResponse.content[0] as TextBlock).text.trim());
+        toast.success("One-page synopsis generated!");
       } else {
-        throw new Error("AI returned an empty or invalid response.");
+        const errorMsg =
+          (aiResponse?.content?.[0] as { publicMessage?: string })
+            ?.publicMessage || "AI returned an empty or invalid response.";
+        throw new Error(errorMsg);
       }
     } catch (error) {
       console.error("Error generating one-page synopsis:", error);
@@ -232,21 +280,71 @@ export function ProjectSynopsisEditor({
           rows={15}
           disabled={isGeneratingSynopsis || isSaving}
         />
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-1 text-xs text-primary hover:text-primary/90"
-          onClick={handleGenerateSynopsis}
-          disabled={isGeneratingSynopsis || isGeneratingLogLine || isSaving}
-          title="Generate One Page Synopsis with AI"
-        >
-          {isGeneratingSynopsis ? (
-            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-          ) : (
-            <Sparkles className="w-3 h-3 mr-1" />
-          )}
-          {isGeneratingSynopsis ? "Generating..." : "Generate Synopsis with AI"}
-        </Button>
+        <div className="flex items-center mt-2">
+          <Button
+            onClick={handleGenerateSynopsis}
+            disabled={isGeneratingSynopsis || isGeneratingLogLine || isSaving}
+            title="Generate One Page Synopsis with AI"
+            className="rounded-r-none"
+          >
+            {isGeneratingSynopsis ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4 mr-2" />
+            )}
+            {isGeneratingSynopsis ? "Generating..." : "Generate Synopsis"}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="default"
+                size="default"
+                className="px-2 rounded-l-none border-l border-primary/50"
+                aria-label="Select synopsis generation source"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuRadioGroup
+                value={synopsisSource}
+                onValueChange={(value) =>
+                  setSynopsisSource(value as SynopsisSource)
+                }
+              >
+                <DropdownMenuRadioItem value="outline">
+                  From Scene Outlines
+                </DropdownMenuRadioItem>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild disabled={!hasManuscriptContent}>
+                      <div
+                        className={
+                          !hasManuscriptContent ? "cursor-not-allowed" : ""
+                        }
+                      >
+                        <DropdownMenuRadioItem
+                          value="manuscript"
+                          disabled={!hasManuscriptContent}
+                        >
+                          From Full Manuscript
+                        </DropdownMenuRadioItem>
+                      </div>
+                    </TooltipTrigger>
+                    {!hasManuscriptContent && (
+                      <TooltipContent>
+                        <p>
+                          Your manuscript must contain scene content to use this
+                          option.
+                        </p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       <div className="flex justify-end">
         <Button

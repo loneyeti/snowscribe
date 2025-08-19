@@ -21,3 +21,5 @@ class EventEmitter {
 
 // Export single instance for scene updates
 export const sceneUpdateEmitter = new EventEmitter();
+
+export const appEvents = new EventEmitter();

@@ -35,6 +35,7 @@ import type { TextBlock, ChatResponse } from "snowgander";
 import { ManageSceneCharactersModal } from "@/components/modals/ManageSceneCharactersModal";
 import { ManageSceneTagsModal } from "@/components/modals/ManageSceneTagsModal";
 import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal";
+import { appEvents } from "@/lib/utils/eventEmitter";
 
 interface ChapterSceneOutlineListProps {
   chapters: Chapter[];
@@ -157,6 +158,12 @@ export function ChapterSceneOutlineList({
         userPrompt,
         systemPromptText
       );
+
+      // ADD THIS BLOCK
+      if (aiResponse.content?.[0]?.type !== "error") {
+        appEvents.emit("creditsUpdated");
+      }
+      // END ADDED BLOCK
 
       if (aiResponse && aiResponse.content && aiResponse.content.length > 0) {
         const firstTextBlock = aiResponse.content.find(

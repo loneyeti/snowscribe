@@ -16,6 +16,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { appEvents } from "@/lib/utils/eventEmitter";
 
 interface CreditsBadgeProps {
   className?: string;
@@ -52,6 +53,22 @@ export function CreditsBadge({
   React.useEffect(() => {
     load();
   }, [load]);
+
+  // 2. ADD THIS ENTIRE useEffect HOOK
+  React.useEffect(() => {
+    // This function will be called when the 'creditsUpdated' event is emitted
+    const handleCreditsUpdate = () => {
+      load();
+    };
+
+    // Subscribe to the event
+    appEvents.on("creditsUpdated", handleCreditsUpdate);
+
+    // Unsubscribe from the event when the component unmounts
+    return () => {
+      appEvents.off("creditsUpdated", handleCreditsUpdate);
+    };
+  }, [load]); // Add `load` as a dependency
 
   const isLow = !hasUnlimited && balance <= 5;
 

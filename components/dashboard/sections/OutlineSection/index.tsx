@@ -17,6 +17,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { appEvents } from "@/lib/utils/eventEmitter";
 
 type OutlineView = "synopsis" | "scenes";
 
@@ -43,6 +44,15 @@ export function OutlineSection() {
   const generateAIFullOutline = useProjectStore(
     (state) => state.generateAIFullOutline
   );
+  // ADD THIS NEW WRAPPER FUNCTION
+  const handleGenerateOutline = async () => {
+    // This calls the original function from the store.
+    await generateAIFullOutline();
+    // The store function handles its own errors, so we can assume an
+    // AI call was attempted when the function completes.
+    // We emit the event here to refresh the credits badge.
+    appEvents.emit("creditsUpdated");
+  };
   const fetchChapters = useProjectStore((state) => state.fetchChapters);
   const updateScene = useProjectStore((state) => state.updateScene);
 
@@ -120,6 +130,7 @@ export function OutlineSection() {
               title: project.title,
               genre_id: project.genre_id,
             }}
+            chapters={chapters} // Add this line
             projectGenreName={
               project.genre &&
               typeof project.genre === "object" &&
@@ -228,7 +239,7 @@ export function OutlineSection() {
       <OutlineCreatorModal
         isOpen={isOutlineCreatorModalOpen}
         onClose={() => setIsOutlineCreatorModalOpen(false)}
-        onConfirm={generateAIFullOutline}
+        onConfirm={handleGenerateOutline} // UPDATE THIS PROP to use the new wrapper
         isLoading={isLoading.generatingOutline}
         hasExistingContent={chapters.length > 0 || characters.length > 0}
       />

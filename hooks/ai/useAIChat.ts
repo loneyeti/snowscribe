@@ -6,6 +6,7 @@ import { AIMessage } from '@/lib/types/ai';
 import { sendMessage as callAIService } from '@/lib/ai/AISMessageHandler';
 import { ChatResponse as SnowganderChatResponse, TextBlock, ErrorBlock } from 'snowgander';
 import { v4 as uuidv4 } from 'uuid';
+import { appEvents } from '@/lib/utils/eventEmitter';
 
 export interface UseAIChatReturn {
   uiMessages: AIMessage[];
@@ -61,6 +62,11 @@ export function useAIChat(projectId: string): UseAIChatReturn {
         contextData,
         historyForAIService
       );
+
+      // If the AI response is not an error, it means credits were likely used.
+      if (aiSnowganderResponse.content?.[0]?.type !== 'error' && aiSnowganderResponse.role !== 'error') {
+        appEvents.emit('creditsUpdated');
+      }
 
       let aiResponseText = "AI response could not be processed.";
       let messageType: AIMessage['type'] = 'text';
