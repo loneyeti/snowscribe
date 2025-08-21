@@ -5,6 +5,7 @@ import { extractJsonFromString } from "@/lib/utils";
 import type { Scene, Character, PrimarySceneCategory } from "@/lib/types";
 import { ALL_PRIMARY_SCENE_CATEGORIES } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { appEvents } from "@/lib/utils/eventEmitter";
 import { IconButton } from "@/components/ui/IconButton";
 import { Heading } from "@/components/typography/Heading";
 import { Paragraph } from "@/components/typography/Paragraph";
@@ -30,7 +31,7 @@ export interface SceneMetadataPanelProps {
       Pick<
         Scene,
         "outline_description" | "pov_character_id" | "primary_category"
-      >
+      > & { tag_ids?: string[]; other_character_ids?: string[] }
     >
   ) => Promise<void>;
   onCharacterLinkChange: (
@@ -140,6 +141,7 @@ export function SceneMetadataPanel({
         aiResponse.content.length > 0 &&
         aiResponse.content[0].type === "text"
       ) {
+        appEvents.emit("creditsUpdated"); // <<< ADD THIS LINE
         const rawResponseText = (
           aiResponse.content[0] as import("snowgander").TextBlock
         ).text;
@@ -206,7 +208,7 @@ export function SceneMetadataPanel({
         projectId,
         AI_TOOL_NAMES.SCENE_CHARACTER_ANALYZER,
         userPrompt,
-        { sceneContent: scene.content }
+        { scene } // Pass the whole scene object as context
       );
 
       if (
@@ -214,6 +216,7 @@ export function SceneMetadataPanel({
         aiResponse.content.length > 0 &&
         aiResponse.content[0].type === "text"
       ) {
+        appEvents.emit("creditsUpdated"); // <<< ADD THIS LINE
         const rawResponseText = (
           aiResponse.content[0] as import("snowgander").TextBlock
         ).text;
@@ -224,90 +227,100 @@ export function SceneMetadataPanel({
           return;
         }
 
-        const cleanedJsonText = extractJsonFromString<string>(rawResponseText);
+        type AICharacterResponse = {
+          povCharacterName: string | null;
+          otherCharacterNames: string[];
+        };
 
-        if (!cleanedJsonText) {
+        const parsedResponse =
+          extractJsonFromString<AICharacterResponse>(rawResponseText);
+
+        if (!parsedResponse) {
           toast.error(
-            "AI returned an empty or un-cleanable response for character suggestions.",
+            "AI returned an unparsable response for character suggestions.",
             { id: toastId }
+          );
+          console.error(
+            "Unparsable AI response for characters:",
+            rawResponseText
           );
           return;
         }
 
-        try {
-          type AICharacterResponse = {
-            povCharacterName: string | null;
-            otherCharacterNames: string[];
-          };
-
-          const parsedResponse = JSON.parse(
-            cleanedJsonText
-          ) as AICharacterResponse;
-
-          let newPovCharacterId: string | null = null;
-          if (parsedResponse.povCharacterName) {
-            const foundPov = allProjectCharacters.find(
-              (c) =>
-                c.name.toLowerCase() ===
-                parsedResponse.povCharacterName!.toLowerCase()
+        let newPovCharacterId: string | null = null;
+        if (parsedResponse.povCharacterName) {
+          const foundPov = allProjectCharacters.find(
+            (c) =>
+              c.name.toLowerCase() ===
+              parsedResponse.povCharacterName!.toLowerCase()
+          );
+          if (foundPov) {
+            newPovCharacterId = foundPov.id;
+          } else {
+            toast.info(
+              `AI suggested POV character "${parsedResponse.povCharacterName}" not found in project characters.`
             );
-            if (foundPov) {
-              newPovCharacterId = foundPov.id;
-            } else {
+          }
+        }
+
+        const newOtherCharacterIds: string[] = [];
+        if (
+          parsedResponse.otherCharacterNames &&
+          parsedResponse.otherCharacterNames.length > 0
+        ) {
+          parsedResponse.otherCharacterNames.forEach((name) => {
+            const foundChar = allProjectCharacters.find(
+              (c) => c.name.toLowerCase() === name.toLowerCase()
+            );
+            if (foundChar && foundChar.id !== newPovCharacterId) {
+              newOtherCharacterIds.push(foundChar.id);
+            } else if (!foundChar) {
               toast.info(
-                `AI suggested POV character "${parsedResponse.povCharacterName}" not found in project characters.`
+                `AI suggested other character "${name}" not found in project characters.`
               );
             }
-          }
+          });
+        }
 
-          const newOtherCharacterIds: string[] = [];
-          if (
-            parsedResponse.otherCharacterNames &&
-            parsedResponse.otherCharacterNames.length > 0
-          ) {
-            parsedResponse.otherCharacterNames.forEach((name) => {
-              const foundChar = allProjectCharacters.find(
-                (c) => c.name.toLowerCase() === name.toLowerCase()
-              );
-              if (foundChar && foundChar.id !== newPovCharacterId) {
-                newOtherCharacterIds.push(foundChar.id);
-              } else if (!foundChar) {
-                toast.info(
-                  `AI suggested other character "${name}" not found in project characters.`
-                );
-              }
-            });
-          }
+        // Combine all character updates into a single object
+        const updates: {
+          pov_character_id?: string | null;
+          other_character_ids?: string[];
+        } = {};
+        let needsUpdate = false;
 
-          if (newPovCharacterId !== scene.pov_character_id) {
-            await onSceneUpdate({ pov_character_id: newPovCharacterId });
-          }
+        // Check if POV character needs updating
+        if (newPovCharacterId !== scene.pov_character_id) {
+          updates.pov_character_id = newPovCharacterId;
+          needsUpdate = true;
+        }
 
-          const currentOtherIds =
-            scene.scene_characters?.map((c) => c.character_id) || [];
-          // Ensure comparison is robust to order differences
-          const sortedNewOtherIds = [...new Set(newOtherCharacterIds)].sort(); // Remove duplicates and sort
-          const sortedCurrentOtherIds = [...new Set(currentOtherIds)].sort(); // Remove duplicates and sort
+        // Check if other characters need updating
+        const currentOtherIds =
+          scene.scene_characters?.map((c) => c.character_id) || [];
+        const sortedNewOtherIds = [...new Set(newOtherCharacterIds)].sort();
+        const sortedCurrentOtherIds = [...new Set(currentOtherIds)].sort();
 
-          if (
-            JSON.stringify(sortedNewOtherIds) !==
-            JSON.stringify(sortedCurrentOtherIds)
-          ) {
-            await onCharacterLinkChange(
-              sortedNewOtherIds.map((id) => ({ character_id: id }))
-            );
-          }
+        if (
+          JSON.stringify(sortedNewOtherIds) !==
+          JSON.stringify(sortedCurrentOtherIds)
+        ) {
+          updates.other_character_ids = sortedNewOtherIds;
+          needsUpdate = true;
+        }
 
+        // If there are any changes, call onSceneUpdate once
+        if (needsUpdate) {
+          await onSceneUpdate(updates);
           toast.success("Characters suggested by AI and updated.", {
             id: toastId,
           });
-        } catch (jsonError) {
-          console.error("JSON Parse Error after cleaning:", jsonError);
-          console.error("Original Raw Response Text from AI:", rawResponseText);
-          console.error("Attempted Cleaned JSON Text:", cleanedJsonText);
-          toast.error(
-            "Failed to parse character suggestions from AI. The response format was unexpected even after cleaning.",
-            { id: toastId }
+        } else {
+          toast.info(
+            "AI suggestions match current characters. No changes made.",
+            {
+              id: toastId,
+            }
           );
         }
       } else {
@@ -346,7 +359,7 @@ export function SceneMetadataPanel({
         projectId,
         AI_TOOL_NAMES.SCENE_TAG_SUGGESTER,
         userPrompt,
-        { sceneContent: scene.content }
+        { scene }
       );
 
       if (
@@ -354,12 +367,23 @@ export function SceneMetadataPanel({
         aiResponse.content.length > 0 &&
         aiResponse.content[0].type === "text"
       ) {
+        appEvents.emit("creditsUpdated"); // <<< ADD THIS LINE
         const responseText = (
           aiResponse.content[0] as import("snowgander").TextBlock
         ).text;
-        const parsedResponse = JSON.parse(responseText) as {
+        const parsedResponse = extractJsonFromString<{
           suggestedTagNames: string[];
-        };
+        }>(responseText);
+
+        if (!parsedResponse) {
+          console.error(
+            "Failed to parse JSON from AI tag suggestion response",
+            responseText
+          );
+          throw new Error(
+            "AI returned a response that could not be understood."
+          );
+        }
 
         const validSuggestedTagNames = (
           parsedResponse.suggestedTagNames || []
@@ -380,11 +404,25 @@ export function SceneMetadataPanel({
           })
           .filter((id): id is string => !!id);
 
-        await onTagLinkChange(newTagIds.map((id) => ({ tag_id: id })));
+        const currentTagIds =
+          scene.scene_applied_tags?.map((t) => t.tag_id) || [];
 
-        toast.success("Scene tags suggested by AI and updated.", {
-          id: toastId,
-        });
+        const sortedNewTagIds = [...new Set(newTagIds)].sort();
+        const sortedCurrentTagIds = [...new Set(currentTagIds)].sort();
+
+        if (
+          JSON.stringify(sortedNewTagIds) !==
+          JSON.stringify(sortedCurrentTagIds)
+        ) {
+          await onSceneUpdate({ tag_ids: sortedNewTagIds });
+          toast.success("Scene tags suggested by AI and updated.", {
+            id: toastId,
+          });
+        } else {
+          toast.info("AI suggestions match current tags. No changes made.", {
+            id: toastId,
+          });
+        }
       } else {
         const errorBlock = aiResponse.content?.find(
           (block) => block.type === "error"
@@ -419,7 +457,7 @@ export function SceneMetadataPanel({
         projectId,
         AI_TOOL_NAMES.SCENE_CATEGORY_SUGGESTER,
         userPrompt,
-        { sceneContent: scene.content }
+        { scene }
       );
 
       if (
@@ -427,12 +465,23 @@ export function SceneMetadataPanel({
         aiResponse.content.length > 0 &&
         aiResponse.content[0].type === "text"
       ) {
+        appEvents.emit("creditsUpdated"); // <<< ADD THIS LINE
         const responseText = (
           aiResponse.content[0] as import("snowgander").TextBlock
         ).text;
-        const parsedResponse = JSON.parse(responseText) as {
+        const parsedResponse = extractJsonFromString<{
           suggestedCategory: string;
-        };
+        }>(responseText);
+
+        if (!parsedResponse) {
+          console.error(
+            "Failed to parse JSON from AI category suggestion response",
+            responseText
+          );
+          throw new Error(
+            "AI returned a response that could not be understood."
+          );
+        }
 
         const suggestedCategory = parsedResponse.suggestedCategory;
         if (

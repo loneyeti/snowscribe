@@ -178,6 +178,13 @@ export async function generateManuscriptDocx(projectId: string, userId: string):
     throw new Error("User not authenticated or does not match for DOCX generation.");
   }
 
+  // Fetch user profile to get full_name and pen_name
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, pen_name')
+    .eq('id', user.id)
+    .single();
+
   const project = await getProjectById(projectId, userId);
   const chapters = await getChaptersWithScenes(projectId, userId);
 
@@ -185,8 +192,16 @@ export async function generateManuscriptDocx(projectId: string, userId: string):
     throw new Error('Project data not found');
   }
 
-  const authorName = user.email || 'Author'; // Replace with profile name if available
-  const authorLastName = authorName.split(' ')[0] || 'Author';
+  // Determine the name for the top-left contact info (real name)
+  const contactName = profile?.full_name || '';
+
+  // Determine the name for the "by" line on the title page
+  // Priority: Pen Name > Real Name > Email
+  const bylineName = profile?.pen_name || profile?.full_name || user.email || 'Author';
+
+  // Determine the last name for the page header from the byline name
+  const nameParts = bylineName.split(' ');
+  const authorLastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : bylineName;
   const projectKeyword = project.title.split(' ')[0] || 'Manuscript';
 
   const doc = new Document({
@@ -207,12 +222,23 @@ export async function generateManuscriptDocx(projectId: string, userId: string):
       { // Title Page Section
         properties: { page: { margin: { top: convertInchesToTwip(1), right: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1) } } },
         children: [
-          new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun(sanitizeText(authorName))] }),
+          // Conditionally add the real name to the top left if it exists
+          ...(contactName ? [new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun(sanitizeText(contactName))] })] : []),
+          
+          // Always add the email to the top left
           new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun(sanitizeText(user.email || ''))] }),
+          
+          // Word count
           new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(`Approx. ${Math.round((project.wordCount || 0) / 100) * 100} words`)] }),
+          
+          // Spacer
           new Paragraph({ children: [], spacing: { before: 2400 } }),
+          
+          // Title
           new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: sanitizeText(project.title) || 'Untitled', bold: true, size: 32 })] }),
-          new Paragraph({ spacing: { before: 240 }, alignment: AlignmentType.CENTER, children: [new TextRun(`by ${sanitizeText(authorName)}`)] }),
+          
+          // Byline using the correct bylineName
+          new Paragraph({ spacing: { before: 240 }, alignment: AlignmentType.CENTER, children: [new TextRun(`by ${sanitizeText(bylineName)}`)] }),
         ],
       },
       { // Main Content Section

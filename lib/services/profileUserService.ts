@@ -26,7 +26,6 @@ export async function updateProfile(userId: string, profileData: UpdateProfileVa
     .from('profiles')
     .update({
       ...validatedData,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', userId)
     .select()
