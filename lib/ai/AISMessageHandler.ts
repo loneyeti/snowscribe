@@ -54,17 +54,27 @@ export async function sendMessage(
     // Check if user has enough credits (minimum 1 credit check to prevent spam)
     try {
       await profileService.checkCreditBalance(user.id, 1);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown credit check error';
-      return {
-        role: 'assistant',
-        content: [{ 
-          type: 'error', 
-          publicMessage: errorMessage,
-          privateMessage: errorMessage 
-        }]
-      };
-    }
+} catch (error: unknown) {
+  const errorMessage = error instanceof Error ? error.message : 'Unknown credit check error';
+  console.log('[AISMessageHandler] Caught credit check error:', errorMessage); 
+
+  const isInsufficientCredits = errorMessage.toLowerCase().includes('insufficient credits');
+  
+  // Create a user-friendly public message
+  const publicMessage = isInsufficientCredits 
+    ? "Insufficient credits to use this AI feature. Please add more credits to your account."
+    : errorMessage;
+
+  return {
+    role: 'assistant',
+    content: [{
+      type: 'error',
+      publicMessage: publicMessage,
+      privateMessage: errorMessage, // Keep the technical details for internal logs
+      ...(isInsufficientCredits && { code: 'INSUFFICIENT_CREDITS' })
+    }]
+  };
+}
 
     // 1. Fetch Tool-Specific Configuration
     const toolModelEntry = await getToolModelByName(toolName);

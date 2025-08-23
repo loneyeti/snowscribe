@@ -81,6 +81,46 @@ export function SceneMetadataPanel({
   const [isSuggestingTags, setIsSuggestingTags] = useState(false);
   const [isSuggestingCategory, setIsSuggestingCategory] = useState(false);
 
+  const processAIResponse = (
+    response: import("snowgander").ChatResponse | null | undefined,
+    toastId: string | number,
+    failureMessage: string
+  ): string | null => {
+    // Add a log to see if this function is even being called
+    console.log("[processAIResponse] Processing response:", response);
+
+    if (!response || !response.content || response.content.length === 0) {
+      toast.error("AI returned an empty or invalid response.", { id: toastId });
+      console.error("Empty or invalid AI response:", response);
+      return null;
+    }
+
+    const errorBlock = response.content?.find(
+      (block) => block.type === "error"
+    ) as (import("snowgander").ErrorBlock & { code?: string }) | undefined;
+
+    if (errorBlock) {
+      console.log("[processAIResponse] Found error block:", errorBlock);
+      // This is the core of the fix: show a toast for any AI error.
+      toast.error(errorBlock.publicMessage || failureMessage, { id: toastId });
+      return null;
+    }
+
+    const textBlock = response.content.find(
+      (block) => block.type === "text"
+    ) as import("snowgander").TextBlock | undefined;
+
+    if (textBlock) {
+      appEvents.emit("creditsUpdated");
+      return textBlock.text;
+    }
+
+    // Fallback for unexpected but non-error response format
+    toast.error("AI returned an unexpected response format.", { id: toastId });
+    console.error("Unexpected AI response format:", response);
+    return null;
+  };
+
   // Type the parameters in the component
   const povCharacterName = allProjectCharacters.find(
     (c: Character) => c.id === scene.pov_character_id
@@ -133,21 +173,23 @@ export function SceneMetadataPanel({
         projectId,
         AI_TOOL_NAMES.SCENE_OUTLINER,
         userPrompt,
-        { scene } // Pass the whole scene object as context
+        { scene }
       );
 
-      if (
-        aiResponse.content &&
-        aiResponse.content.length > 0 &&
-        aiResponse.content[0].type === "text"
-      ) {
-        appEvents.emit("creditsUpdated"); // <<< ADD THIS LINE
-        const rawResponseText = (
-          aiResponse.content[0] as import("snowgander").TextBlock
-        ).text;
+      // ADD THIS LINE FOR LOGGING
+      console.log(
+        "[SceneMetadataPanel] Received aiResponse (handleGenerateDescription):",
+        JSON.stringify(aiResponse, null, 2)
+      );
 
-        let generatedDescription = rawResponseText.trim();
-        // Clean up common AI conversational prefixes
+      const responseText = processAIResponse(
+        aiResponse,
+        toastId,
+        "Could not generate description."
+      );
+
+      if (responseText) {
+        let generatedDescription = responseText.trim();
         generatedDescription = generatedDescription
           .replace(
             /^(here's a description:|description:|here is the description:|the description is:)\s*/i,
@@ -157,27 +199,26 @@ export function SceneMetadataPanel({
         generatedDescription = generatedDescription
           .replace(/^"|"$/g, "")
           .trim();
-
         setCurrentDescription(generatedDescription);
         toast.success("AI generated description is ready to be saved.", {
           id: toastId,
         });
-      } else {
-        const errorBlock = aiResponse.content?.find(
-          (block) => block.type === "error"
-        ) as import("snowgander").ErrorBlock | undefined;
-        throw new Error(
-          errorBlock?.publicMessage || "AI did not return a valid description."
-        );
       }
-    } catch (error) {
-      console.error("Failed to generate scene description:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not generate description.",
-        { id: toastId }
-      );
+    } catch (error: any) {
+      // Use `any` to inspect the error object
+      console.error("Caught exception in AI handler:", error);
+
+      // Check if it's our custom error object being thrown
+      if (error?.code === "INSUFFICIENT_CREDITS" && error?.publicMessage) {
+        toast.error(error.publicMessage, { id: toastId });
+      } else {
+        // Fallback to the generic error message
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred.";
+        toast.error(errorMessage, { id: toastId });
+      }
     } finally {
       setIsGeneratingDescription(false);
     }
@@ -208,45 +249,38 @@ export function SceneMetadataPanel({
         projectId,
         AI_TOOL_NAMES.SCENE_CHARACTER_ANALYZER,
         userPrompt,
-        { scene } // Pass the whole scene object as context
+        { scene }
       );
 
-      if (
-        aiResponse.content &&
-        aiResponse.content.length > 0 &&
-        aiResponse.content[0].type === "text"
-      ) {
-        appEvents.emit("creditsUpdated"); // <<< ADD THIS LINE
-        const rawResponseText = (
-          aiResponse.content[0] as import("snowgander").TextBlock
-        ).text;
+      // ADD THIS LINE FOR LOGGING
+      console.log(
+        "[SceneMetadataPanel] Received aiResponse (handleSuggestCharacters):",
+        JSON.stringify(aiResponse, null, 2)
+      );
 
-        if (typeof rawResponseText !== "string") {
-          console.error("Unexpected AI response format", rawResponseText);
-          toast.error("AI returned an unexpected response format");
-          return;
-        }
+      const responseText = processAIResponse(
+        aiResponse,
+        toastId,
+        "Could not suggest characters."
+      );
 
+      if (responseText) {
         type AICharacterResponse = {
           povCharacterName: string | null;
           otherCharacterNames: string[];
         };
-
         const parsedResponse =
-          extractJsonFromString<AICharacterResponse>(rawResponseText);
-
+          extractJsonFromString<AICharacterResponse>(responseText);
         if (!parsedResponse) {
           toast.error(
             "AI returned an unparsable response for character suggestions.",
             { id: toastId }
           );
-          console.error(
-            "Unparsable AI response for characters:",
-            rawResponseText
-          );
+          console.error("Unparsable AI response for characters:", responseText);
           return;
         }
 
+        // (The rest of the logic inside the original 'if' block remains the same)
         let newPovCharacterId: string | null = null;
         if (parsedResponse.povCharacterName) {
           const foundPov = allProjectCharacters.find(
@@ -262,7 +296,6 @@ export function SceneMetadataPanel({
             );
           }
         }
-
         const newOtherCharacterIds: string[] = [];
         if (
           parsedResponse.otherCharacterNames &&
@@ -281,26 +314,19 @@ export function SceneMetadataPanel({
             }
           });
         }
-
-        // Combine all character updates into a single object
         const updates: {
           pov_character_id?: string | null;
           other_character_ids?: string[];
         } = {};
         let needsUpdate = false;
-
-        // Check if POV character needs updating
         if (newPovCharacterId !== scene.pov_character_id) {
           updates.pov_character_id = newPovCharacterId;
           needsUpdate = true;
         }
-
-        // Check if other characters need updating
         const currentOtherIds =
           scene.scene_characters?.map((c) => c.character_id) || [];
         const sortedNewOtherIds = [...new Set(newOtherCharacterIds)].sort();
         const sortedCurrentOtherIds = [...new Set(currentOtherIds)].sort();
-
         if (
           JSON.stringify(sortedNewOtherIds) !==
           JSON.stringify(sortedCurrentOtherIds)
@@ -308,8 +334,6 @@ export function SceneMetadataPanel({
           updates.other_character_ids = sortedNewOtherIds;
           needsUpdate = true;
         }
-
-        // If there are any changes, call onSceneUpdate once
         if (needsUpdate) {
           await onSceneUpdate(updates);
           toast.success("Characters suggested by AI and updated.", {
@@ -323,22 +347,22 @@ export function SceneMetadataPanel({
             }
           );
         }
-      } else {
-        const errorBlock = aiResponse.content?.find(
-          (block) => block.type === "error"
-        ) as import("snowgander").ErrorBlock | undefined;
-        throw new Error(
-          errorBlock?.publicMessage || "AI did not return valid character data."
-        );
       }
-    } catch (error) {
-      console.error("Failed to suggest characters:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not suggest characters.",
-        { id: toastId }
-      );
+    } catch (error: any) {
+      // Use `any` to inspect the error object
+      console.error("Caught exception in AI handler:", error);
+
+      // Check if it's our custom error object being thrown
+      if (error?.code === "INSUFFICIENT_CREDITS" && error?.publicMessage) {
+        toast.error(error.publicMessage, { id: toastId });
+      } else {
+        // Fallback to the generic error message
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred.";
+        toast.error(errorMessage, { id: toastId });
+      }
     } finally {
       setIsAnalyzingCharacters(false);
     }
@@ -362,29 +386,32 @@ export function SceneMetadataPanel({
         { scene }
       );
 
-      if (
-        aiResponse.content &&
-        aiResponse.content.length > 0 &&
-        aiResponse.content[0].type === "text"
-      ) {
-        appEvents.emit("creditsUpdated"); // <<< ADD THIS LINE
-        const responseText = (
-          aiResponse.content[0] as import("snowgander").TextBlock
-        ).text;
+      // ADD THIS LINE FOR LOGGING
+      console.log(
+        "[SceneMetadataPanel] Received aiResponse (handleSuggestTags):",
+        JSON.stringify(aiResponse, null, 2)
+      );
+
+      const responseText = processAIResponse(
+        aiResponse,
+        toastId,
+        "Could not suggest tags."
+      );
+
+      if (responseText) {
         const parsedResponse = extractJsonFromString<{
           suggestedTagNames: string[];
         }>(responseText);
-
         if (!parsedResponse) {
           console.error(
             "Failed to parse JSON from AI tag suggestion response",
             responseText
           );
-          throw new Error(
-            "AI returned a response that could not be understood."
-          );
+          toast.error("AI returned a response that could not be understood.", {
+            id: toastId,
+          });
+          return;
         }
-
         const validSuggestedTagNames = (
           parsedResponse.suggestedTagNames || []
         ).filter((name) =>
@@ -392,7 +419,6 @@ export function SceneMetadataPanel({
             (predefined) => predefined.toLowerCase() === name.toLowerCase()
           )
         );
-
         const newTagIds = validSuggestedTagNames
           .map((name) => {
             const foundTag = allProjectSceneTags.find(
@@ -403,13 +429,10 @@ export function SceneMetadataPanel({
             return foundTag?.id;
           })
           .filter((id): id is string => !!id);
-
         const currentTagIds =
           scene.scene_applied_tags?.map((t) => t.tag_id) || [];
-
         const sortedNewTagIds = [...new Set(newTagIds)].sort();
         const sortedCurrentTagIds = [...new Set(currentTagIds)].sort();
-
         if (
           JSON.stringify(sortedNewTagIds) !==
           JSON.stringify(sortedCurrentTagIds)
@@ -423,20 +446,22 @@ export function SceneMetadataPanel({
             id: toastId,
           });
         }
-      } else {
-        const errorBlock = aiResponse.content?.find(
-          (block) => block.type === "error"
-        ) as import("snowgander").ErrorBlock | undefined;
-        throw new Error(
-          errorBlock?.publicMessage || "AI did not return valid tag data."
-        );
       }
-    } catch (error) {
-      console.error("Failed to suggest tags:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Could not suggest tags.",
-        { id: toastId }
-      );
+    } catch (error: any) {
+      // Use `any` to inspect the error object
+      console.error("Caught exception in AI handler:", error);
+
+      // Check if it's our custom error object being thrown
+      if (error?.code === "INSUFFICIENT_CREDITS" && error?.publicMessage) {
+        toast.error(error.publicMessage, { id: toastId });
+      } else {
+        // Fallback to the generic error message
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred.";
+        toast.error(errorMessage, { id: toastId });
+      }
     } finally {
       setIsSuggestingTags(false);
     }
@@ -460,29 +485,32 @@ export function SceneMetadataPanel({
         { scene }
       );
 
-      if (
-        aiResponse.content &&
-        aiResponse.content.length > 0 &&
-        aiResponse.content[0].type === "text"
-      ) {
-        appEvents.emit("creditsUpdated"); // <<< ADD THIS LINE
-        const responseText = (
-          aiResponse.content[0] as import("snowgander").TextBlock
-        ).text;
+      // ADD THIS LINE FOR LOGGING
+      console.log(
+        "[SceneMetadataPanel] Received aiResponse (handleSuggestCategory):",
+        JSON.stringify(aiResponse, null, 2)
+      );
+
+      const responseText = processAIResponse(
+        aiResponse,
+        toastId,
+        "Could not suggest category."
+      );
+
+      if (responseText) {
         const parsedResponse = extractJsonFromString<{
           suggestedCategory: string;
         }>(responseText);
-
         if (!parsedResponse) {
           console.error(
             "Failed to parse JSON from AI category suggestion response",
             responseText
           );
-          throw new Error(
-            "AI returned a response that could not be understood."
-          );
+          toast.error("AI returned a response that could not be understood.", {
+            id: toastId,
+          });
+          return;
         }
-
         const suggestedCategory = parsedResponse.suggestedCategory;
         if (
           ALL_PRIMARY_SCENE_CATEGORIES.includes(
@@ -498,17 +526,11 @@ export function SceneMetadataPanel({
             { id: toastId }
           );
         } else {
-          throw new Error(
-            `AI suggested an invalid category: "${suggestedCategory}".`
+          toast.error(
+            `AI suggested an invalid category: "${suggestedCategory}".`,
+            { id: toastId }
           );
         }
-      } else {
-        const errorBlock = aiResponse.content?.find(
-          (block) => block.type === "error"
-        ) as import("snowgander").ErrorBlock | undefined;
-        throw new Error(
-          errorBlock?.publicMessage || "AI did not return valid category data."
-        );
       }
     } catch (error) {
       console.error("Failed to suggest category:", error);

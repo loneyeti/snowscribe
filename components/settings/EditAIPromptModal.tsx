@@ -1,42 +1,41 @@
+// components/settings/EditAIPromptModal.tsx
 "use client";
-
 import React, { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
+import { Modal } from "../../components/ui/Modal";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
+import { Textarea } from "../../components/ui/Textarea";
 import {
   aiPromptSchema,
   type AIPromptFormData,
-} from "@/lib/schemas/aiPrompt.schema";
-import { updateAIPrompt } from "@/lib/data/aiPrompts";
-import { toast } from "sonner";
-import { type AIPrompt } from "@/lib/types";
+} from "../../lib/schemas/aiPrompt.schema";
+import { type AIPrompt } from "../../lib/types";
 import type { z } from "zod";
+import { useSettingsStore } from "../../lib/stores/settingsStore";
 
 interface EditAIPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPromptUpdated: (updatedPrompt: AIPrompt) => void;
   initialData: AIPrompt | null;
 }
 
-// For editing, allow updating name, prompt_text, category
 const editFormSchema = aiPromptSchema.pick({
   name: true,
   prompt_text: true,
   category: true,
 });
+
 type EditAIPromptFormValues = z.infer<typeof editFormSchema>;
 
 export function EditAIPromptModal({
   isOpen,
   onClose,
-  onPromptUpdated,
   initialData,
 }: EditAIPromptModalProps) {
+  const updatePrompt = useSettingsStore((state) => state.updatePrompt);
+
   const {
     control,
     handleSubmit,
@@ -45,9 +44,9 @@ export function EditAIPromptModal({
   } = useForm<EditAIPromptFormValues>({
     resolver: zodResolver(editFormSchema),
     defaultValues: {
-      name: initialData?.name ?? "",
-      prompt_text: initialData?.prompt_text ?? "",
-      category: initialData?.category ?? "",
+      name: "",
+      prompt_text: "",
+      category: "",
     },
   });
 
@@ -62,23 +61,14 @@ export function EditAIPromptModal({
   }, [initialData, isOpen, reset]);
 
   const onSubmit = async (data: EditAIPromptFormValues) => {
-    if (!initialData?.id) {
-      toast.error("Cannot update prompt: ID is missing.");
-      return;
-    }
-    try {
-      const updated = await updateAIPrompt(
-        initialData.id,
-        data as Partial<AIPromptFormData>
-      );
-      toast.success(`AI Prompt "${updated.name}" updated successfully.`);
-      onPromptUpdated(updated);
+    if (!initialData?.id) return;
+
+    const updated = await updatePrompt(
+      initialData.id,
+      data as Partial<AIPromptFormData>
+    );
+    if (updated) {
       onClose();
-    } catch (error) {
-      console.error("Failed to update AI prompt:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Could not update AI prompt."
-      );
     }
   };
 
@@ -108,7 +98,6 @@ export function EditAIPromptModal({
             <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
           )}
         </div>
-
         <div>
           <label
             htmlFor="edit-prompt-category"
@@ -136,7 +125,6 @@ export function EditAIPromptModal({
             </p>
           )}
         </div>
-
         <div>
           <label
             htmlFor="edit-prompt-text"
@@ -163,7 +151,6 @@ export function EditAIPromptModal({
             </p>
           )}
         </div>
-
         <div className="flex justify-end space-x-3 pt-2">
           <Button
             type="button"

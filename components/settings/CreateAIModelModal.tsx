@@ -1,39 +1,32 @@
+// components/settings/CreateAIModelModal.tsx
 "use client";
-
 import React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Checkbox } from "@/components/ui/Checkbox"; // Assuming Checkbox component exists
-// import { Textarea } from "@/components/ui/Textarea"; // Remove unused import
-import {
-  aiModelSchema,
-  // type AIModelFormData, // No longer directly used for prop type
-} from "@/lib/schemas/aiModel.schema";
-import { z } from "zod"; // Import z for input/output types
-import { createAIModel } from "@/lib/data/aiModels";
+import { Modal } from "../../components/ui/Modal";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
+import { Checkbox } from "../../components/ui/Checkbox";
+import { aiModelSchema } from "../../lib/schemas/aiModel.schema";
+import { z } from "zod";
 import { toast } from "sonner";
-import { type AIVendor, type AIModel } from "@/lib/types"; // Import AIModel for prop type
+import { type AIVendor } from "../../lib/types";
+import { useSettingsStore } from "../../lib/stores/settingsStore";
 
 interface CreateAIModelModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onModelCreated: (newModel: AIModel) => void; // Expect AIModel with guaranteed string id
-  vendors: AIVendor[]; // To populate vendor dropdown
+  vendors: AIVendor[];
 }
 
-// Define input and output types for the form based on the Zod schema
 type AIModelFormInputValues = z.input<typeof aiModelSchema>;
-// AIModelFormOutputValues is equivalent to the imported AIModelFormData, so it's not needed here.
 
 export function CreateAIModelModal({
   isOpen,
   onClose,
-  onModelCreated,
   vendors,
 }: CreateAIModelModalProps) {
+  const createModel = useSettingsStore((state) => state.createModel);
   const {
     control,
     handleSubmit,
@@ -41,43 +34,34 @@ export function CreateAIModelModal({
     formState: { errors, isSubmitting },
     reset,
   } = useForm<AIModelFormInputValues>({
-    // Use the INPUT type for useForm
-    resolver: zodResolver(aiModelSchema), // Resolver validates against the full schema
+    resolver: zodResolver(aiModelSchema),
     defaultValues: {
       name: "",
       api_name: "",
-      vendor_id: vendors.length > 0 ? vendors[0].id : "", // Input type is string, ensure it's always a string
-      // For boolean fields with .default(), their input type is boolean | undefined
-      // Set initial form state; Zod .default() applies on validation if undefined
-      is_vision: false, // Initial state (boolean | undefined is fine for input)
-      is_image_generation: false, // Initial state
-      is_thinking: false, // Initial state
+      vendor_id: vendors.length > 0 ? vendors[0].id : "",
+      is_vision: false,
+      is_image_generation: false,
+      is_thinking: false,
       max_tokens: 4096,
       input_token_cost_micros: 0,
       output_token_cost_micros: 0,
       notes: null,
-      // id, created_at, updated_at are not part of form input
     },
   });
 
   const onSubmit = async (data: AIModelFormInputValues) => {
-    // onSubmit now accepts INPUT type
     try {
-      // Re-parse data with the schema to get the correctly typed output.
-      // zodResolver calls onSubmit only after successful validation, so parse here should succeed
-      // and apply defaults/transformations.
-      const validatedData = aiModelSchema.parse(data); // This will be AIModelFormOutputValues
-
-      const newModel = await createAIModel(validatedData); // Use the parsed (output) data
-      toast.success(`AI Model "${newModel.name}" created successfully.`);
-      onModelCreated(newModel);
-      reset(); // Reset form
-      onClose(); // Close modal
+      const validatedData = aiModelSchema.parse(data);
+      const newModel = await createModel(validatedData);
+      if (newModel) {
+        reset();
+        onClose();
+      }
     } catch (error) {
-      console.error("Failed to create AI model:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Could not create AI model."
-      );
+      console.error("Validation failed or error during creation:", error);
+      if (error instanceof z.ZodError) {
+        toast.error("Please check the form for errors.");
+      }
     }
   };
 
@@ -107,7 +91,6 @@ export function CreateAIModelModal({
             <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
           )}
         </div>
-
         <div>
           <label
             htmlFor="api_name"
@@ -126,7 +109,6 @@ export function CreateAIModelModal({
             </p>
           )}
         </div>
-
         <div>
           <label
             htmlFor="vendor_id"
@@ -152,7 +134,6 @@ export function CreateAIModelModal({
             </p>
           )}
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label
@@ -212,7 +193,6 @@ export function CreateAIModelModal({
             )}
           </div>
         </div>
-
         <div className="space-y-2">
           <div className="flex items-center">
             <Controller
@@ -221,7 +201,7 @@ export function CreateAIModelModal({
               render={({ field }) => (
                 <Checkbox
                   id="is_vision"
-                  checked={field.value ?? false} // Provide default if undefined
+                  checked={field.value ?? false}
                   onCheckedChange={field.onChange}
                   className="mr-2"
                 />
@@ -234,12 +214,6 @@ export function CreateAIModelModal({
               Supports Vision
             </label>
           </div>
-          {errors.is_vision && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.is_vision.message}
-            </p>
-          )}
-
           <div className="flex items-center">
             <Controller
               name="is_image_generation"
@@ -247,7 +221,7 @@ export function CreateAIModelModal({
               render={({ field }) => (
                 <Checkbox
                   id="is_image_generation"
-                  checked={field.value ?? false} // Provide default if undefined
+                  checked={field.value ?? false}
                   onCheckedChange={field.onChange}
                   className="mr-2"
                 />
@@ -260,12 +234,6 @@ export function CreateAIModelModal({
               Supports Image Generation
             </label>
           </div>
-          {errors.is_image_generation && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.is_image_generation.message}
-            </p>
-          )}
-
           <div className="flex items-center">
             <Controller
               name="is_thinking"
@@ -273,7 +241,7 @@ export function CreateAIModelModal({
               render={({ field }) => (
                 <Checkbox
                   id="is_thinking"
-                  checked={field.value ?? false} // Align with default value (false)
+                  checked={field.value ?? false}
                   onCheckedChange={field.onChange}
                   className="mr-2"
                 />
@@ -286,21 +254,7 @@ export function CreateAIModelModal({
               Is Thinking Model (for snowgander)
             </label>
           </div>
-          {errors.is_thinking && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.is_thinking.message}
-            </p>
-          )}
         </div>
-
-        {/* Optional Notes field
-        <div>
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-          <Textarea id="notes" {...register("notes")} />
-          {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes.message}</p>}
-        </div>
-        */}
-
         <div className="flex justify-end space-x-3 pt-2">
           <Button
             type="button"

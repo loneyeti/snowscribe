@@ -1,35 +1,34 @@
+// components/settings/EditToolModelModal.tsx
 "use client";
 import React, { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Modal } from "../../components/ui/Modal";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
 import {
   updateToolModelValuesSchema,
   type UpdateToolModelValues,
   type ToolModelWithAIModel,
-} from "@/lib/schemas/toolModel.schema";
-import { type AIModel } from "@/lib/types";
-import { updateToolModel } from "@/lib/data/toolModels";
-import { toast } from "sonner";
-import { getErrorMessage } from "@/lib/utils";
+} from "../../lib/schemas/toolModel.schema";
+import { type AIModel } from "../../lib/types";
+import { useSettingsStore } from "../../lib/stores/settingsStore";
 
 interface EditToolModelModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onToolModelUpdated: (updatedToolModel: ToolModelWithAIModel) => void;
   toolModel: ToolModelWithAIModel | null;
-  aiModels: AIModel[]; // List of all available AI models for the dropdown
+  aiModels: AIModel[];
 }
 
 export function EditToolModelModal({
   isOpen,
   onClose,
-  onToolModelUpdated,
   toolModel,
   aiModels,
 }: EditToolModelModalProps) {
+  const updateToolModel = useSettingsStore((state) => state.updateToolModel);
+
   const {
     control,
     handleSubmit,
@@ -52,15 +51,9 @@ export function EditToolModelModal({
 
   const onSubmit = async (data: UpdateToolModelValues) => {
     if (!toolModel) return;
-
-    try {
-      const updated = await updateToolModel(toolModel.id, data);
-      toast.success(`Tool Model "${toolModel.name}" updated successfully.`);
-      onToolModelUpdated(updated);
+    const updated = await updateToolModel(toolModel.id, data);
+    if (updated) {
       onClose();
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-      console.error("Failed to update tool model:", error);
     }
   };
 
@@ -127,7 +120,6 @@ export function EditToolModelModal({
             className="mt-1 block w-full"
           />
         </div>
-
         <div>
           <label
             htmlFor="model_id"

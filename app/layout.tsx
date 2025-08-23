@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { inter, cactusSerif } from "@/lib/fonts";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({
         >
           {children}
         </ThemeProvider>
+        <Toaster toastOptions={{ style: { zIndex: 99999 } }} />
       </body>
     </html>
   );

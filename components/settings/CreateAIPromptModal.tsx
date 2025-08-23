@@ -1,40 +1,38 @@
+// components/settings/CreateAIPromptModal.tsx
 "use client";
-
 import React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
+import { Modal } from "../../components/ui/Modal";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
+import { Textarea } from "../../components/ui/Textarea";
 import {
   aiPromptSchema,
   type AIPromptFormData,
-} from "@/lib/schemas/aiPrompt.schema";
-import { createAIPrompt } from "@/lib/data/aiPrompts";
-import { toast } from "sonner";
-import { type AIPrompt } from "@/lib/types";
+} from "../../lib/schemas/aiPrompt.schema";
 import type { z } from "zod";
+import { useSettingsStore } from "../../lib/stores/settingsStore";
 
 interface CreateAIPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPromptCreated: (newPrompt: AIPrompt) => void;
 }
 
-// For creation, use only name, prompt_text, category
 const createFormSchema = aiPromptSchema.pick({
   name: true,
   prompt_text: true,
   category: true,
 });
+
 type CreateAIPromptFormValues = z.infer<typeof createFormSchema>;
 
 export function CreateAIPromptModal({
   isOpen,
   onClose,
-  onPromptCreated,
 }: CreateAIPromptModalProps) {
+  const createPrompt = useSettingsStore((state) => state.createPrompt);
+
   const {
     control,
     handleSubmit,
@@ -50,17 +48,10 @@ export function CreateAIPromptModal({
   });
 
   const onSubmit = async (data: CreateAIPromptFormValues) => {
-    try {
-      const newPrompt = await createAIPrompt(data as AIPromptFormData);
-      toast.success(`AI Prompt "${newPrompt.name}" created successfully.`);
-      onPromptCreated(newPrompt);
+    const newPrompt = await createPrompt(data as AIPromptFormData);
+    if (newPrompt) {
       reset();
       onClose();
-    } catch (error) {
-      console.error("Failed to create AI prompt:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Could not create AI prompt."
-      );
     }
   };
 
@@ -98,7 +89,6 @@ export function CreateAIPromptModal({
             <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
           )}
         </div>
-
         <div>
           <label
             htmlFor="prompt-category"
@@ -126,7 +116,6 @@ export function CreateAIPromptModal({
             </p>
           )}
         </div>
-
         <div>
           <label
             htmlFor="prompt-text"
@@ -153,7 +142,6 @@ export function CreateAIPromptModal({
             </p>
           )}
         </div>
-
         <div className="flex justify-end space-x-3 pt-2">
           <Button
             type="button"

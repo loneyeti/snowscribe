@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Loader2 } from "lucide-react";
-import { chat } from "@/lib/data/chat";
+import { sendMessage } from "@/lib/ai/AISMessageHandler"; // Add this
+import { toast } from "sonner"; // Add this
 
 // Import types from snowgander
 import type { ChatResponse } from "snowgander";
@@ -12,18 +13,18 @@ import type { ChatResponse } from "snowgander";
 interface AIToolButtonProps {
   toolName: string;
   prompt: string;
-  systemPrompt: string;
-  modelId: string;
   onResponse: (response: ChatResponse) => void;
+  projectId: string; // Add this
+  contextData?: unknown; // Add this
   className?: string;
 }
 
 export function AIToolButton({
   toolName,
   prompt,
-  systemPrompt,
-  modelId,
   onResponse,
+  projectId,
+  contextData,
   className = "",
 }: AIToolButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -32,42 +33,39 @@ export function AIToolButton({
   const handleClick = async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      // Call the chat function with the predefined prompt
-      const response = await chat(modelId, [], prompt, systemPrompt);
+      // Call the centralized AI handler
+      const response = await sendMessage(
+        projectId,
+        toolName,
+        prompt,
+        contextData
+      );
 
-      // Ensure we have a valid ChatResponse object
-      if (
-        !response ||
-        typeof response !== "object" ||
-        !("content" in response)
-      ) {
-        // If we don't have a valid ChatResponse, create an error response
-        const errorResponse: ChatResponse = {
-          role: "assistant",
-          content: [
-            {
-              type: "error",
-              publicMessage: "Invalid response format from AI service",
-              privateMessage: `Unexpected response format: ${JSON.stringify(
-                response
-              )}`,
-            },
-          ],
-        };
-        onResponse(errorResponse);
-        return;
+      // Check for a specific error block in the response
+      const errorBlock = response.content?.find(
+        (block) => block.type === "error"
+      ) as (import("snowgander").ErrorBlock & { code?: string }) | undefined;
+
+      if (errorBlock) {
+        // If the error is insufficient credits, show a toast and do nothing else.
+        if (errorBlock.code === "INSUFFICIENT_CREDITS") {
+          toast.error(
+            errorBlock.publicMessage || "Insufficient credits for this action."
+          );
+        } else {
+          // For other AI errors, display them in the component's error state.
+          setError(errorBlock.publicMessage || "An unknown AI error occurred.");
+        }
       }
 
-      // Pass the full ChatResponse object to the parent
+      // Pass the full response to the parent component.
       onResponse(response);
     } catch (err) {
       console.error("Error calling AI tool:", err);
       const errorMessage =
         err instanceof Error ? err.message : "An unknown error occurred";
       setError("Failed to get response from AI. Please try again.");
-      // Create a proper error response
       const errorResponse: ChatResponse = {
         role: "assistant",
         content: [

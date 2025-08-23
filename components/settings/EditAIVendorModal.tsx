@@ -1,32 +1,30 @@
+// components/settings/EditAIVendorModal.tsx
 "use client";
-
 import React, { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Modal } from "../../components/ui/Modal";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
 import {
   aiVendorSchema,
   type AIVendorFormData,
-} from "@/lib/schemas/aiVendor.schema";
-import { updateAIVendor } from "@/lib/data/aiVendors";
-import { toast } from "sonner";
-import { type AIVendor } from "@/lib/types";
+} from "../../lib/schemas/aiVendor.schema";
+import { useSettingsStore } from "../../lib/stores/settingsStore";
+import { type AIVendor } from "../../lib/types";
 
 interface EditAIVendorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onVendorUpdated: (updatedVendor: AIVendor) => void;
   initialData: AIVendor | null;
 }
 
 export function EditAIVendorModal({
   isOpen,
   onClose,
-  onVendorUpdated,
   initialData,
 }: EditAIVendorModalProps) {
+  const updateVendor = useSettingsStore((state) => state.updateVendor);
   const {
     control,
     handleSubmit,
@@ -50,21 +48,10 @@ export function EditAIVendorModal({
   }, [initialData, isOpen, reset]);
 
   const onSubmit = async (data: AIVendorFormData) => {
-    if (!initialData?.id) {
-      toast.error("Cannot update vendor: ID is missing.");
-      return;
-    }
-
-    try {
-      const updatedVendor = await updateAIVendor(initialData.id, data);
-      toast.success(`AI Vendor "${updatedVendor.name}" updated successfully.`);
-      onVendorUpdated(updatedVendor);
+    if (!initialData?.id) return;
+    const updated = await updateVendor(initialData.id, data);
+    if (updated) {
       onClose();
-    } catch (error) {
-      console.error("Failed to update AI vendor:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Could not update AI vendor."
-      );
     }
   };
 
@@ -94,7 +81,6 @@ export function EditAIVendorModal({
             <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
           )}
         </div>
-
         <div>
           <label
             htmlFor="edit-api_key_env_var"
@@ -122,7 +108,6 @@ export function EditAIVendorModal({
             </p>
           )}
         </div>
-
         <div className="flex justify-end space-x-3 pt-2">
           <Button
             type="button"

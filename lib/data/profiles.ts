@@ -7,9 +7,9 @@ import type { UpdateProfileValues } from '../schemas/profile.schema';
 export async function getClientProfile(): Promise<Pick<Profile, 'id' | 'is_site_admin' | 'full_name' | 'pen_name'> | null> {
   try {
     const user = await getAuthenticatedUser();
+    // The service now returns the correct shape, so we just update the type here.
     return await profileService.getProfileForUser(user.id);
   } catch (error) {
-    // This can fail if user is not logged in, which is a valid state.
     console.log("Could not get client profile, likely not logged in:", error);
     return null;
   }

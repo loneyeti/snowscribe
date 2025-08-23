@@ -19,9 +19,11 @@ interface AISidePanelProps {
   children?: React.ReactNode;
   title?: string;
   componentType?: AIComponentType;
-  toolName?: string; // Name of the tool to look up in toolModels
-  defaultPrompt?: string; // Default prompt if tool model doesn't provide one
-  defaultSystemPrompt?: string; // Default system prompt if tool model doesn't provide one
+  toolName?: string;
+  defaultPrompt?: string;
+  defaultSystemPrompt?: string;
+  projectId: string; // Add this line
+  contextData?: unknown; // Add this line
 }
 
 export function AISidePanel({
@@ -33,6 +35,8 @@ export function AISidePanel({
   toolName,
   defaultPrompt = "",
   defaultSystemPrompt = "You are a helpful AI assistant.",
+  projectId, // Add this
+  contextData, // Add this
 }: AISidePanelProps) {
   const [aiResponse, setAiResponse] = useState<ChatResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -190,12 +194,11 @@ export function AISidePanel({
                   ) : toolModel ? (
                     <>
                       <AIToolButton
-                        toolName={title}
-                        prompt={toolModel.prompt}
-                        systemPrompt={toolModel.systemPrompt}
-                        modelId={toolModel.id}
+                        toolName={toolName!} // Pass the toolName prop
+                        prompt={defaultPrompt}
+                        projectId={projectId}
+                        contextData={contextData}
                         onResponse={(response: ChatResponse) => {
-                          // Store the full ChatResponse
                           setAiResponse(response);
                         }}
                       />

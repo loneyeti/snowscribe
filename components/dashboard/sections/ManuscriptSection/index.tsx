@@ -388,10 +388,11 @@ export function ManuscriptSection() {
         middleColumn={middleColumnContent}
         mainDetailColumn={mainDetailColumnContent}
       />
-      {isCreateChapterModalOpen && (
+      {isCreateChapterModalOpen && project && (
         <CreateChapterModal
           isOpen={isCreateChapterModalOpen}
           onClose={() => setIsCreateChapterModalOpen(false)}
+          projectId={project.id}
           onChapterCreated={(data) => {
             // Close the modal immediately
             setIsCreateChapterModalOpen(false);
@@ -402,10 +403,12 @@ export function ManuscriptSection() {
           }}
         />
       )}
-      {isCreateSceneModalOpen && selectedChapter && (
+      {isCreateSceneModalOpen && selectedChapter && project && (
         <CreateSceneModal
           isOpen={isCreateSceneModalOpen}
           onClose={() => setIsCreateSceneModalOpen(false)}
+          projectId={project.id}
+          chapterId={selectedChapter.id}
           onSceneCreated={(data) => {
             // Close the modal immediately
             setIsCreateSceneModalOpen(false);
@@ -430,19 +433,23 @@ export function ManuscriptSection() {
           onTagLinkChange={handleSceneDetailsPanelTagLinkChange}
         />
       )}
-      {isAIPanelOpen && selectedScene && (
-        <AISidePanel
-          isOpen={isAIPanelOpen}
-          onClose={() => setIsAIPanelOpen(false)}
-          title={`AI Assistant - ${selectedScene.title || "Scene"}`}
-          componentType="tool"
-          toolName="scene_helper"
-          defaultPrompt={`Help me improve this scene: ${
-            selectedScene.content || "Untitled Scene Content"
-          }`}
-          defaultSystemPrompt="You are a helpful writing assistant specialized in fiction. Help the user improve their scene by providing constructive feedback and suggestions."
-        />
-      )}
+      {isAIPanelOpen &&
+        selectedScene &&
+        project && ( // Ensure project exists
+          <AISidePanel
+            isOpen={isAIPanelOpen}
+            onClose={() => setIsAIPanelOpen(false)}
+            title={`AI Assistant - ${selectedScene.title || "Scene"}`}
+            componentType="tool"
+            toolName="Scene Analyzer"
+            defaultPrompt={`Help me improve this scene: ${
+              selectedScene.content || "Untitled Scene Content"
+            }`}
+            defaultSystemPrompt="You are a helpful writing assistant specialized in fiction. Help the user improve their scene by providing constructive feedback and suggestions."
+            projectId={project.id} // Add this line
+            contextData={{ scene: selectedScene }} // Add this line
+          />
+        )}
     </>
   );
 }

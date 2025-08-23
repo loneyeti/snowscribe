@@ -1,30 +1,27 @@
+// components/settings/CreateAIVendorModal.tsx
 "use client";
-
 import React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Modal } from "../../components/ui/Modal";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
 import {
   aiVendorSchema,
   type AIVendorFormData,
-} from "@/lib/schemas/aiVendor.schema";
-import { createAIVendor } from "@/lib/data/aiVendors";
-import { toast } from "sonner";
-import { type AIVendor } from "@/lib/types";
+} from "../../lib/schemas/aiVendor.schema";
+import { useSettingsStore } from "../../lib/stores/settingsStore";
 
 interface CreateAIVendorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onVendorCreated: (newVendor: AIVendor) => void;
 }
 
 export function CreateAIVendorModal({
   isOpen,
   onClose,
-  onVendorCreated,
 }: CreateAIVendorModalProps) {
+  const createVendor = useSettingsStore((state) => state.createVendor);
   const {
     control,
     handleSubmit,
@@ -39,17 +36,10 @@ export function CreateAIVendorModal({
   });
 
   const onSubmit = async (data: AIVendorFormData) => {
-    try {
-      const newVendor = await createAIVendor(data);
-      toast.success(`AI Vendor "${newVendor.name}" created successfully.`);
-      onVendorCreated(newVendor);
+    const newVendor = await createVendor(data);
+    if (newVendor) {
       reset();
       onClose();
-    } catch (error) {
-      console.error("Failed to create AI vendor:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Could not create AI vendor."
-      );
     }
   };
 
@@ -86,7 +76,6 @@ export function CreateAIVendorModal({
             <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
           )}
         </div>
-
         <div>
           <label
             htmlFor="api_key_env_var"
@@ -114,7 +103,6 @@ export function CreateAIVendorModal({
             </p>
           )}
         </div>
-
         <div className="flex justify-end space-x-3 pt-2">
           <Button
             type="button"
