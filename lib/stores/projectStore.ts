@@ -1,7 +1,7 @@
 // lib/stores/projectStore.ts
 import { create } from 'zustand';
 import { type User } from '@supabase/supabase-js';
-import { countWords, getErrorMessage } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/utils';
 import * as projectService from '@/lib/data/projects';
 import * as outlineCreator from '@/lib/ai/outlineCreator';
 import type { Project, Chapter, Scene, Character, WorldBuildingNote, SceneTag, CharacterFormValues, UpdateSceneValues, PrimarySceneCategory } from '@/lib/types';
@@ -64,9 +64,11 @@ export interface ProjectActions {
   enableWorldNoteEditMode: () => void;
   disableWorldNoteEditMode: () => void;
   createChapter: (title: string) => Promise<Chapter | undefined>;
+  renameChapter: (chapterId: string, newTitle: string) => Promise<void>;
   createScene: (chapterId: string, title: string, primaryCategory: string) => Promise<Scene | undefined>; 
   updateScene: (chapterId: string, sceneId: string, values: ComprehensiveUpdateSceneValues) => Promise<void>;
   reorderScenes: (chapterId: string, scenes: { id: string; order: number }[]) => Promise<void>;
+  moveSceneToChapter: (sceneId: string, sourceChapterId: string, destinationChapterId: string) => Promise<void>;
   createCharacter: (data: CharacterFormValues) => Promise<Character | undefined>;
   updateCharacter: (characterId: string, data: Partial<CharacterFormValues>) => Promise<Character | undefined>;
   deleteCharacter: (characterId: string) => Promise<void>;
@@ -259,6 +261,41 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
     }
   },
 
+  renameChapter: async (chapterId, newTitle) => {
+    const { project, chapters } = get();
+    if (!project) {
+      toast.error("Cannot rename chapter: Project context is missing.");
+      return;
+    }
+    const originalChapters = JSON.parse(JSON.stringify(chapters));
+    const chapterToRename = chapters.find(c => c.id === chapterId);
+    if (!chapterToRename) {
+      toast.error("Cannot rename chapter: Chapter not found.");
+      return;
+    }
+    if (chapterToRename.title === newTitle.trim()) {
+      // No change, so don't do anything.
+      return;
+    }
+
+    // Optimistic update
+    set(state => ({
+      chapters: state.chapters.map(c =>
+        c.id === chapterId ? { ...c, title: newTitle.trim() } : c
+      ),
+    }));
+
+    try {
+      await chapterData.updateChapter(project.id, chapterId, { title: newTitle.trim() });
+      toast.success(`Chapter renamed to "${newTitle.trim()}".`);
+      // No need to set state again, optimistic update is now confirmed.
+    } catch (e) {
+      toast.error(`Failed to rename chapter: ${getErrorMessage(e)}`);
+      // Revert on failure
+      set({ chapters: originalChapters });
+    }
+  },
+
   createScene: async (chapterId, title, primaryCategory) => {
     const projectId = get().project?.id; if (!projectId) return;
     set(state => ({ isLoading: { ...state.isLoading, saving: true } }));
@@ -421,6 +458,52 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
     } catch(e) { set({ chapters: originalChapters }); toast.error("Failed to save scene order."); }
   },
 
+  moveSceneToChapter: async (sceneId, sourceChapterId, destinationChapterId) => {
+    const { project, chapters } = get();
+    if (!project) return;
+  
+    // Store original state for rollback
+    const originalChapters = JSON.parse(JSON.stringify(chapters));
+  
+    // --- Optimistic Update ---
+    let sceneToMove: Scene | undefined;
+    const newChapters = chapters.map(chapter => {
+      if (chapter.id === sourceChapterId) {
+        sceneToMove = chapter.scenes?.find(s => s.id === sceneId);
+        return { ...chapter, scenes: chapter.scenes?.filter(s => s.id !== sceneId) };
+      }
+      return chapter;
+    });
+  
+    if (!sceneToMove) {
+      toast.error("Scene not found for moving.");
+      return;
+    }
+  
+    const chaptersWithMovedScene = newChapters.map(chapter => {
+      if (chapter.id === destinationChapterId) {
+        // Add scene to the end of the new chapter
+        const newScenes = [...(chapter.scenes || []), { ...sceneToMove!, chapter_id: destinationChapterId }];
+        return { ...chapter, scenes: newScenes };
+      }
+      return chapter;
+    });
+  
+    set({ chapters: chaptersWithMovedScene, selectedScene: null, selectedChapter: chaptersWithMovedScene.find(c => c.id === sourceChapterId) });
+  
+    // --- API Call ---
+    try {
+      await sceneData.moveScene(project.id, sceneId, destinationChapterId);
+      toast.success("Scene moved successfully!");
+      // Refetch chapters to ensure data consistency (word counts, new order, etc.)
+      get().fetchChapters(); 
+    } catch (error) {
+      toast.error(`Failed to move scene: ${getErrorMessage(error)}`);
+      // Rollback on error
+      set({ chapters: originalChapters, selectedChapter: originalChapters.find((c: Character) => c.id === sourceChapterId) });
+    }
+  },
+
   createCharacter: async (data) => {
     const projectId = get().project?.id; if (!projectId) return;
     set(state => ({ isLoading: { ...state.isLoading, saving: true } }));
@@ -453,7 +536,7 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
     // 2. Optimistically update the UI.
     // This happens instantly, preventing any flicker.
     set(state => ({
-      characters: state.characters.map(c =>
+      characters: state.characters.map((c: Character) =>
         c.id === characterId ? { ...c, ...data } : c
       ),
       selectedCharacter: state.selectedCharacter?.id === characterId

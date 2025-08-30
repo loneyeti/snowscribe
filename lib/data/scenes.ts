@@ -37,3 +37,12 @@ export async function reorderScenesInChapter(projectId: string, chapterId: strin
     const user = await getAuthenticatedUser();
     await sceneService.reorderScenes(projectId, chapterId, user.id, scenes);
 }
+
+export async function moveScene(
+  projectId: string,
+  sceneId: string,
+  newChapterId: string
+): Promise<Scene> {
+  const user = await getAuthenticatedUser();
+  return sceneService.moveScene(projectId, user.id, sceneId, newChapterId);
+}

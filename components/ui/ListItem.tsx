@@ -4,9 +4,10 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 
-interface ListItemProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ListItemProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   icon?: LucideIcon;
-  title: string;
+  title: React.ReactNode;
   secondaryText?: string;
   isSelected?: boolean;
   onClick?: () => void;

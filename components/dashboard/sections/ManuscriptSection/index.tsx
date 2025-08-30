@@ -6,10 +6,12 @@ import { ListContainer } from "@/components/ui/ListContainer";
 import { ListItem } from "@/components/ui/ListItem";
 import { ContextualHeader } from "@/components/ui/ContextualHeader";
 import { IconButton } from "@/components/ui/IconButton";
+import { Input } from "@/components/ui/Input";
 import { CreateChapterModal } from "@/components/manuscript/CreateChapterModal";
 import { CreateSceneModal } from "@/components/manuscript/CreateSceneModal";
+import { ChapterActions } from "@/components/manuscript/ChapterActions";
 import { Paragraph } from "@/components/typography/Paragraph";
-import { PlusCircle, ArrowLeft, Sparkles, Info } from "lucide-react";
+import { PlusCircle, ArrowLeft, Sparkles, Info, Pencil } from "lucide-react";
 import { AISidePanel } from "@/components/ai/AISidePanel";
 import { SceneMetadataPanel } from "@/components/manuscript/SceneMetadataPanel";
 import { cn } from "@/lib/utils";
@@ -19,6 +21,7 @@ import { updateSceneCharacters, updateSceneTags } from "@/lib/data/scenes";
 import dynamic from "next/dynamic";
 import { countWords } from "@/lib/utils";
 import { useShallow } from "zustand/react/shallow";
+import { SceneActions } from "@/components/manuscript/SceneActions";
 
 type ManuscriptView = "chapters" | "scenes";
 
@@ -55,6 +58,7 @@ export function ManuscriptSection() {
     reorderScenes,
     selectChapter,
     selectScene,
+    renameChapter,
   } = useProjectStore(
     useShallow((state) => ({
       project: state.project,
@@ -68,11 +72,13 @@ export function ManuscriptSection() {
       reorderScenes: state.reorderScenes,
       selectChapter: state.selectChapter,
       selectScene: state.selectScene,
+      renameChapter: state.renameChapter,
     }))
   );
 
   const [manuscriptView, setManuscriptView] =
     useState<ManuscriptView>("chapters");
+  const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
   const [isCreateChapterModalOpen, setIsCreateChapterModalOpen] =
     useState(false);
   const [isCreateSceneModalOpen, setIsCreateSceneModalOpen] = useState(false);
@@ -257,15 +263,59 @@ export function ManuscriptSection() {
                 Loading chapters...
               </Paragraph>
             ) : chapters.length > 0 ? (
-              chapters.map((chapter) => (
-                <ListItem
-                  key={chapter.id}
-                  title={`Chapter ${chapter.order + 1}: ${chapter.title}`}
-                  secondaryText={`${chapter.word_count || 0} words`}
-                  onClick={() => handleChapterSelect(chapter)}
-                  isSelected={selectedChapter?.id === chapter.id}
-                />
-              ))
+              chapters.map((chapter) => {
+                const isEditing = editingChapterId === chapter.id;
+
+                return (
+                  <ListItem
+                    key={chapter.id}
+                    title={
+                      isEditing ? (
+                        <div className="flex items-center w-full gap-2 -my-1">
+                          <Pencil className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <Input
+                            defaultValue={chapter.title}
+                            autoFocus
+                            onBlur={() => setEditingChapterId(null)}
+                            onKeyDown={async (e) => {
+                              if (e.key === "Enter") {
+                                const input = e.target as HTMLInputElement;
+                                await renameChapter(chapter.id, input.value);
+                                setEditingChapterId(null);
+                              }
+                              if (e.key === "Escape") {
+                                setEditingChapterId(null);
+                              }
+                            }}
+                            className="h-8 text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      ) : (
+                        `Chapter ${chapter.order + 1}: ${chapter.title}`
+                      )
+                    }
+                    secondaryText={
+                      isEditing ? undefined : `${chapter.word_count || 0} words`
+                    }
+                    onClick={
+                      isEditing ? undefined : () => handleChapterSelect(chapter)
+                    }
+                    isSelected={
+                      selectedChapter?.id === chapter.id && !isEditing
+                    }
+                    actions={
+                      !isEditing ? (
+                        <ChapterActions
+                          chapter={chapter}
+                          onRename={() => setEditingChapterId(chapter.id)}
+                        />
+                      ) : null
+                    }
+                    className={cn(isEditing && "py-2.5 cursor-default")}
+                  />
+                );
+              })
             ) : (
               <Paragraph className="p-4 text-sm text-muted-foreground">
                 No chapters yet.
@@ -320,6 +370,7 @@ export function ManuscriptSection() {
                         draggedSceneId !== scene.id &&
                         "border-t-2 border-primary pt-[calc(0.75rem-2px)] pb-[0.75rem]"
                     )}
+                    actions={<SceneActions scene={scene} chapters={chapters} />}
                   />
                 ))
               ) : (

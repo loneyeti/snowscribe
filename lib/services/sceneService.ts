@@ -258,3 +258,58 @@ export async function createScene(
 
     return newScene;
 }
+
+export async function moveScene(
+  projectId: string,
+  userId: string,
+  sceneId: string,
+  newChapterId: string
+): Promise<Scene> {
+  const supabase = await createClient();
+
+  // 1. Verify user owns the project
+  const ownership = await verifyProjectOwnership(supabase, projectId, userId);
+  if (ownership.error) throw new Error(ownership.error.message);
+
+  // 2. Verify the new chapter belongs to this project
+  await verifyChapterBelongsToProject(supabase, projectId, newChapterId);
+
+  // 3. Get the maximum order value in the new chapter to place the scene at the end
+  const { data: maxOrderScene, error: maxOrderError } = await supabase
+    .from('scenes')
+    .select('order')
+    .eq('chapter_id', newChapterId)
+    .order('order', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (maxOrderError) {
+    console.error(`Error fetching max order for new chapter ${newChapterId}:`, maxOrderError);
+    throw new Error('Could not determine scene order in new chapter.');
+  }
+
+  const newOrder = maxOrderScene ? maxOrderScene.order + 1 : 0;
+
+  // 4. Update the scene's chapter_id and order
+  const { data: movedScene, error: updateError } = await supabase
+    .from('scenes')
+    .update({
+      chapter_id: newChapterId,
+      order: newOrder,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', sceneId)
+    .select('*, scene_characters(character_id), scene_applied_tags(tag_id)')
+    .single();
+
+  if (updateError) {
+    console.error(`Error moving scene ${sceneId} to chapter ${newChapterId}:`, updateError);
+    throw new Error('Failed to move scene.');
+  }
+
+  // The database trigger 'update_aggregate_word_counts' will automatically handle
+  // decrementing the word count from the old chapter and incrementing it in the new one.
+  // This is because we are performing an UPDATE on the scene's chapter_id.
+
+  return movedScene;
+}
