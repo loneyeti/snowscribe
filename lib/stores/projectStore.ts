@@ -52,6 +52,7 @@ interface ComprehensiveUpdateSceneValues {
 export interface ProjectActions {
   initialize: (project: Project, user: User) => void;
   initializeAll: (initialState: Partial<ProjectState>, user: User) => void;
+  resetProjectState: () => void;
   fetchChapters: () => Promise<void>;
   fetchCharacters: () => Promise<void>;
   fetchWorldNotes: () => Promise<void>;
@@ -98,17 +99,57 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
 
   },
 
-    initializeAll: (initialState, user) => {
+  initializeAll: (initialState, user) => {
     set({
-      ...initialState, // Spread all the pre-fetched data into the store
+      // 1. Explicitly reset all project-specific state to defaults first
+      project: null,
+      chapters: [],
+      characters: [],
+      worldNotes: [],
+      sceneTags: [],
+      selectedChapter: null,
+      selectedScene: null,
+      selectedCharacter: null,
+      selectedWorldNote: null,
+      isEditingSelectedWorldNote: false,
+  
+      // 2. Apply the new state from the server
+      ...initialState,
       user,
-      isLoading: { // Set all loading states to false
+  
+      // 3. Set loading states to false, as initialization is complete
+      isLoading: {
         project: false,
         chapters: false,
         scenes: false,
         characters: false,
         worldNotes: false,
         sceneTags: false,
+        saving: false,
+        generatingOutline: false,
+      },
+    });
+  },
+
+  resetProjectState: () => {
+    set({
+      project: null,
+      chapters: [],
+      characters: [],
+      worldNotes: [],
+      sceneTags: [],
+      selectedChapter: null,
+      selectedScene: null,
+      selectedCharacter: null,
+      selectedWorldNote: null,
+      isEditingSelectedWorldNote: false,
+      isLoading: {
+        project: true,
+        chapters: true,
+        scenes: false,
+        characters: true,
+        worldNotes: true,
+        sceneTags: true,
         saving: false,
         generatingOutline: false,
       },
@@ -260,7 +301,9 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
   updateScene: async (chapterId, sceneId, values) => {
     const { project } = get();
     if (!project || !chapterId) {
-      toast.error("Could not save scene: Missing project or chapter context.");
+      console.log(
+        "updateScene call skipped: Project context missing, likely during navigation cleanup."
+      );
       return;
     }
 
@@ -356,7 +399,7 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
         set({ chapters: allChapters });
       }
       
-      toast.success("Scene updated successfully.", { duration: 1500 });
+      // toast.success("Scene updated successfully.", { duration: 1500 });
 
     } catch (e) {
       // 5. ERROR HANDLING: If any server call fails, revert the UI to its original state.

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Paragraph } from "@/components/typography/Paragraph";
 import { PlotHoleAnalysisDisplay } from "@/components/ai/PlotHoleAnalysisDisplay";
 import { sendMessage as AISMessageHandler } from "@/lib/ai/AISMessageHandler";
+import { LoadingState } from "../ui/LoadingState";
 import { AI_TOOL_NAMES } from "@/lib/ai/constants";
 import { toast } from "sonner";
 import type { AIMessage } from "@/lib/types";
@@ -140,9 +141,7 @@ export function PlotHoleChecker({ projectId }: PlotHoleCheckerProps) {
 
       <div className="flex-grow overflow-y-auto border rounded-lg p-4 bg-muted/20">
         {isLoading && (
-          <Paragraph className="text-muted-foreground animate-pulse">
-            Analyzing your project... This may take a moment.
-          </Paragraph>
+          <LoadingState text="Analyzing your project... This may take a moment." />
         )}
         {error && <Paragraph className="text-destructive">{error}</Paragraph>}
 

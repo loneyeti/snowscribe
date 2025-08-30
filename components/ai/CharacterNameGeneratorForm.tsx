@@ -8,6 +8,7 @@ import { AI_TOOL_NAMES } from "@/lib/ai/constants";
 import { Paragraph } from "@/components/typography/Paragraph";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import MarkdownComponent from "./MarkdownComponent";
+import { LoadingState } from "../ui/LoadingState";
 import { toast } from "sonner";
 
 interface CharacterNameGeneratorFormProps {
@@ -68,7 +69,9 @@ export function CharacterNameGeneratorForm({
         </div>
       )}
       {isLoading && !aiResponses.length && (
-        <Paragraph>Generating names...</Paragraph>
+        <div className="flex-grow flex items-center justify-center">
+          <LoadingState text="Generating names..." />
+        </div>
       )}
     </div>
   );

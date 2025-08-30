@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { SendHorizonal } from "lucide-react";
+import { TypingIndicator } from "../ui/TypingIndicator";
 // Assuming Button and Input components will be available
 // import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
@@ -104,8 +105,8 @@ export function AIChatInterface({
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="max-w-[70%] p-3 rounded-lg shadow-sm bg-muted text-muted-foreground">
-              <p className="text-sm italic">AI is thinking...</p>
+            <div className="max-w-[70%] rounded-lg shadow-sm bg-muted">
+              <TypingIndicator />
             </div>
           </div>
         )}

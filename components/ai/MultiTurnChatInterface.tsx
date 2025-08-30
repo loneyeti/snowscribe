@@ -5,6 +5,7 @@ import type { AIMessage } from "@/lib/types/ai";
 import { Button } from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Input } from "@/components/ui/Input";
+import { TypingIndicator } from "../ui/TypingIndicator";
 import { cn } from "@/lib/utils";
 import MarkdownComponent from "./MarkdownComponent";
 
@@ -92,6 +93,17 @@ export function MultiTurnChatInterface({
             )}
           </div>
         ))}
+
+        {/* START: Add this new block */}
+        {isLoading && (
+          <div className="flex items-end gap-2 justify-start">
+            <div className="p-3 rounded-md bg-gray-100 dark:bg-gray-800 self-start">
+              <TypingIndicator />
+            </div>
+          </div>
+        )}
+        {/* END: Add this new block */}
+
         {error && <div className="text-red-600">{error}</div>}
       </ScrollArea>
 
