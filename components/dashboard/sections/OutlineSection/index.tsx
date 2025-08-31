@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useCallback } from "react";
-import type { Project, Scene } from "@/lib/types";
+import type { Scene } from "@/lib/types";
 import { useShallow } from "zustand/react/shallow";
 import { useProjectStore } from "@/lib/stores/projectStore";
 import { SecondaryViewLayout } from "@/components/layouts/SecondaryViewLayout";
@@ -16,7 +16,6 @@ import { OutlineCreatorModal } from "@/components/outline/OutlineCreatorModal";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { appEvents } from "@/lib/utils/eventEmitter";
 
 type OutlineView = "synopsis" | "scenes";

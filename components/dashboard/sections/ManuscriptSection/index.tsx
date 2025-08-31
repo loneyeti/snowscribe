@@ -90,6 +90,23 @@ export function ManuscriptSection() {
   const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
 
   useEffect(() => {
+    // This effect ensures data consistency. If a chapter is selected but
+    // it no longer exists in the main chapters list (e.g., after deletion),
+    // this will clear the invalid selection, preventing UI errors.
+    if (selectedChapter && !chapters.some((c) => c.id === selectedChapter.id)) {
+      selectChapter(null);
+    }
+  }, [chapters, selectedChapter, selectChapter]);
+
+  useEffect(() => {
+    // This ensures that whenever a chapter is deselected (e.g., after deletion),
+    // the view reliably returns to the chapter list.
+    if (selectedChapter === null && manuscriptView !== "chapters") {
+      setManuscriptView("chapters");
+    }
+  }, [selectedChapter, manuscriptView]);
+
+  useEffect(() => {
     if (selectedScene) {
       setCurrentSceneWordCount(countWords(selectedScene.content));
     }
@@ -443,7 +460,6 @@ export function ManuscriptSection() {
         <CreateChapterModal
           isOpen={isCreateChapterModalOpen}
           onClose={() => setIsCreateChapterModalOpen(false)}
-          projectId={project.id}
           onChapterCreated={(data) => {
             // Close the modal immediately
             setIsCreateChapterModalOpen(false);
@@ -458,8 +474,6 @@ export function ManuscriptSection() {
         <CreateSceneModal
           isOpen={isCreateSceneModalOpen}
           onClose={() => setIsCreateSceneModalOpen(false)}
-          projectId={project.id}
-          chapterId={selectedChapter.id}
           onSceneCreated={(data) => {
             // Close the modal immediately
             setIsCreateSceneModalOpen(false);

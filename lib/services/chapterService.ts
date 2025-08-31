@@ -223,3 +223,32 @@ export async function getChapters(projectId: string, userId: string): Promise<Ch
   if (error) throw error;
   return chapters || [];
 }
+
+export async function reorderChapters(
+  projectId: string,
+  userId: string,
+  chapters: { id: string; order: number }[]
+): Promise<void> {
+  const supabase = await createClient();
+  const ownership = await verifyProjectOwnership(supabase, projectId, userId);
+  if (ownership.error) throw new Error(ownership.error.message);
+
+  // Create an array of update promises
+  const updates = chapters.map(chapter =>
+    supabase
+      .from('chapters')
+      .update({ order: chapter.order, updated_at: new Date().toISOString() })
+      .eq('id', chapter.id)
+      .eq('project_id', projectId)
+  );
+
+  // Execute all promises concurrently
+  const results = await Promise.all(updates);
+
+  // Check for any errors in the results
+  const firstError = results.find(res => res.error);
+  if (firstError && firstError.error) {
+    console.error('Error reordering chapters:', firstError.error);
+    throw new Error('Failed to update chapter order.');
+  }
+}

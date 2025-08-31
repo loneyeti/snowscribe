@@ -73,3 +73,8 @@ export async function deleteChapter(projectId: string, chapterId: string): Promi
 }
 
 export const getChaptersByProjectId = getChapters;
+
+export async function reorderChapters(projectId: string, chapters: { id: string; order: number }[]): Promise<void> {
+  const user = await getAuthenticatedUser();
+  await chapterService.reorderChapters(projectId, user.id, chapters);
+}

@@ -764,8 +764,6 @@ export function ChapterSceneOutlineList({
 
       {isCreateSceneModalOpen && creatingSceneInChapterId && (
         <CreateSceneModal
-          projectId={projectId}
-          chapterId={creatingSceneInChapterId}
           isOpen={isCreateSceneModalOpen}
           onClose={() => {
             setIsCreateSceneModalOpen(false);

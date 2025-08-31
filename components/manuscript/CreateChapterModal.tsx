@@ -17,14 +17,12 @@ const formSchema = createChapterSchema.pick({
 type ChapterFormValues = z.infer<typeof formSchema>;
 
 interface CreateChapterModalProps {
-  projectId: string;
   isOpen: boolean;
   onClose: () => void;
   onChapterCreated: (data: ChapterFormValues) => void;
 }
 
 export function CreateChapterModal({
-  projectId,
   isOpen,
   onClose,
   onChapterCreated,

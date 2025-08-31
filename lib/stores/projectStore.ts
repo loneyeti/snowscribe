@@ -78,6 +78,9 @@ export interface ProjectActions {
   updateProjectDetails: (details: Partial<UpdateProjectValues>) => Promise<void>;
   generateAIFullOutline: () => Promise<void>;
   deepLinkToScene: (chapterId: string, sceneId: string) => Promise<void>;
+  deleteChapter: (chapterId: string) => Promise<void>;
+  deleteScene: (chapterId: string, sceneId: string) => Promise<void>;
+  reorderChapters: (chapters: { id: string; order: number }[]) => Promise<void>;
 }
 
 export const useProjectStore = create<ProjectState & ProjectActions>()((set, get) => ({
@@ -458,6 +461,29 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
     } catch(e) { set({ chapters: originalChapters }); toast.error("Failed to save scene order."); }
   },
 
+  reorderChapters: async (chapters) => {
+    const projectId = get().project?.id;
+    if (!projectId) return;
+
+    const originalChapters = get().chapters;
+
+    // Optimistically update the local state
+    const reorderedLocalChapters = get().chapters.map(c => {
+      const newOrderInfo = chapters.find(newC => newC.id === c.id);
+      return newOrderInfo ? { ...c, order: newOrderInfo.order } : c;
+    }).sort((a, b) => a.order - b.order);
+
+    set({ chapters: reorderedLocalChapters });
+
+    try {
+      await chapterData.reorderChapters(projectId, chapters);
+      toast.success("Chapter order saved.");
+    } catch(e) {
+      set({ chapters: originalChapters });
+      toast.error("Failed to save chapter order.");
+    }
+  },
+
   moveSceneToChapter: async (sceneId, sourceChapterId, destinationChapterId) => {
     const { project, chapters } = get();
     if (!project) return;
@@ -677,6 +703,92 @@ export const useProjectStore = create<ProjectState & ProjectActions>()((set, get
       }));
     } catch(e) { toast.error("Failed to delete world note."); }
     finally { set(state => ({ isLoading: { ...state.isLoading, saving: false } })); }
+  },
+
+  deleteChapter: async (chapterId) => {
+    const { project } = get();
+    if (!project) {
+      toast.error("Cannot delete chapter: Project context is missing.");
+      return;
+    }
+  
+    const originalChapters = get().chapters;
+    const chapterToDelete = originalChapters.find(c => c.id === chapterId);
+  
+    if (!chapterToDelete) {
+      toast.error("Chapter not found for deletion.");
+      return;
+    }
+  
+    // Prepare for re-ordering: filter, then re-index
+    const chaptersAfterDelete = originalChapters.filter(c => c.id !== chapterId);
+    const reorderedChapters = chaptersAfterDelete.map((chapter, index) => ({
+      ...chapter,
+      order: index,
+    }));
+  
+    // Find which chapters actually need a server update
+    const chaptersToUpdateOnServer = reorderedChapters
+      .filter(c => c.order !== originalChapters.find(oc => oc.id === c.id)?.order)
+      .map(c => ({ id: c.id, order: c.order }));
+  
+    // Optimistic UI update with re-ordered chapters
+    set(state => ({
+      chapters: reorderedChapters,
+      selectedChapter: null, // Always deselect to force view change
+      selectedScene: null,
+    }));
+  
+    try {
+      // Perform deletion first
+      await chapterData.deleteChapter(project.id, chapterId);
+  
+      // Then perform re-ordering if necessary
+      if (chaptersToUpdateOnServer.length > 0) {
+        await chapterData.reorderChapters(project.id, chaptersToUpdateOnServer);
+      }
+  
+      toast.success("Chapter deleted and list re-ordered successfully.");
+    } catch (e) {
+      toast.error(`Failed to delete chapter: ${getErrorMessage(e)}`);
+      // On error, revert to the original state
+      set({ 
+        chapters: originalChapters,
+        selectedChapter: get().selectedChapter // Keep selection as it was
+      });
+    }
+  },
+
+  deleteScene: async (chapterId, sceneId) => {
+    const { project } = get();
+    if (!project) {
+      toast.error("Cannot delete scene: Project context is missing.");
+      return;
+    }
+    const originalChapters = get().chapters;
+    // Optimistically update the UI
+    set(state => ({
+      chapters: state.chapters.map(chapter => {
+        if (chapter.id === chapterId) {
+          // Create a new chapter object with the scene filtered out
+          return {
+            ...chapter,
+            scenes: chapter.scenes?.filter(s => s.id !== sceneId)
+          };
+        }
+        return chapter;
+      }),
+      // If the deleted scene was selected, deselect it
+      selectedScene: state.selectedScene?.id === sceneId ? null : state.selectedScene,
+    }));
+    try {
+      await sceneData.deleteScene(project.id, chapterId, sceneId);
+      toast.success("Scene deleted successfully.");
+    } catch (e) {
+      toast.error(`Failed to delete scene: ${getErrorMessage(e)}`);
+      // Revert UI on error
+      set({ chapters: originalChapters });
+    }
   },
 
   updateProjectDetails: async (details) => {

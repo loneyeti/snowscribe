@@ -37,7 +37,7 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "server-only": "^0.0.1",
-    "snowgander": "^0.0.37",
+    "snowgander": "^0.2.28",
     "sonner": "^2.0.3",
     "stripe": "^18.4.0",
     "tailwind-merge": "^2.6.0",

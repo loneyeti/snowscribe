@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import type { Project } from "@/lib/types";
 import { useShallow } from "zustand/react/shallow";
 import { useProjectStore } from "@/lib/stores/projectStore";
 import { CharacterList } from "@/components/characters/CharacterList";

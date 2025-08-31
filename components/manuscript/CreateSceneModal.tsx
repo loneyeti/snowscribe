@@ -17,16 +17,12 @@ const formSchema = createSceneSchema.pick({
 type SceneFormValues = z.infer<typeof formSchema>;
 
 interface CreateSceneModalProps {
-  projectId: string;
-  chapterId: string;
   isOpen: boolean;
   onClose: () => void;
   onSceneCreated: (data: SceneFormValues) => void;
 }
 
 export function CreateSceneModal({
-  projectId,
-  chapterId,
   isOpen,
   onClose,
   onSceneCreated,

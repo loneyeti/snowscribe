@@ -38,6 +38,15 @@ export async function reorderScenesInChapter(projectId: string, chapterId: strin
     await sceneService.reorderScenes(projectId, chapterId, user.id, scenes);
 }
 
+export async function deleteScene(
+  projectId: string,
+  chapterId: string,
+  sceneId: string
+): Promise<void> {
+  const user = await getAuthenticatedUser();
+  await sceneService.deleteScene(projectId, chapterId, sceneId, user.id);
+}
+
 export async function moveScene(
   projectId: string,
   sceneId: string,

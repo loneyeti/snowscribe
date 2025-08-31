@@ -14,15 +14,14 @@ import type { AIMessage } from "@/lib/types";
 import { useCreateWorldNoteFromChat } from "@/hooks/ai/useCreateWorldNoteFromChat";
 
 export function WorldBuildingChat() {
-  const { project, worldNotes, isStoreLoading, createWorldNote } =
-    useProjectStore(
-      useShallow((state) => ({
-        project: state.project,
-        worldNotes: state.worldNotes,
-        isStoreLoading: state.isLoading,
-        createWorldNote: state.createWorldNote,
-      }))
-    );
+  const { project, worldNotes, isStoreLoading } = useProjectStore(
+    useShallow((state) => ({
+      project: state.project,
+      worldNotes: state.worldNotes,
+      isStoreLoading: state.isLoading,
+      //createWorldNote: state.createWorldNote,
+    }))
+  );
 
   const projectId = project?.id || "placeholder-project-id";
   const { uiMessages, isLoading, error, sendUserMessage } =

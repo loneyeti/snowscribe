@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { extractJsonFromString } from "@/lib/utils";
+import { isErrorBlock } from "@/lib/utils";
 
 import type { Scene, Character, PrimarySceneCategory } from "@/lib/types";
 import { ALL_PRIMARY_SCENE_CATEGORIES } from "@/lib/types";
@@ -97,11 +98,10 @@ export function SceneMetadataPanel({
 
     const errorBlock = response.content?.find(
       (block) => block.type === "error"
-    ) as (import("snowgander").ErrorBlock & { code?: string }) | undefined;
+    ) as import("snowgander").ErrorBlock | undefined;
 
     if (errorBlock) {
-      console.log("[processAIResponse] Found error block:", errorBlock);
-      // This is the core of the fix: show a toast for any AI error.
+      // Show a toast for any AI error.
       toast.error(errorBlock.publicMessage || failureMessage, { id: toastId });
       return null;
     }
@@ -204,12 +204,12 @@ export function SceneMetadataPanel({
           id: toastId,
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       // Use `any` to inspect the error object
       console.error("Caught exception in AI handler:", error);
 
       // Check if it's our custom error object being thrown
-      if (error?.code === "INSUFFICIENT_CREDITS" && error?.publicMessage) {
+      if (isErrorBlock(error)) {
         toast.error(error.publicMessage, { id: toastId });
       } else {
         // Fallback to the generic error message
@@ -348,12 +348,12 @@ export function SceneMetadataPanel({
           );
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       // Use `any` to inspect the error object
       console.error("Caught exception in AI handler:", error);
 
       // Check if it's our custom error object being thrown
-      if (error?.code === "INSUFFICIENT_CREDITS" && error?.publicMessage) {
+      if (isErrorBlock(error)) {
         toast.error(error.publicMessage, { id: toastId });
       } else {
         // Fallback to the generic error message
@@ -447,12 +447,12 @@ export function SceneMetadataPanel({
           });
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       // Use `any` to inspect the error object
       console.error("Caught exception in AI handler:", error);
 
       // Check if it's our custom error object being thrown
-      if (error?.code === "INSUFFICIENT_CREDITS" && error?.publicMessage) {
+      if (isErrorBlock(error)) {
         toast.error(error.publicMessage, { id: toastId });
       } else {
         // Fallback to the generic error message

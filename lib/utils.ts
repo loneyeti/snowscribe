@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
+import { ErrorBlock } from "snowgander";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -71,4 +72,17 @@ export function extractJsonFromString<T = unknown>(input: unknown): T | null {
   } catch {
     return null;
   }
+}
+
+export function isErrorBlock(error: unknown): error is ErrorBlock {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "type" in error &&
+    (error as { type: unknown }).type === "error" &&
+    "publicMessage" in error &&
+    typeof (error as { publicMessage: unknown }).publicMessage === "string" &&
+    "privateMessage" in error &&
+    typeof (error as { privateMessage: unknown }).privateMessage === "string"
+  );
 }
